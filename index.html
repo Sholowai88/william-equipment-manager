@@ -603,7 +603,14 @@
     function initUI() {
         updateClock(); setToday(); initCanvas();
         document.getElementById("etSelect").innerHTML = etNames.map(n => `<option value="${n}">${n}</option>`).join('');
-        document.getElementById("clearSearchBtn").onclick = () => { document.getElementById("equipSearch").value = ""; renderEquipment(); };
+        document.getElementById("clearSearchBtn").onclick = () => { 
+           document.getElementById("equipSearch").value = ""; 
+           // Also reset filter dropdowns to default values
+           document.getElementById("filterLocation").value = "";
+           document.getElementById("filterParentAsset").value = "";
+           document.getElementById("filterStatus").value = "";
+           renderEquipment(); 
+           };
         document.getElementById("clearSelEquipBtn").onclick = () => { selectedAssetsSet.clear(); renderEquipment(); };
         document.getElementById("selectAllEquipBtn").onclick = () => { equipmentData.forEach(e => selectedAssetsSet.add(getKey(e))); renderEquipment(); };
         document.getElementById("addNewEquipBtn").onclick = addNewEquipment;
