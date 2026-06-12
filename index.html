@@ -6,9 +6,7 @@
     <title>NTWC MPU DR Workshop | Equipment Management System</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Rest of your CSS remains exactly the same as in your file -->
     <style>
-        /* ... (keep all your existing CSS styles exactly as they are) ... */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
         body { background: #eef2f9; padding: 16px; min-height: 100vh; }
         .app-container { max-width: 1600px; margin: 0 auto; background: white; border-radius: 28px; box-shadow: 0 12px 30px rgba(0,0,0,0.08); overflow: hidden; display: none; }
@@ -136,7 +134,7 @@
 
     <div id="homePage" class="page active">
         <div class="filter-bar"><input type="text" id="equipSearch" placeholder="🔍 Search by Asset #, Description, Manufacturer, Serial #"><select id="filterLocation"></select><select id="filterParentAsset"></select><select id="filterStatus"><option value="">All Status</option><option value="IN">IN</option><option value="OUT">OUT</option></select><button id="clearSearchBtn" class="btn">Clear Filter</button><span id="selectedCountBadge" style="background:#e2e8f0; padding:4px 12px; border-radius:40px;">0 selected</span><button id="clearSelEquipBtn" class="btn btn-sm">Clear</button><button id="selectAllEquipBtn" class="btn btn-sm">Select All</button><button id="addNewEquipBtn" class="btn btn-primary btn-sm">➕ Add New</button></div>
-        <div class="table-wrapper"><table id="equipTable"><thead><tr><th style="width:30px">Select</th><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th><th>Location</th><th>Parent</th><th>Status</th><th>Actions</th><tr></thead><tbody id="equipTableBody"></tbody></table></div>
+        <div class="table-wrapper"><table id="equipTable"><thead><tr><th style="width:30px">Select</th><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th><th>Location</th><th>Parent</th><th>Status</th><th>Actions</th></tr></thead><tbody id="equipTableBody"></tbody></table></div>
     </div>
 
     <div id="recordPage" class="page">
@@ -169,10 +167,11 @@
 </div>
 
 <script>
+(function() {
     // ======================== SUPABASE CONFIGURATION ========================
     const supabaseUrl = 'https://qhuqlhzvpmhykkmmqtth.supabase.co';
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodXFsaHp2cG1oeWtrbW1xdHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTM0OTQsImV4cCI6MjA5Njc4OTQ5NH0.pTTY4irj4vx-us8W1DyYaEB6ug_wEjuwNdy0lJjh_-8';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
     
     // ======================== GLOBAL STATE ========================
     let currentUser = null;
@@ -187,9 +186,16 @@
     let dbLogsSortOrder = 'desc';
     let isInitialLoad = true;
     
+    // Helper functions
+    function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
+    function formatTimestamp(isoString) { let d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; }
+    function getHKTime() { let now = new Date(); return new Date(now.getTime() + (480 + now.getTimezoneOffset()) * 60000); }
+    function setToday() { let hk = getHKTime(); document.getElementById("recordDatetime").value = hk.toISOString().slice(0, 16); }
+    function updateClock() { let hk = getHKTime(); document.getElementById("liveTime").innerHTML = hk.toLocaleTimeString('zh-HK', { hour12: false }); document.getElementById("liveDate").innerHTML = hk.toISOString().slice(0, 10).replace(/-/g, '/'); setTimeout(updateClock, 1000); }
+    
     // ======================== DATA SYNC FUNCTIONS ========================
     async function loadEquipmentFromSupabase() {
-        const { data, error } = await supabase.from('equipment_data').select('*').order('id');
+        const { data, error } = await supabaseClient.from('equipment_data').select('*').order('id');
         if (!error && data && data.length > 0) {
             equipmentData = data.map(row => ({
                 assetNumber: row.asset_number || "",
@@ -209,7 +215,7 @@
     }
     
     async function loadStatusFromSupabase() {
-        const { data, error } = await supabase.from('equip_status').select('*');
+        const { data, error } = await supabaseClient.from('equip_status').select('*');
         if (!error && data) {
             equipStatus = {};
             data.forEach(row => { equipStatus[row.equipment_key] = row.status; });
@@ -218,7 +224,7 @@
     }
     
     async function loadHistoryFromSupabase() {
-        const { data, error } = await supabase.from('history_records').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabaseClient.from('history_records').select('*').order('created_at', { ascending: false });
         if (!error && data) {
             historyRecords = data.map(row => ({
                 id: row.record_id,
@@ -242,7 +248,7 @@
     
     async function loadLogsFromSupabase() {
         if (currentUserRole !== 'admin') return;
-        const { data, error } = await supabase.from('db_logs').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabaseClient.from('db_logs').select('*').order('created_at', { ascending: false });
         if (!error && data) {
             dbLogs = data.map(row => ({
                 id: row.log_id,
@@ -257,7 +263,7 @@
     }
     
     async function loadUsersFromSupabase() {
-        const { data, error } = await supabase.from('users').select('*');
+        const { data, error } = await supabaseClient.from('users').select('*');
         if (!error && data) {
             window.users = {};
             data.forEach(row => { window.users[row.username] = { password: row.password, role: row.role, canChangePassword: true }; });
@@ -282,7 +288,7 @@
     
     // Real-time subscriptions
     function subscribeToRealtime() {
-        supabase.channel('equipment_changes')
+        supabaseClient.channel('equipment_changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'equipment_data' }, () => { if (!isInitialLoad) loadEquipmentFromSupabase().then(() => renderEquipment()); })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'equip_status' }, () => { if (!isInitialLoad) loadStatusFromSupabase().then(() => renderEquipment()); })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'history_records' }, () => { if (!isInitialLoad) loadHistoryFromSupabase().then(() => renderHistory()); })
@@ -291,10 +297,10 @@
     }
     
     async function saveEquipmentToSupabase() {
-        await supabase.from('equipment_data').delete().neq('id', 0);
+        await supabaseClient.from('equipment_data').delete().neq('id', 0);
         for (let i = 0; i < equipmentData.length; i++) {
             const eq = equipmentData[i];
-            await supabase.from('equipment_data').insert({
+            await supabaseClient.from('equipment_data').insert({
                 asset_number: eq.assetNumber,
                 asset_desc: eq.assetDesc,
                 manufacturer: eq.manufacturer,
@@ -311,16 +317,16 @@
     }
     
     async function saveStatusToSupabase() {
-        await supabase.from('equip_status').delete().neq('id', 0);
+        await supabaseClient.from('equip_status').delete().neq('id', 0);
         for (const [key, status] of Object.entries(equipStatus)) {
-            await supabase.from('equip_status').insert({ equipment_key: key, status: status });
+            await supabaseClient.from('equip_status').insert({ equipment_key: key, status: status });
         }
     }
     
     async function saveHistoryToSupabase() {
-        await supabase.from('history_records').delete().neq('id', 0);
+        await supabaseClient.from('history_records').delete().neq('id', 0);
         for (const rec of historyRecords) {
-            await supabase.from('history_records').insert({
+            await supabaseClient.from('history_records').insert({
                 record_id: rec.id,
                 display_time: rec.displayTime,
                 status: rec.status,
@@ -341,9 +347,9 @@
     
     async function saveLogsToSupabase() {
         if (currentUserRole !== 'admin') return;
-        await supabase.from('db_logs').delete().neq('id', 0);
+        await supabaseClient.from('db_logs').delete().neq('id', 0);
         for (const log of dbLogs) {
-            await supabase.from('db_logs').insert({
+            await supabaseClient.from('db_logs').insert({
                 log_id: log.id,
                 timestamp: log.timestamp,
                 action: log.action,
@@ -361,13 +367,6 @@
         await saveHistoryToSupabase();
         await saveLogsToSupabase();
     }
-    
-    // Helper functions
-    function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
-    function formatTimestamp(isoString) { let d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; }
-    function getHKTime() { let now = new Date(); return new Date(now.getTime() + (480 + now.getTimezoneOffset()) * 60000); }
-    function setToday() { let hk = getHKTime(); document.getElementById("recordDatetime").value = hk.toISOString().slice(0, 16); }
-    function updateClock() { let hk = getHKTime(); document.getElementById("liveTime").innerHTML = hk.toLocaleTimeString('zh-HK', { hour12: false }); document.getElementById("liveDate").innerHTML = hk.toISOString().slice(0, 10).replace(/-/g, '/'); setTimeout(updateClock, 1000); }
     
     function rebuildFilters() {
         let locSet = new Set(), parentSet = new Set();
@@ -506,7 +505,7 @@
     
     function showFullRecordPreview(rec) {
         let modal = document.createElement("div"); modal.className = "modal-overlay";
-        let equipHtml = rec.equipmentDetails?.map(e => `</td><td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td><td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td><td style="border:1px solid #ddd; padding:8px;">${e.manufacturer}</td><td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td></tr>`).join('') || '<tr><td colspan="4">No details</td></tr>';
+        let equipHtml = rec.equipmentDetails?.map(e => `<tr><td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td><td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td><td style="border:1px solid #ddd; padding:8px;">${e.manufacturer}</td><td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td></tr>`).join('') || '<tr><td colspan="4">No details</td></tr>';
         let style = `
             body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; background: white; }
             .preview-header { background: linear-gradient(135deg, #0a2e3f, #166b5c); color: white; padding: 20px; border-radius: 16px; margin-bottom: 20px; }
@@ -682,7 +681,7 @@
     }
     
     async function login(username, password) {
-        const { data, error } = await supabase.from('users').select('*').eq('username', username).eq('password', password).single();
+        const { data, error } = await supabaseClient.from('users').select('*').eq('username', username).eq('password', password).single();
         if (data) {
             currentUser = username;
             currentUserRole = data.role;
@@ -720,7 +719,7 @@
             if (window.users[currentUser].password !== oldPwd) { alert("Current password incorrect"); return; }
             if (newPwd !== confirmPwd) { alert("New passwords do not match"); return; }
             if (newPwd.length < 3) { alert("Password too short"); return; }
-            const { error } = await supabase.from('users').update({ password: newPwd }).eq('username', currentUser);
+            const { error } = await supabaseClient.from('users').update({ password: newPwd }).eq('username', currentUser);
             if (!error) {
                 window.users[currentUser].password = newPwd;
                 alert("Password changed successfully");
@@ -812,7 +811,7 @@
         });
     }
     
-    // AI Assistant setup (same as original)
+    // AI Assistant setup
     let isDraggingAI = false, dragStartXAI, dragStartYAI;
     const aiAssistantDiv = document.getElementById('aiAssistant');
     const aiChatWin = document.getElementById('aiChatWindow');
@@ -853,6 +852,7 @@
             document.getElementById("loginError").innerText = "Invalid username or password";
         }
     };
+})();
 </script>
 </body>
 </html>
