@@ -100,6 +100,7 @@
         <input type="password" id="loginPassword" class="login-input" placeholder="Password">
         <button id="loginBtn" class="login-btn">🔓 Login to System</button>
         <div id="loginError" class="error-msg"></div>
+        <div id="connectionStatus" style="font-size:0.7rem; margin-top:10px;"></div>
     </div>
 </div>
 
@@ -155,7 +156,7 @@
         <div class="filter-bar"><input type="text" id="historySearch" placeholder="🔍 Filter"><select id="histFilterPurpose"><option value="">Job Type</option><option value="PM">PM</option><option value="CM">CM</option><option value="QA">QA</option><option value="AT">AT</option><option value="OTH">OTH</option></select><select id="histFilterStatus"><option value="">Status</option><option value="IN">IN</option><option value="OUT">OUT</option></select><select id="histFilterRecordStatus"><option value="">Record Status</option><option value="Verified">Verified</option><option value="Edited">Edited</option></select>
             <div style="display:flex; gap:8px; align-items:center;"><span style="font-size:0.7rem;">Sort by Date:</span><button id="sortHistoryAscBtn" class="btn btn-sm">⬆️ Ascending</button><button id="sortHistoryDescBtn" class="btn btn-sm">⬇️ Descending</button></div>
             <button id="resetHistoryFiltersBtn" class="btn">Reset</button><button id="exportBtn" class="btn-primary btn">📎 Export</button></div>
-        <div class="table-wrapper"><table style="min-width:950px;"><thead><tr><th>Timestamp</th><th>Equipment(s) Details</th><th>Status</th><th>Job Type</th><th>Purpose</th><th>ET/SET/Phy</th><th>Record Status</th><th>Edit History</th><th>Actions</th></tr></thead><tbody id="historyBody"></tbody></table></div>
+        <div class="table-wrapper"><table style="min-width:950px;"><thead><tr><th>Timestamp</th><th>Equipment(s) Details</th><th>Status</th><th>Job Type</th><th>Purpose</th><th>ET/SET/Phy</th><th>Record Status</th><th>Edit History</th><th>Actions</th></td></thead><tbody id="historyBody"></tbody></table></div>
     </div>
 
     <div id="dblogsPage" class="page">
@@ -186,6 +187,17 @@
     let dbLogsSortOrder = 'desc';
     let isInitialLoad = true;
     
+    function showConnectionStatus(message, isError = false) {
+        const statusDiv = document.getElementById("connectionStatus");
+        if (statusDiv) {
+            statusDiv.innerHTML = message;
+            statusDiv.style.color = isError ? "#dc3545" : "#28a745";
+            setTimeout(() => {
+                if (statusDiv.innerHTML === message) statusDiv.innerHTML = "";
+            }, 5000);
+        }
+    }
+    
     // Helper functions
     function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
     function formatTimestamp(isoString) { let d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; }
@@ -195,78 +207,107 @@
     
     // ======================== DATA SYNC FUNCTIONS ========================
     async function loadEquipmentFromSupabase() {
-        const { data, error } = await supabaseClient.from('equipment_data').select('*').order('id');
-        if (!error && data && data.length > 0) {
-            equipmentData = data.map(row => ({
-                assetNumber: row.asset_number || "",
-                assetDesc: row.asset_desc,
-                manufacturer: row.manufacturer || "",
-                parentAsset: row.parent_asset || "",
-                assetOwner: row.asset_owner || "",
-                serialNo: row.serial_no || "",
-                location: row.location || "",
-                poNumber: row.po_number || "",
-                acceptanceDate: row.acceptance_date || "",
-                calibrationDate: row.calibration_date || "",
-                currentDetail: row.current_detail || ""
-            }));
+        try {
+            const { data, error } = await supabaseClient.from('equipment_data').select('*').order('id');
+            if (error) throw error;
+            if (data && data.length > 0) {
+                equipmentData = data.map(row => ({
+                    assetNumber: row.asset_number || "",
+                    assetDesc: row.asset_desc,
+                    manufacturer: row.manufacturer || "",
+                    parentAsset: row.parent_asset || "",
+                    assetOwner: row.asset_owner || "",
+                    serialNo: row.serial_no || "",
+                    location: row.location || "",
+                    poNumber: row.po_number || "",
+                    acceptanceDate: row.acceptance_date || "",
+                    calibrationDate: row.calibration_date || "",
+                    currentDetail: row.current_detail || ""
+                }));
+            } else {
+                equipmentData = [];
+            }
+        } catch (err) {
+            console.error("Error loading equipment:", err);
+            showConnectionStatus("⚠️ Cannot load equipment data. Please ensure database tables are created.", true);
         }
         return equipmentData;
     }
     
     async function loadStatusFromSupabase() {
-        const { data, error } = await supabaseClient.from('equip_status').select('*');
-        if (!error && data) {
-            equipStatus = {};
-            data.forEach(row => { equipStatus[row.equipment_key] = row.status; });
+        try {
+            const { data, error } = await supabaseClient.from('equip_status').select('*');
+            if (error) throw error;
+            if (data) {
+                equipStatus = {};
+                data.forEach(row => { equipStatus[row.equipment_key] = row.status; });
+            }
+        } catch (err) {
+            console.error("Error loading status:", err);
         }
         return equipStatus;
     }
     
     async function loadHistoryFromSupabase() {
-        const { data, error } = await supabaseClient.from('history_records').select('*').order('created_at', { ascending: false });
-        if (!error && data) {
-            historyRecords = data.map(row => ({
-                id: row.record_id,
-                displayTime: row.display_time,
-                status: row.status,
-                jobType: row.job_type,
-                purpose: row.purpose,
-                et: row.et,
-                set: row.set_person,
-                physicist: row.physicist,
-                others: row.others,
-                remarks: row.remarks,
-                signature: row.signature,
-                recordStatus: row.record_status,
-                editHistory: row.edit_history || [],
-                equipmentDetails: row.equipment_details || []
-            }));
+        try {
+            const { data, error } = await supabaseClient.from('history_records').select('*').order('created_at', { ascending: false });
+            if (error) throw error;
+            if (data) {
+                historyRecords = data.map(row => ({
+                    id: row.record_id,
+                    displayTime: row.display_time,
+                    status: row.status,
+                    jobType: row.job_type,
+                    purpose: row.purpose,
+                    et: row.et,
+                    set: row.set_person,
+                    physicist: row.physicist,
+                    others: row.others,
+                    remarks: row.remarks,
+                    signature: row.signature,
+                    recordStatus: row.record_status,
+                    editHistory: row.edit_history || [],
+                    equipmentDetails: row.equipment_details || []
+                }));
+            }
+        } catch (err) {
+            console.error("Error loading history:", err);
         }
         return historyRecords;
     }
     
     async function loadLogsFromSupabase() {
         if (currentUserRole !== 'admin') return;
-        const { data, error } = await supabaseClient.from('db_logs').select('*').order('created_at', { ascending: false });
-        if (!error && data) {
-            dbLogs = data.map(row => ({
-                id: row.log_id,
-                timestamp: row.timestamp,
-                action: row.action,
-                recordId: row.record_id,
-                details: row.details,
-                user: row.user_name,
-                reason: row.reason
-            }));
+        try {
+            const { data, error } = await supabaseClient.from('db_logs').select('*').order('created_at', { ascending: false });
+            if (error) throw error;
+            if (data) {
+                dbLogs = data.map(row => ({
+                    id: row.log_id,
+                    timestamp: row.timestamp,
+                    action: row.action,
+                    recordId: row.record_id,
+                    details: row.details,
+                    user: row.user_name,
+                    reason: row.reason
+                }));
+            }
+        } catch (err) {
+            console.error("Error loading logs:", err);
         }
     }
     
     async function loadUsersFromSupabase() {
-        const { data, error } = await supabaseClient.from('users').select('*');
-        if (!error && data) {
-            window.users = {};
-            data.forEach(row => { window.users[row.username] = { password: row.password, role: row.role, canChangePassword: true }; });
+        try {
+            const { data, error } = await supabaseClient.from('users').select('*');
+            if (error) throw error;
+            if (data) {
+                window.users = {};
+                data.forEach(row => { window.users[row.username] = { password: row.password, role: row.role, canChangePassword: true }; });
+            }
+        } catch (err) {
+            console.error("Error loading users:", err);
+            showConnectionStatus("⚠️ Cannot connect to database. Please check if Supabase tables are created.", true);
         }
     }
     
@@ -288,76 +329,97 @@
     
     // Real-time subscriptions
     function subscribeToRealtime() {
-        supabaseClient.channel('equipment_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'equipment_data' }, () => { if (!isInitialLoad) loadEquipmentFromSupabase().then(() => renderEquipment()); })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'equip_status' }, () => { if (!isInitialLoad) loadStatusFromSupabase().then(() => renderEquipment()); })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'history_records' }, () => { if (!isInitialLoad) loadHistoryFromSupabase().then(() => renderHistory()); })
-            .subscribe();
+        try {
+            supabaseClient.channel('equipment_changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'equipment_data' }, () => { if (!isInitialLoad) loadEquipmentFromSupabase().then(() => renderEquipment()); })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'equip_status' }, () => { if (!isInitialLoad) loadStatusFromSupabase().then(() => renderEquipment()); })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'history_records' }, () => { if (!isInitialLoad) loadHistoryFromSupabase().then(() => renderHistory()); })
+                .subscribe();
+        } catch (err) {
+            console.error("Realtime subscription error:", err);
+        }
         isInitialLoad = false;
     }
     
     async function saveEquipmentToSupabase() {
-        await supabaseClient.from('equipment_data').delete().neq('id', 0);
-        for (let i = 0; i < equipmentData.length; i++) {
-            const eq = equipmentData[i];
-            await supabaseClient.from('equipment_data').insert({
-                asset_number: eq.assetNumber,
-                asset_desc: eq.assetDesc,
-                manufacturer: eq.manufacturer,
-                parent_asset: eq.parentAsset,
-                asset_owner: eq.assetOwner,
-                serial_no: eq.serialNo,
-                location: eq.location,
-                po_number: eq.poNumber,
-                acceptance_date: eq.acceptanceDate,
-                calibration_date: eq.calibrationDate,
-                current_detail: eq.currentDetail
-            });
+        if (equipmentData.length === 0) return;
+        try {
+            await supabaseClient.from('equipment_data').delete().neq('id', 0);
+            for (let i = 0; i < equipmentData.length; i++) {
+                const eq = equipmentData[i];
+                await supabaseClient.from('equipment_data').insert({
+                    asset_number: eq.assetNumber,
+                    asset_desc: eq.assetDesc,
+                    manufacturer: eq.manufacturer,
+                    parent_asset: eq.parentAsset,
+                    asset_owner: eq.assetOwner,
+                    serial_no: eq.serialNo,
+                    location: eq.location,
+                    po_number: eq.poNumber,
+                    acceptance_date: eq.acceptanceDate,
+                    calibration_date: eq.calibrationDate,
+                    current_detail: eq.currentDetail
+                });
+            }
+        } catch (err) {
+            console.error("Error saving equipment:", err);
         }
     }
     
     async function saveStatusToSupabase() {
-        await supabaseClient.from('equip_status').delete().neq('id', 0);
-        for (const [key, status] of Object.entries(equipStatus)) {
-            await supabaseClient.from('equip_status').insert({ equipment_key: key, status: status });
+        try {
+            await supabaseClient.from('equip_status').delete().neq('id', 0);
+            for (const [key, status] of Object.entries(equipStatus)) {
+                await supabaseClient.from('equip_status').insert({ equipment_key: key, status: status });
+            }
+        } catch (err) {
+            console.error("Error saving status:", err);
         }
     }
     
     async function saveHistoryToSupabase() {
-        await supabaseClient.from('history_records').delete().neq('id', 0);
-        for (const rec of historyRecords) {
-            await supabaseClient.from('history_records').insert({
-                record_id: rec.id,
-                display_time: rec.displayTime,
-                status: rec.status,
-                job_type: rec.jobType,
-                purpose: rec.purpose,
-                et: rec.et,
-                set_person: rec.set,
-                physicist: rec.physicist,
-                others: rec.others,
-                remarks: rec.remarks,
-                signature: rec.signature,
-                record_status: rec.recordStatus,
-                edit_history: rec.editHistory || [],
-                equipment_details: rec.equipmentDetails || []
-            });
+        try {
+            await supabaseClient.from('history_records').delete().neq('id', 0);
+            for (const rec of historyRecords) {
+                await supabaseClient.from('history_records').insert({
+                    record_id: rec.id,
+                    display_time: rec.displayTime,
+                    status: rec.status,
+                    job_type: rec.jobType,
+                    purpose: rec.purpose,
+                    et: rec.et,
+                    set_person: rec.set,
+                    physicist: rec.physicist,
+                    others: rec.others,
+                    remarks: rec.remarks,
+                    signature: rec.signature,
+                    record_status: rec.recordStatus,
+                    edit_history: rec.editHistory || [],
+                    equipment_details: rec.equipmentDetails || []
+                });
+            }
+        } catch (err) {
+            console.error("Error saving history:", err);
         }
     }
     
     async function saveLogsToSupabase() {
         if (currentUserRole !== 'admin') return;
-        await supabaseClient.from('db_logs').delete().neq('id', 0);
-        for (const log of dbLogs) {
-            await supabaseClient.from('db_logs').insert({
-                log_id: log.id,
-                timestamp: log.timestamp,
-                action: log.action,
-                record_id: log.recordId,
-                details: log.details,
-                user_name: log.user,
-                reason: log.reason
-            });
+        try {
+            await supabaseClient.from('db_logs').delete().neq('id', 0);
+            for (const log of dbLogs) {
+                await supabaseClient.from('db_logs').insert({
+                    log_id: log.id,
+                    timestamp: log.timestamp,
+                    action: log.action,
+                    record_id: log.recordId,
+                    details: log.details,
+                    user_name: log.user,
+                    reason: log.reason
+                });
+            }
+        } catch (err) {
+            console.error("Error saving logs:", err);
         }
     }
     
@@ -366,6 +428,7 @@
         await saveStatusToSupabase();
         await saveHistoryToSupabase();
         await saveLogsToSupabase();
+        alert("Data saved to cloud successfully!");
     }
     
     function rebuildFilters() {
@@ -577,7 +640,6 @@
             record.recordStatus = "Edited";
             await fullSyncToCloud();
             renderHistory();
-            addLog("RECORD_EDITED", record.id, `Record edited by ${editPerson} - ${record.equipmentDetails?.map(e => e.assetDesc).join(", ")}`, editPerson, editReason);
             modal.remove(); alert("Record updated with edit history.");
         };
     }
@@ -601,14 +663,6 @@
             row.insertCell(5).innerText = formatTimestamp(l.timestamp);
             row.insertCell(6).innerText = l.reason || '-';
         });
-    }
-    
-    function addLog(action, recordId, details, user, reason) {
-        let log = { id: Date.now(), timestamp: getHKTime().toISOString(), action, recordId, details, user: user || currentUser, reason };
-        dbLogs.unshift(log);
-        if (dbLogs.length > 500) dbLogs.pop();
-        fullSyncToCloud();
-        if (currentUserRole === "admin") renderDbLogs();
     }
     
     async function backupWithOptions() {
@@ -681,22 +735,31 @@
     }
     
     async function login(username, password) {
-        const { data, error } = await supabaseClient.from('users').select('*').eq('username', username).eq('password', password).single();
-        if (data) {
-            currentUser = username;
-            currentUserRole = data.role;
-            sessionStorage.setItem("loggedUser", username);
-            sessionStorage.setItem("loggedRole", data.role);
-            document.getElementById("loginPage").style.display = "none";
-            document.getElementById("appContainer").classList.add("visible");
-            if (currentUserRole === "super") document.getElementById("dblogsTab").style.display = "none";
-            else document.getElementById("dblogsTab").style.display = "block";
-            await syncAllData();
-            subscribeToRealtime();
-            initUI();
-            return true;
+        try {
+            const { data, error } = await supabaseClient.from('users').select('*').eq('username', username).eq('password', password);
+            if (error) throw error;
+            if (data && data.length > 0) {
+                currentUser = username;
+                currentUserRole = data[0].role;
+                sessionStorage.setItem("loggedUser", username);
+                sessionStorage.setItem("loggedRole", data[0].role);
+                document.getElementById("loginPage").style.display = "none";
+                document.getElementById("appContainer").classList.add("visible");
+                if (currentUserRole === "super") document.getElementById("dblogsTab").style.display = "none";
+                else document.getElementById("dblogsTab").style.display = "block";
+                await syncAllData();
+                subscribeToRealtime();
+                initUI();
+                return true;
+            } else {
+                showConnectionStatus("Invalid username or password", true);
+                return false;
+            }
+        } catch (err) {
+            console.error("Login error:", err);
+            showConnectionStatus("Database connection error. Please ensure tables are created.", true);
+            return false;
         }
-        return false;
     }
     
     function accountManagement() {
