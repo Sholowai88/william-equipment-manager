@@ -11,7 +11,6 @@
         body { background: #eef2f9; padding: 16px; min-height: 100vh; }
         .app-container { max-width: 1600px; margin: 0 auto; background: white; border-radius: 28px; box-shadow: 0 12px 30px rgba(0,0,0,0.08); overflow: hidden; display: none; }
         .app-container.visible { display: block; }
-        
         .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0a2e3f 0%, #1a5c6e 50%, #0f2c3f 100%); position: relative; overflow: hidden; }
         .login-container::before { content: ""; position: absolute; width: 200%; height: 200%; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.05"><path fill="white" d="M20,20 L30,20 L25,28 Z M50,50 L60,50 L55,58 Z M80,80 L90,80 L85,88 Z"/><circle cx="70" cy="30" r="4"/><circle cx="30" cy="70" r="3"/></svg>') repeat; animation: scan 20s linear infinite; }
         @keyframes scan { 0% { transform: translate(0,0); } 100% { transform: translate(100px,100px); } }
@@ -25,7 +24,6 @@
         .login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #0a2e3f, #1a5c6e); color: white; border: none; border-radius: 60px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-top: 20px; }
         .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); background: linear-gradient(135deg, #1a5c6e, #0a2e3f); }
         .error-msg { color: #dc3545; font-size: 0.85rem; margin-top: 15px; background: #ffe0db; padding: 10px; border-radius: 30px; }
-        
         .ai-assistant { position: fixed; bottom: 30px; right: 30px; cursor: pointer; z-index: 1000; transition: all 0.2s ease; }
         .ai-avatar { width: 70px; height: 70px; background: linear-gradient(135deg, #166b5c, #0a2e3f); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.2); transition: all 0.3s; border: 3px solid white; animation: pulse 2s infinite; }
         .ai-avatar:hover { transform: scale(1.1); }
@@ -45,7 +43,6 @@
         .ai-input-area { display: flex; padding: 12px; border-top: 1px solid #e2e8f0; background: white; gap: 8px; }
         .ai-input-area input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 40px; outline: none; font-size: 0.8rem; }
         .ai-input-area button { background: #166b5c; border: none; color: white; padding: 8px 16px; border-radius: 40px; cursor: pointer; }
-        
         .header { background: linear-gradient(135deg, #0a2e3f, #166b5c); padding: 18px 24px; color: white; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
         .title-section h1 { font-size: 1.4rem; font-weight: 700; }
         .title-section .subtitle { font-size: 0.7rem; opacity: 0.85; margin-top: 4px; }
@@ -56,19 +53,16 @@
         .action-group button { background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 14px; border-radius: 40px; font-size: 0.7rem; cursor: pointer; transition: 0.2s; }
         .action-group button:hover { background: rgba(255,255,255,0.3); }
         .sync-status { font-size: 0.65rem; background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 20px; margin-left: 10px; }
-        
         .tabs { display: flex; gap: 0; background: #e2e8f0; padding: 0 20px; overflow-x: auto; }
         .tab { padding: 12px 24px; font-weight: 600; background: transparent; border: none; cursor: pointer; font-size: 0.85rem; color: #2d3748; border-radius: 20px 20px 0 0; }
         .tab.active { background: white; color: #166b5c; border-bottom: 3px solid #166b5c; }
         .page { display: none; padding: 24px; background: #ffffff; }
         .page.active { display: block; }
-        
         .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: white; padding: 10px 16px; border-radius: 60px; margin-bottom: 20px; border: 1px solid #e0e7ef; }
         .filter-bar input, .filter-bar select { padding: 8px 14px; border-radius: 40px; border: 1px solid #cbd5e1; background: white; font-size: 0.75rem; flex: 1 1 120px; }
         .btn { background: #eef2f6; border: none; border-radius: 40px; padding: 6px 16px; font-weight: 500; cursor: pointer; font-size: 0.7rem; transition: 0.2s; }
         .btn-primary { background: #166b5c; color: white; }
         .btn-sm { padding: 4px 12px; font-size: 0.65rem; }
-        
         .table-wrapper { overflow-x: auto; border-radius: 20px; border: 1px solid #e2e8f0; background: white; max-height: 550px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 0.7rem; min-width: 800px; }
         th { background: #f1f5f9; padding: 12px 8px; font-weight: 600; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; }
@@ -77,7 +71,6 @@
         .status-in { background: #00a86b; color: white; }
         .status-out { background: #dc3545; color: white; }
         .checkbox-select { transform: scale(1.1); cursor: pointer; }
-        
         .flex-form { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 16px; }
         .form-group { flex: 1; min-width: 130px; }
         .form-group label { font-size: 0.65rem; font-weight: 600; color: #2c4d5e; display: block; margin-bottom: 4px; }
@@ -85,7 +78,6 @@
         .multi-select { height: auto; min-height: 80px; }
         canvas { border: 1px solid #cbd5e1; background: white; border-radius: 16px; cursor: crosshair; width: 100%; max-width: 380px; height: auto; }
         .warning-box { background: #fff3e0; border-left: 4px solid #e67e22; padding: 10px; border-radius: 12px; margin: 10px 0; font-size: 0.7rem; display: none; }
-        
         .modal-overlay { position: fixed; top:0;left:0;width:100%;height:100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
         .modal-card { background: white; color: #1a2a3a; max-width: 750px; width: 90%; max-height: 85vh; overflow-y: auto; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
         .modal-card h3 { color: #166b5c; margin-bottom: 16px; border-bottom: 2px solid #166b5c; padding-bottom: 8px; }
@@ -95,7 +87,6 @@
         .detail-item strong { display: block; font-size: 0.7rem; color: #166b5c; margin-bottom: 4px; }
         .detail-item span { font-size: 0.8rem; color: #1a2a3a; word-break: break-word; }
         .edit-history-item { background: #f1f5f9; padding: 8px; border-radius: 8px; margin-bottom: 6px; font-size: 0.7rem; }
-        
         @media (max-width: 768px) { .page { padding: 16px; } .tab { padding: 10px 16px; font-size: 0.7rem; } .details-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -157,538 +148,539 @@
         <div class="filter-bar"><input type="text" id="dbLogSearch" placeholder="🔍 Filter logs"><select id="dbLogActionFilter"><option value="">All Actions</option><option value="RECORD_CREATED">Record Created</option><option value="RECORD_EDITED">Record Edited</option><option value="EQUIPMENT_ADDED">Equipment Added</option><option value="EQUIPMENT_EDITED">Equipment Edited</option></select>
             <div style="display:flex; gap:8px; align-items:center;"><span style="font-size:0.7rem;">Sort by Date:</span><button id="sortDbLogsAscBtn" class="btn btn-sm">⬆️ Ascending</button><button id="sortDbLogsDescBtn" class="btn btn-sm">⬇️ Descending</button></div>
             <button id="resetDbLogsBtn" class="btn">Reset</button><button id="exportDbLogsBtn" class="btn-primary btn">📎 Export Logs</button></div>
-        <div class="table-wrapper"><table style="min-width:900px;"><thead><tr><th>Timestamp</th><th>Action Type</th><th>Record ID</th><th>Equipment/Details</th><th>User</th><th>Timestamp of Action</th><th>Reason/Note</th></tr></thead><tbody id="dbLogsBody"></tbody></table></div>
+        <div class="table-wrapper"><table style="min-width:900px;"><thead><tr><th>Timestamp</th><th>Action Type</th><th>Record ID</th><th>Equipment/Details</th><th>User</th><th>Timestamp of Action</th><th>Reason/Note</th></tr></thead><tbody id="dbLogsBody"></tbody></td></div>
     </div>
 </div>
 
 <script>
-const supabaseUrl = 'https://qhuqlhzvpmhykkmmqtth.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodXFsaHp2cG1oeWtrbW1xdHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTM0OTQsImV4cCI6MjA5Njc4OTQ5NH0.pTTY4irj4vx-us8W1DyYaEB6ug_wEjuwNdy0lJjh_-8';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
-
-let currentUser = null, currentUserRole = null;
-let equipmentData = [], equipStatus = {}, historyRecords = [], dbLogs = [];
-let selectedAssetsSet = new Set();
-const etNames = ["Heung","Andy","Vincent","William","Pal","Joe","Richard","Ray"];
-let historySortOrder = 'desc', dbLogsSortOrder = 'desc';
-
-function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
-function formatTimestamp(isoString) { let d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; }
-function getHKTime() { let now = new Date(); return new Date(now.getTime() + (480 + now.getTimezoneOffset()) * 60000); }
-function setToday() { let hk = getHKTime(); document.getElementById("recordDatetime").value = hk.toISOString().slice(0, 16); }
-function updateClock() { let hk = getHKTime(); document.getElementById("liveTime").innerHTML = hk.toLocaleTimeString('zh-HK', { hour12: false }); document.getElementById("liveDate").innerHTML = hk.toISOString().slice(0, 10).replace(/-/g, '/'); setTimeout(updateClock, 1000); }
-
-async function loadEquipment() {
-    const { data } = await supabase.from('equipment_data').select('*');
-    if (data && data.length > 0) equipmentData = data.map(row => ({
-        assetNumber: row.asset_number || "", assetDesc: row.asset_desc, manufacturer: row.manufacturer || "",
-        parentAsset: row.parent_asset || "", assetOwner: row.asset_owner || "", serialNo: row.serial_no || "",
-        location: row.location || "", poNumber: row.po_number || "", acceptanceDate: row.acceptance_date || "",
-        calibrationDate: row.calibration_date || "", currentDetail: row.current_detail || ""
-    }));
-}
-
-async function loadStatus() {
-    const { data } = await supabase.from('equip_status').select('*');
-    if (data) { equipStatus = {}; data.forEach(row => { equipStatus[row.equipment_key] = row.status; }); }
-}
-
-async function loadHistory() {
-    const { data } = await supabase.from('history_records').select('*').order('created_at', { ascending: false });
-    if (data) historyRecords = data.map(row => ({
-        id: row.record_id, displayTime: row.display_time, status: row.status, jobType: row.job_type,
-        purpose: row.purpose, et: row.et, set: row.set_person, physicist: row.physicist,
-        others: row.others, remarks: row.remarks, signature: row.signature,
-        recordStatus: row.record_status, editHistory: row.edit_history || [],
-        equipmentDetails: row.equipment_details || []
-    }));
-}
-
-async function loadDbLogs() {
-    if (currentUserRole !== 'admin') return;
-    const { data } = await supabase.from('db_logs').select('*').order('created_at', { ascending: false });
-    if (data) dbLogs = data.map(row => ({
-        id: row.log_id, timestamp: row.timestamp, action: row.action, recordId: row.record_id,
-        details: row.details, user: row.user_name, reason: row.reason
-    }));
-}
-
-async function addLog(action, recordId, details, user, reason) {
-    const log = { id: Date.now(), timestamp: getHKTime().toISOString(), action, recordId, details, user: user || currentUser, reason };
-    dbLogs.unshift(log);
-    if (dbLogs.length > 500) dbLogs.pop();
-    if (currentUserRole === 'admin') await supabase.from('db_logs').insert({
-        log_id: log.id, timestamp: log.timestamp, action, record_id: recordId, details, user_name: log.user, reason
-    });
-}
-
-async function syncAll() {
-    document.getElementById("syncStatus").innerHTML = "🔄 Syncing...";
-    await Promise.all([loadEquipment(), loadStatus(), loadHistory(), loadDbLogs()]);
-    rebuildFilters(); renderEquipment(); renderHistory(); if (currentUserRole === 'admin') renderDbLogs();
-    document.getElementById("syncStatus").innerHTML = "🟢 Live Sync";
-}
-
-async function fullSyncToCloud() {
-    await supabase.from('equipment_data').delete().neq('id', 0);
-    for (const eq of equipmentData) {
-        await supabase.from('equipment_data').insert({
-            asset_number: eq.assetNumber, asset_desc: eq.assetDesc, manufacturer: eq.manufacturer,
-            parent_asset: eq.parentAsset, asset_owner: eq.assetOwner, serial_no: eq.serialNo,
-            location: eq.location, po_number: eq.poNumber, acceptance_date: eq.acceptanceDate,
-            calibration_date: eq.calibrationDate, current_detail: eq.currentDetail
-        });
+(function() {
+    // Supabase configuration
+    const supabaseUrl = 'https://qhuqlhzvpmhykkmmqtth.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodXFsaHp2cG1oeWtrbW1xdHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTM0OTQsImV4cCI6MjA5Njc4OTQ5NH0.pTTY4irj4vx-us8W1DyYaEB6ug_wEjuwNdy0lJjh_-8';
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    
+    // Global state
+    let currentUser = null;
+    let currentUserRole = null;
+    let equipmentData = [];
+    let equipStatus = {};
+    let historyRecords = [];
+    let dbLogs = [];
+    let selectedAssetsSet = new Set();
+    const etNames = ["Heung","Andy","Vincent","William","Pal","Joe","Richard","Ray"];
+    let historySortOrder = 'desc';
+    let dbLogsSortOrder = 'desc';
+    let isInitialLoad = true;
+    
+    // Helper functions
+    function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
+    function formatTimestamp(isoString) { let d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; }
+    function getHKTime() { let now = new Date(); return new Date(now.getTime() + (480 + now.getTimezoneOffset()) * 60000); }
+    function setToday() { let hk = getHKTime(); document.getElementById("recordDatetime").value = hk.toISOString().slice(0, 16); }
+    function updateClock() { let hk = getHKTime(); document.getElementById("liveTime").innerHTML = hk.toLocaleTimeString('zh-HK', { hour12: false }); document.getElementById("liveDate").innerHTML = hk.toISOString().slice(0, 10).replace(/-/g, '/'); setTimeout(updateClock, 1000); }
+    
+    // Data loading functions
+    async function loadEquipment() {
+        const { data } = await supabaseClient.from('equipment_data').select('*');
+        if (data && data.length > 0) {
+            equipmentData = data.map(row => ({
+                assetNumber: row.asset_number || "", assetDesc: row.asset_desc, manufacturer: row.manufacturer || "",
+                parentAsset: row.parent_asset || "", assetOwner: row.asset_owner || "", serialNo: row.serial_no || "",
+                location: row.location || "", poNumber: row.po_number || "", acceptanceDate: row.acceptance_date || "",
+                calibrationDate: row.calibration_date || "", currentDetail: row.current_detail || ""
+            }));
+        }
     }
-    await supabase.from('equip_status').delete().neq('id', 0);
-    for (const [key, status] of Object.entries(equipStatus)) {
-        await supabase.from('equip_status').insert({ equipment_key: key, status });
+    
+    async function loadStatus() {
+        const { data } = await supabaseClient.from('equip_status').select('*');
+        if (data) { equipStatus = {}; data.forEach(row => { equipStatus[row.equipment_key] = row.status; }); }
     }
-    await supabase.from('history_records').delete().neq('id', 0);
-    for (const rec of historyRecords) {
-        await supabase.from('history_records').insert({
-            record_id: rec.id, display_time: rec.displayTime, status: rec.status, job_type: rec.jobType,
-            purpose: rec.purpose, et: rec.et, set_person: rec.set, physicist: rec.physicist,
-            others: rec.others, remarks: rec.remarks, signature: rec.signature,
-            record_status: rec.recordStatus, edit_history: rec.editHistory || [],
-            equipment_details: rec.equipmentDetails || []
-        });
+    
+    async function loadHistory() {
+        const { data } = await supabaseClient.from('history_records').select('*').order('created_at', { ascending: false });
+        if (data) {
+            historyRecords = data.map(row => ({
+                id: row.record_id, displayTime: row.display_time, status: row.status, jobType: row.job_type,
+                purpose: row.purpose, et: row.et, set: row.set_person, physicist: row.physicist,
+                others: row.others, remarks: row.remarks, signature: row.signature,
+                recordStatus: row.record_status, editHistory: row.edit_history || [],
+                equipmentDetails: row.equipment_details || []
+            }));
+        }
     }
-    if (currentUserRole === 'admin') {
-        await supabase.from('db_logs').delete().neq('id', 0);
-        for (const log of dbLogs) {
-            await supabase.from('db_logs').insert({
-                log_id: log.id, timestamp: log.timestamp, action: log.action, record_id: log.recordId,
-                details: log.details, user_name: log.user, reason: log.reason
+    
+    async function loadDbLogs() {
+        if (currentUserRole !== 'admin') return;
+        const { data } = await supabaseClient.from('db_logs').select('*').order('created_at', { ascending: false });
+        if (data) {
+            dbLogs = data.map(row => ({
+                id: row.log_id, timestamp: row.timestamp, action: row.action, recordId: row.record_id,
+                details: row.details, user: row.user_name, reason: row.reason
+            }));
+        }
+    }
+    
+    async function syncAll() {
+        document.getElementById("syncStatus").innerHTML = "🔄 Syncing...";
+        await Promise.all([loadEquipment(), loadStatus(), loadHistory(), loadDbLogs()]);
+        rebuildFilters(); renderEquipment(); renderHistory(); if (currentUserRole === 'admin') renderDbLogs();
+        document.getElementById("syncStatus").innerHTML = "🟢 Live Sync";
+    }
+    
+    async function fullSyncToCloud() {
+        await supabaseClient.from('equipment_data').delete().neq('id', 0);
+        for (const eq of equipmentData) {
+            await supabaseClient.from('equipment_data').insert({
+                asset_number: eq.assetNumber, asset_desc: eq.assetDesc, manufacturer: eq.manufacturer,
+                parent_asset: eq.parentAsset, asset_owner: eq.assetOwner, serial_no: eq.serialNo,
+                location: eq.location, po_number: eq.poNumber, acceptance_date: eq.acceptanceDate,
+                calibration_date: eq.calibrationDate, current_detail: eq.currentDetail
             });
         }
-    }
-}
-
-function rebuildFilters() {
-    let locSet = new Set(), parentSet = new Set();
-    equipmentData.forEach(e => { if (e.location) locSet.add(e.location); if (e.parentAsset) parentSet.add(e.parentAsset); });
-    document.getElementById("filterLocation").innerHTML = '<option value="">All Locations</option>' + [...locSet].sort().map(l => `<option value="${l}">${l}</option>`).join('');
-    document.getElementById("filterParentAsset").innerHTML = '<option value="">All Parent Assets</option>' + [...parentSet].sort().map(p => `<option value="${p}">${p}</option>`).join('');
-}
-
-function renderEquipment() {
-    let search = document.getElementById("equipSearch").value.toLowerCase();
-    let loc = document.getElementById("filterLocation").value, parent = document.getElementById("filterParentAsset").value, statFilter = document.getElementById("filterStatus").value;
-    let filtered = equipmentData.filter(eq => (eq.assetNumber?.toLowerCase().includes(search) || eq.assetDesc?.toLowerCase().includes(search) || eq.manufacturer?.toLowerCase().includes(search) || eq.serialNo?.toLowerCase().includes(search)) && (loc ? eq.location === loc : true) && (parent ? eq.parentAsset === parent : true));
-    filtered = filtered.filter(eq => statFilter ? (equipStatus[getKey(eq)] === statFilter) : true);
-    const tbody = document.getElementById("equipTableBody"); tbody.innerHTML = "";
-    filtered.forEach(eq => {
-        let key = getKey(eq); let status = equipStatus[key] || "IN"; let row = tbody.insertRow();
-        let selectCell = row.insertCell(0); let chk = document.createElement("input"); chk.type = "checkbox"; chk.className = "checkbox-select"; chk.dataset.key = key; chk.checked = selectedAssetsSet.has(key); chk.onclick = (e) => e.stopPropagation(); selectCell.appendChild(chk);
-        row.insertCell(1).innerText = eq.assetNumber || "-"; row.insertCell(2).innerText = eq.assetDesc; row.insertCell(3).innerText = eq.manufacturer; row.insertCell(4).innerText = eq.serialNo || "-";
-        row.insertCell(5).innerText = eq.location || "-"; row.insertCell(6).innerText = eq.parentAsset || "-";
-        row.insertCell(7).innerHTML = `<span class="status-badge ${status === 'IN' ? 'status-in' : 'status-out'}">${status}</span>`;
-        let actionCell = row.insertCell(8);
-        let showBtn = document.createElement("button"); showBtn.innerText = "📋 Show"; showBtn.className = "btn btn-sm"; showBtn.onclick = () => showEquipmentDetail(eq);
-        let editBtn = document.createElement("button"); editBtn.innerText = "✏️ Edit"; editBtn.className = "btn btn-sm"; editBtn.onclick = () => editEquipmentDialog(eq);
-        actionCell.append(showBtn, editBtn);
-        if (currentUserRole === "admin") {
-            let statBtn = document.createElement("button"); statBtn.innerText = "📊 Stat"; statBtn.className = "btn btn-sm"; statBtn.style.background = "#e67e22"; statBtn.style.color = "white"; statBtn.onclick = () => showEquipmentStats(eq);
-            actionCell.appendChild(statBtn);
+        await supabaseClient.from('equip_status').delete().neq('id', 0);
+        for (const [key, status] of Object.entries(equipStatus)) {
+            await supabaseClient.from('equip_status').insert({ equipment_key: key, status });
         }
-    });
-    attachCheckboxEvents(); updateSelectedDisplay(); renderSelectedList();
-}
-
-function attachCheckboxEvents() { document.querySelectorAll('.checkbox-select').forEach(cb => { cb.onchange = () => { let k = cb.dataset.key; if (cb.checked) selectedAssetsSet.add(k); else selectedAssetsSet.delete(k); updateSelectedDisplay(); renderSelectedList(); }; }); }
-function updateSelectedDisplay() { document.getElementById("selectedCountBadge").innerText = `${selectedAssetsSet.size} selected`; }
-function renderSelectedList() { let selected = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq))); document.getElementById("selectedEquipList").innerHTML = selected.map(eq => `• ${eq.assetNumber || eq.assetDesc} - ${eq.assetDesc} (${equipStatus[getKey(eq)]})`).join("<br>") || "None selected"; }
-
-function showEquipmentDetail(eq) {
-    let modal = document.createElement("div"); modal.className = "modal-overlay";
-    modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>🔧 Equipment Details</h3><div class="details-grid">${Object.entries(eq).map(([k, v]) => `<div class="detail-item"><strong>${k.replace(/([A-Z])/g, ' $1').trim()}:</strong><span>${v || '-'}</span></div>`).join('')}</div></div>`;
-    document.body.appendChild(modal); modal.querySelector(".close-modal").onclick = () => modal.remove();
-}
-
-async function editEquipmentDialog(eq) {
-    let newDesc = prompt("Edit Description:", eq.assetDesc);
-    if (newDesc && newDesc.trim()) eq.assetDesc = newDesc.trim();
-    let newLoc = prompt("Edit Location:", eq.location);
-    if (newLoc !== null) eq.location = newLoc;
-    await fullSyncToCloud();
-    renderEquipment();
-    alert("Equipment updated!");
-}
-
-async function addNewEquipment() {
-    let newDesc = prompt("Enter Asset Description:");
-    if (!newDesc) return;
-    let newEq = { assetNumber: "", assetDesc: newDesc, manufacturer: "", parentAsset: "", assetOwner: "", serialNo: "", location: "", poNumber: "", acceptanceDate: "", calibrationDate: "", currentDetail: "" };
-    equipmentData.push(newEq);
-    equipStatus[getKey(newEq)] = "IN";
-    await fullSyncToCloud();
-    renderEquipment();
-    alert("Equipment added!");
-}
-
-function showEquipmentStats(eq) {
-    let usageRecords = historyRecords.filter(r => r.equipmentDetails?.some(d => d.key === getKey(eq)));
-    let etUsage = {};
-    usageRecords.forEach(r => { if (r.et) { r.et.split(", ").forEach(et => { etUsage[et] = (etUsage[et] || 0) + 1; }); } });
-    let modal = document.createElement("div"); modal.className = "modal-overlay";
-    modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>📊 Equipment Usage Statistics: ${eq.assetDesc}</h3><div style="margin-top:15px;">Total Transactions: ${usageRecords.length}<br><br>ET Usage: ${Object.entries(etUsage).map(([k, v]) => `${k}: ${v}`).join(', ') || 'None'}</div></div>`;
-    document.body.appendChild(modal); modal.querySelector(".close-modal").onclick = () => modal.remove();
-}
-
-const canvas = document.getElementById("signatureCanvas"), ctx = canvas.getContext("2d"); let drawing = false;
-function initCanvas() { canvas.width = 400; canvas.height = 100; ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = "#166b5c"; ctx.lineWidth = 2; }
-function clearCanvas() { ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
-function getXY(e) { let rect = canvas.getBoundingClientRect(), sx = canvas.width / rect.width, sy = canvas.height / rect.height; let cx = (e.touches ? e.touches[0].clientX : e.clientX), cy = (e.touches ? e.touches[0].clientY : e.clientY); return { x: (cx - rect.left) * sx, y: (cy - rect.top) * sy }; }
-function startDraw(e) { drawing = true; let { x, y } = getXY(e); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); }
-function drawMove(e) { if (!drawing) return; let { x, y } = getXY(e); ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); }
-function endDraw() { drawing = false; ctx.beginPath(); }
-canvas.addEventListener("mousedown", startDraw); canvas.addEventListener("mousemove", drawMove); canvas.addEventListener("mouseup", endDraw); canvas.addEventListener("touchstart", startDraw); canvas.addEventListener("touchmove", drawMove); canvas.addEventListener("touchend", endDraw);
-
-function validateStatusSelection() {
-    let selected = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq)));
-    let desiredStatus = document.getElementById("inOutStatus").value;
-    let conflictItems = selected.filter(eq => equipStatus[getKey(eq)] === desiredStatus);
-    if (conflictItems.length > 0) {
-        let conflictNames = conflictItems.map(eq => eq.assetDesc || eq.assetNumber).join(", ");
-        document.getElementById("statusWarning").innerHTML = `⚠️ Cannot perform "${desiredStatus}" on equipment(s) that already have status "${desiredStatus}": ${conflictNames}`;
-        document.getElementById("statusWarning").style.display = "block";
-        return false;
+        await supabaseClient.from('history_records').delete().neq('id', 0);
+        for (const rec of historyRecords) {
+            await supabaseClient.from('history_records').insert({
+                record_id: rec.id, display_time: rec.displayTime, status: rec.status, job_type: rec.jobType,
+                purpose: rec.purpose, et: rec.et, set_person: rec.set, physicist: rec.physicist,
+                others: rec.others, remarks: rec.remarks, signature: rec.signature,
+                record_status: rec.recordStatus, edit_history: rec.editHistory || [],
+                equipment_details: rec.equipmentDetails || []
+            });
+        }
+        if (currentUserRole === 'admin') {
+            await supabaseClient.from('db_logs').delete().neq('id', 0);
+            for (const log of dbLogs) {
+                await supabaseClient.from('db_logs').insert({
+                    log_id: log.id, timestamp: log.timestamp, action: log.action, record_id: log.recordId,
+                    details: log.details, user_name: log.user, reason: log.reason
+                });
+            }
+        }
     }
-    document.getElementById("statusWarning").style.display = "none";
-    return true;
-}
-
-async function saveRecord() {
-    if (selectedAssetsSet.size === 0) { alert("No equipment selected."); return; }
-    if (!validateStatusSelection()) { alert("Status conflict: Cannot proceed."); return; }
-    let dt = document.getElementById("recordDatetime").value, newStatus = document.getElementById("inOutStatus").value, jobType = document.getElementById("jobType").value, purpose = document.getElementById("purposeInput").value.trim();
-    if (!dt || !jobType || !purpose || !document.getElementById("etSelect").selectedOptions.length || !document.getElementById("setSelect").value || !document.getElementById("phySelect").value) { alert("All mandatory fields required"); return; }
-    if (canvas.toDataURL() === document.createElement('canvas').toDataURL()) { alert("Signature required"); return; }
-    let et = [...document.getElementById("etSelect").selectedOptions].map(o => o.value).join(", ");
-    let set = document.getElementById("setSelect").value, phy = document.getElementById("phySelect").value, others = document.getElementById("othersNames").value.trim(), remarks = document.getElementById("remarksField").value.trim();
-    let signature = canvas.toDataURL(); let selectedEquips = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq)));
-    let equipDetails = selectedEquips.map(eq => ({ key: getKey(eq), assetNumber: eq.assetNumber, assetDesc: eq.assetDesc, manufacturer: eq.manufacturer, serialNo: eq.serialNo, location: eq.location }));
-    let record = { id: Date.now(), displayTime: dt, status: newStatus, jobType, purpose, et, set, physicist: phy, others, remarks, signature, recordStatus: "Verified", editHistory: [], equipmentDetails: equipDetails };
-    historyRecords.unshift(record);
-    selectedAssetsSet.forEach(key => { equipStatus[key] = newStatus; });
-    await fullSyncToCloud();
-    renderEquipment(); renderHistory();
-    await addLog("RECORD_CREATED", record.id, `Record created for ${selectedEquips.length} equipment`, currentUser, "");
-    alert("Record saved!");
-    document.getElementById("purposeInput").value = "";
-}
-
-function renderHistory() {
-    let filtered = [...historyRecords];
-    if (historySortOrder === 'asc') filtered.sort((a, b) => new Date(a.displayTime) - new Date(b.displayTime));
-    else filtered.sort((a, b) => new Date(b.displayTime) - new Date(a.displayTime));
-    let tbody = document.getElementById("historyBody"); tbody.innerHTML = "";
-    filtered.forEach(r => {
-        let row = tbody.insertRow();
-        row.insertCell(0).innerText = formatTimestamp(r.displayTime);
-        row.insertCell(1).innerHTML = `<ul style="margin:0; padding-left:16px;">${r.equipmentDetails?.map(d => `<li>${d.assetDesc} | ${d.manufacturer} | SN:${d.serialNo || '-'}</li>`).join('') || '-'}</ul>`;
-        row.insertCell(2).innerHTML = `<span class="status-badge ${r.status === 'IN' ? 'status-in' : 'status-out'}">${r.status}</span>`;
-        row.insertCell(3).innerText = r.jobType || '-'; row.insertCell(4).innerText = r.purpose || '-'; row.insertCell(5).innerText = `ET:${r.et} SET:${r.set} Phy:${r.physicist}`;
-        row.insertCell(6).innerHTML = `<span style="background:${r.recordStatus === 'Verified' ? '#c8f0e1' : '#ffe0db'}; padding:2px 8px; border-radius:40px;">${r.recordStatus}</span>`;
-        row.insertCell(7).innerHTML = r.editHistory?.map(h => `${h.timestamp} | ${h.user}: ${h.reason}`).join('<br>') || '—';
-        let btnCell = row.insertCell(8);
-        let editBtn = document.createElement("button"); editBtn.innerText = "✏️ Edit"; editBtn.className = "btn btn-sm"; editBtn.onclick = () => openEditRecordDialog(r);
-        let previewBtn = document.createElement("button"); previewBtn.innerText = "Preview"; previewBtn.className = "btn btn-sm"; previewBtn.onclick = () => showFullRecordPreview(r);
-        btnCell.append(editBtn, previewBtn);
-    });
-}
-
-function showFullRecordPreview(rec) {
-    let modal = document.createElement("div"); modal.className = "modal-overlay";
-    let equipHtml = rec.equipmentDetails?.map(e => `<tr><td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td><td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td><td style="border:1px solid #ddd; padding:8px;">${e.manufacturer}</td><td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td></tr>`).join('') || '<tr><td colspan="4">No details</td></tr>';
-    let dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    let win = window.open('', '_blank');
-    win.document.write(`<html><head><title>Preview_${dateStr}</title><style>body{font-family:sans-serif; padding:20px;} .preview-header{background:#166b5c; color:white; padding:15px; border-radius:16px;} .info-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; background:#f8fafc; padding:15px; border-radius:16px; margin:15px 0;} table{border-collapse:collapse; width:100%;} th,td{border:1px solid #ddd; padding:8px;}</style></head><body>
-        <div class="preview-header"><h3>Transaction Record Preview</h3></div>
-        <div class="info-grid"><div><strong>Timestamp:</strong><br>${formatTimestamp(rec.displayTime)}</div><div><strong>Status:</strong><br>${rec.status}</div><div><strong>Job Type:</strong><br>${rec.jobType || '-'}</div><div><strong>Purpose:</strong><br>${rec.purpose || '-'}</div><div><strong>ET/SET/Phy:</strong><br>${rec.et}/${rec.set}/${rec.physicist}</div><div><strong>Remarks:</strong><br>${rec.remarks || '-'}</div><div><strong>Record Status:</strong><br>${rec.recordStatus}</div></div>
-        <h4>Equipment List</h4><table><thead><tr><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th></tr></thead><tbody>${equipHtml}</tbody></table>
-        ${rec.editHistory?.length ? `<h4>Edit History</h4>${rec.editHistory.map(h => `<div>${h.timestamp} | ${h.user}: ${h.reason}</div>`).join('')}` : ''}
-        <div><strong>Signature:</strong><br><img src="${rec.signature}" style="max-width:200px;"></div>
-    </body></html>`);
-    win.document.close(); win.print();
-    modal.querySelector(".close-modal").onclick = () => modal.remove();
-}
-
-function openEditRecordDialog(record) {
-    let modal = document.createElement("div"); modal.className = "modal-overlay";
-    modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>✏️ Edit Transaction Record</h3>
-        <div><label>Status (Cannot Edit)</label><input type="text" value="${record.status}" disabled style="width:100%; padding:8px; border-radius:12px; background:#f0f0f0;"></div>
-        <div class="flex-form"><div><label>Job Type</label><select id="editJobType">${["PM", "CM", "QA", "AT", "OTH"].map(o => `<option ${record.jobType === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
-        <div><label>Purpose</label><input type="text" id="editPurpose" value="${record.purpose || ''}"></div></div>
-        <div class="flex-form"><div><label>ET</label><select multiple id="editEt" class="multi-select" size="3">${etNames.map(n => `<option ${record.et?.includes(n) ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
-        <div><label>SET</label><select id="editSet"><option value="Reeve" ${record.set === 'Reeve' ? 'selected' : ''}>Reeve</option><option value="Kelvin" ${record.set === 'Kelvin' ? 'selected' : ''}>Kelvin</option><option value="Deputizing" ${record.set === 'Deputizing' ? 'selected' : ''}>Deputizing</option></select></div>
-        <div><label>Physicist</label><select id="editPhy">${["Xiao Li", "Celina", "Keith", "Jacky", "Martin", "RT Phy.", "N/A"].map(p => `<option ${record.physicist === p ? 'selected' : ''}>${p}</option>`).join('')}</select></div></div>
-        <div class="flex-form"><div><label>Others</label><input type="text" id="editOthers" value="${record.others || ''}"></div><div><label>Remarks</label><input type="text" id="editRemarks" value="${record.remarks || ''}"></div></div>
-        <hr><h4>Edit Authorization</h4><div class="flex-form"><div><label>Date *</label><input type="date" id="editDate"></div><div><label>Person Name *</label><input type="text" id="editPerson" value="${currentUser}"></div><div><label>Reason for Edit *</label><input type="text" id="editReason" placeholder="Reason for modification"></div></div>
-        <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px;"><button id="confirmEditRecordBtn" class="btn btn-primary">Confirm Edit</button><button id="cancelEditRecordBtn" class="btn">Cancel</button></div></div>`;
-    document.body.appendChild(modal);
-    modal.querySelector("#editDate").value = getHKTime().toISOString().slice(0, 10);
-    modal.querySelector(".close-modal").onclick = () => modal.remove();
-    modal.querySelector("#cancelEditRecordBtn").onclick = () => modal.remove();
-    modal.querySelector("#confirmEditRecordBtn").onclick = async () => {
-        let editDate = modal.querySelector("#editDate").value, editPerson = modal.querySelector("#editPerson").value.trim(), editReason = modal.querySelector("#editReason").value.trim();
-        if (!editDate || !editPerson || !editReason) { alert("All edit authorization fields required"); return; }
-        record.editHistory = record.editHistory || [];
-        record.editHistory.push({ timestamp: editDate, user: editPerson, reason: editReason, previousStatus: record.status, previousJobType: record.jobType });
-        record.jobType = modal.querySelector("#editJobType").value;
-        record.purpose = modal.querySelector("#editPurpose").value;
-        record.et = [...modal.querySelector("#editEt").selectedOptions].map(o => o.value).join(", ");
-        record.set = modal.querySelector("#editSet").value;
-        record.physicist = modal.querySelector("#editPhy").value;
-        record.others = modal.querySelector("#editOthers").value;
-        record.remarks = modal.querySelector("#editRemarks").value;
-        record.recordStatus = "Edited";
+    
+    function rebuildFilters() {
+        let locSet = new Set(), parentSet = new Set();
+        equipmentData.forEach(e => { if (e.location) locSet.add(e.location); if (e.parentAsset) parentSet.add(e.parentAsset); });
+        document.getElementById("filterLocation").innerHTML = '<option value="">All Locations</option>' + [...locSet].sort().map(l => `<option value="${l}">${l}</option>`).join('');
+        document.getElementById("filterParentAsset").innerHTML = '<option value="">All Parent Assets</option>' + [...parentSet].sort().map(p => `<option value="${p}">${p}</option>`).join('');
+    }
+    
+    function renderEquipment() {
+        let search = document.getElementById("equipSearch").value.toLowerCase();
+        let loc = document.getElementById("filterLocation").value, parent = document.getElementById("filterParentAsset").value, statFilter = document.getElementById("filterStatus").value;
+        let filtered = equipmentData.filter(eq => (eq.assetNumber?.toLowerCase().includes(search) || eq.assetDesc?.toLowerCase().includes(search) || eq.manufacturer?.toLowerCase().includes(search) || eq.serialNo?.toLowerCase().includes(search)) && (loc ? eq.location === loc : true) && (parent ? eq.parentAsset === parent : true));
+        filtered = filtered.filter(eq => statFilter ? (equipStatus[getKey(eq)] === statFilter) : true);
+        const tbody = document.getElementById("equipTableBody"); tbody.innerHTML = "";
+        filtered.forEach(eq => {
+            let key = getKey(eq); let status = equipStatus[key] || "IN"; let row = tbody.insertRow();
+            let selectCell = row.insertCell(0); let chk = document.createElement("input"); chk.type = "checkbox"; chk.className = "checkbox-select"; chk.dataset.key = key; chk.checked = selectedAssetsSet.has(key); chk.onclick = (e) => e.stopPropagation(); selectCell.appendChild(chk);
+            row.insertCell(1).innerText = eq.assetNumber || "-"; row.insertCell(2).innerText = eq.assetDesc; row.insertCell(3).innerText = eq.manufacturer; row.insertCell(4).innerText = eq.serialNo || "-";
+            row.insertCell(5).innerText = eq.location || "-"; row.insertCell(6).innerText = eq.parentAsset || "-";
+            row.insertCell(7).innerHTML = `<span class="status-badge ${status === 'IN' ? 'status-in' : 'status-out'}">${status}</span>`;
+            let actionCell = row.insertCell(8);
+            let showBtn = document.createElement("button"); showBtn.innerText = "📋 Show"; showBtn.className = "btn btn-sm"; showBtn.onclick = () => showEquipmentDetail(eq);
+            let editBtn = document.createElement("button"); editBtn.innerText = "✏️ Edit"; editBtn.className = "btn btn-sm"; editBtn.onclick = () => editEquipmentDialog(eq);
+            actionCell.append(showBtn, editBtn);
+            if (currentUserRole === "admin") {
+                let statBtn = document.createElement("button"); statBtn.innerText = "📊 Stat"; statBtn.className = "btn btn-sm"; statBtn.style.background = "#e67e22"; statBtn.style.color = "white"; statBtn.onclick = () => showEquipmentStats(eq);
+                actionCell.appendChild(statBtn);
+            }
+        });
+        attachCheckboxEvents(); updateSelectedDisplay(); renderSelectedList();
+    }
+    
+    function attachCheckboxEvents() { document.querySelectorAll('.checkbox-select').forEach(cb => { cb.onchange = () => { let k = cb.dataset.key; if (cb.checked) selectedAssetsSet.add(k); else selectedAssetsSet.delete(k); updateSelectedDisplay(); renderSelectedList(); }; }); }
+    function updateSelectedDisplay() { document.getElementById("selectedCountBadge").innerText = `${selectedAssetsSet.size} selected`; }
+    function renderSelectedList() { let selected = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq))); document.getElementById("selectedEquipList").innerHTML = selected.map(eq => `• ${eq.assetNumber || eq.assetDesc} - ${eq.assetDesc} (${equipStatus[getKey(eq)]})`).join("<br>") || "None selected"; }
+    
+    function showEquipmentDetail(eq) {
+        let modal = document.createElement("div"); modal.className = "modal-overlay";
+        modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>🔧 Equipment Details</h3><div class="details-grid">${Object.entries(eq).map(([k, v]) => `<div class="detail-item"><strong>${k.replace(/([A-Z])/g, ' $1').trim()}:</strong><span>${v || '-'}</span></div>`).join('')}</div></div>`;
+        document.body.appendChild(modal); modal.querySelector(".close-modal").onclick = () => modal.remove();
+    }
+    
+    async function editEquipmentDialog(eq) {
+        let newDesc = prompt("Edit Description:", eq.assetDesc);
+        if (newDesc && newDesc.trim()) eq.assetDesc = newDesc.trim();
+        let newLoc = prompt("Edit Location:", eq.location);
+        if (newLoc !== null) eq.location = newLoc;
         await fullSyncToCloud();
-        renderHistory();
-        await addLog("RECORD_EDITED", record.id, `Record edited by ${editPerson}`, editPerson, editReason);
-        alert("Record updated with edit history.");
-        modal.remove();
-    };
-}
-
-function renderDbLogs() {
-    if (currentUserRole !== "admin") return;
-    let search = document.getElementById("dbLogSearch").value.toLowerCase();
-    let actionFilter = document.getElementById("dbLogActionFilter").value;
-    let filtered = dbLogs.filter(l => l.action.toLowerCase().includes(search) || l.details.toLowerCase().includes(search));
-    if (actionFilter) filtered = filtered.filter(l => l.action === actionFilter);
-    if (dbLogsSortOrder === 'asc') filtered.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    else filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    let tbody = document.getElementById("dbLogsBody"); tbody.innerHTML = "";
-    filtered.forEach(l => {
-        let row = tbody.insertRow();
-        row.insertCell(0).innerText = formatTimestamp(l.timestamp);
-        row.insertCell(1).innerHTML = `<span style="background:#e9ecef; padding:2px 8px; border-radius:20px;">${l.action}</span>`;
-        row.insertCell(2).innerText = l.recordId;
-        row.insertCell(3).innerText = l.details.length > 80 ? l.details.substring(0, 80) + "..." : l.details;
-        row.insertCell(4).innerText = l.user || '-';
-        row.insertCell(5).innerText = formatTimestamp(l.timestamp);
-        row.insertCell(6).innerText = l.reason || '-';
-    });
-}
-
-async function backupWithOptions() {
-    await fullSyncToCloud();
-    alert("Data saved to cloud successfully!");
-}
-
-async function restoreWithOptions() {
-    await syncAll();
-    alert("Data restored from cloud!");
-}
-
-function exportWithOptions() {
-    let modal = document.createElement("div"); modal.className = "modal-overlay";
-    modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>📎 Export History</h3>
-        <div><label>Start Date:</label><input type="date" id="expStart"></div>
-        <div><label>End Date:</label><input type="date" id="expEnd"></div>
-        <div><label>Format:</label><select id="expFormat"><option value="csv">CSV</option><option value="excel">Excel (XLSX format)</option></select></div>
-        <button id="doExportBtn" class="btn btn-primary" style="margin-top:15px;">Export</button></div>`;
-    document.body.appendChild(modal);
-    modal.querySelector(".close-modal").onclick = () => modal.remove();
-    modal.querySelector("#doExportBtn").onclick = () => {
-        let start = modal.querySelector("#expStart").value, end = modal.querySelector("#expEnd").value, format = modal.querySelector("#expFormat").value;
-        let records = historyRecords.filter(r => { let d = r.displayTime.split('T')[0]; if (start && d < start) return false; if (end && d > end) return false; return true; });
-        let dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        let rows = [["Timestamp", "Equipment", "Status", "Job Type", "Purpose", "ET", "SET", "Physicist", "Remarks", "Record Status"]];
-        records.forEach(r => rows.push([formatTimestamp(r.displayTime), r.equipmentDetails?.map(d => d.assetDesc).join("; "), r.status, r.jobType, r.purpose, r.et, r.set, r.physicist, r.remarks, r.recordStatus]));
-        let csv = rows.map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(",")).join("\n");
-        let blob = new Blob(["\uFEFF" + csv], { type: "text/csv" });
-        let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `Export_${dateStr}.${format === 'csv' ? 'csv' : 'xls'}`; a.click();
-        modal.remove();
-    };
-}
-
-function exportDbLogs() {
-    if (currentUserRole !== "admin") return;
-    let modal = document.createElement("div"); modal.className = "modal-overlay";
-    modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>📎 Export DB Logs (Admin Only)</h3>
-        <div><label>Start Date:</label><input type="date" id="expStart"></div>
-        <div><label>End Date:</label><input type="date" id="expEnd"></div>
-        <div><label>Format:</label><select id="expFormat"><option value="csv">CSV</option><option value="excel">Excel (XLSX format)</option><option value="pdf">PDF</option></select></div>
-        <button id="doExportBtn" class="btn btn-primary" style="margin-top:15px;">Export</button></div>`;
-    document.body.appendChild(modal);
-    modal.querySelector(".close-modal").onclick = () => modal.remove();
-    modal.querySelector("#doExportBtn").onclick = () => {
-        let start = modal.querySelector("#expStart").value, end = modal.querySelector("#expEnd").value, format = modal.querySelector("#expFormat").value;
-        let filtered = dbLogs.filter(l => { let d = l.timestamp.split('T')[0]; if (start && d < start) return false; if (end && d > end) return false; return true; });
-        let dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        if (format === "pdf") {
-            let win = window.open('', '_blank');
-            let rowsHtml = filtered.map(l => `<table><td style="border:1px solid #ddd; padding:8px;">${formatTimestamp(l.timestamp)}</td><td style="border:1px solid #ddd; padding:8px;">${l.action}</td><td style="border:1px solid #ddd; padding:8px;">${l.recordId}</td><td style="border:1px solid #ddd; padding:8px;">${l.details}</td><td style="border:1px solid #ddd; padding:8px;">${l.user || '-'}</td><td style="border:1px solid #ddd; padding:8px;">${l.reason || '-'}</td></tr>`).join('');
-            win.document.write(`<html><head><title>DBLogs_${dateStr}</title><style>body{font-family:sans-serif; padding:20px;} table{border-collapse:collapse; width:100%;} th,td{border:1px solid #ddd; padding:8px;}</style></head><body><h2>Database Logs Export</h2><p>Exported on: ${new Date().toLocaleString()}</p><table><thead><tr><th>Timestamp</th><th>Action Type</th><th>Record ID</th><th>Details</th><th>User</th><th>Reason/Note</th></tr></thead><tbody>${rowsHtml}</tbody></table></body></html>`);
-            win.document.close(); win.print();
-        } else {
-            let rows = [["Timestamp", "Action Type", "Record ID", "Details", "User", "Reason/Note"]];
-            filtered.forEach(l => rows.push([formatTimestamp(l.timestamp), l.action, l.recordId, l.details, l.user || '-', l.reason || '-']));
-            let csv = rows.map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(",")).join("\n");
-            let blob = new Blob(["\uFEFF" + csv], { type: "text/csv" });
-            let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `DBLogs_${dateStr}.${format === 'csv' ? 'csv' : 'xls'}`; a.click();
+        renderEquipment();
+        alert("Equipment updated!");
+    }
+    
+    async function addNewEquipment() {
+        let newDesc = prompt("Enter Asset Description:");
+        if (!newDesc) return;
+        let newEq = { assetNumber: "", assetDesc: newDesc, manufacturer: "", parentAsset: "", assetOwner: "", serialNo: "", location: "", poNumber: "", acceptanceDate: "", calibrationDate: "", currentDetail: "" };
+        equipmentData.push(newEq);
+        equipStatus[getKey(newEq)] = "IN";
+        await fullSyncToCloud();
+        renderEquipment();
+        alert("Equipment added!");
+    }
+    
+    function showEquipmentStats(eq) {
+        let usageRecords = historyRecords.filter(r => r.equipmentDetails?.some(d => d.key === getKey(eq)));
+        let etUsage = {};
+        usageRecords.forEach(r => { if (r.et) { r.et.split(", ").forEach(et => { etUsage[et] = (etUsage[et] || 0) + 1; }); } });
+        let modal = document.createElement("div"); modal.className = "modal-overlay";
+        modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>📊 Equipment Usage Statistics: ${eq.assetDesc}</h3><div style="margin-top:15px;">Total Transactions: ${usageRecords.length}<br><br>ET Usage: ${Object.entries(etUsage).map(([k, v]) => `${k}: ${v}`).join(', ') || 'None'}</div></div>`;
+        document.body.appendChild(modal); modal.querySelector(".close-modal").onclick = () => modal.remove();
+    }
+    
+    // Signature canvas
+    const canvas = document.getElementById("signatureCanvas"), ctx = canvas.getContext("2d"); let drawing = false;
+    function initCanvas() { canvas.width = 400; canvas.height = 100; ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = "#166b5c"; ctx.lineWidth = 2; }
+    function clearCanvas() { ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    function getXY(e) { let rect = canvas.getBoundingClientRect(), sx = canvas.width / rect.width, sy = canvas.height / rect.height; let cx = (e.touches ? e.touches[0].clientX : e.clientX), cy = (e.touches ? e.touches[0].clientY : e.clientY); return { x: (cx - rect.left) * sx, y: (cy - rect.top) * sy }; }
+    function startDraw(e) { drawing = true; let { x, y } = getXY(e); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); }
+    function drawMove(e) { if (!drawing) return; let { x, y } = getXY(e); ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); }
+    function endDraw() { drawing = false; ctx.beginPath(); }
+    canvas.addEventListener("mousedown", startDraw); canvas.addEventListener("mousemove", drawMove); canvas.addEventListener("mouseup", endDraw); canvas.addEventListener("touchstart", startDraw); canvas.addEventListener("touchmove", drawMove); canvas.addEventListener("touchend", endDraw);
+    
+    function validateStatusSelection() {
+        let selected = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq)));
+        let desiredStatus = document.getElementById("inOutStatus").value;
+        let conflictItems = selected.filter(eq => equipStatus[getKey(eq)] === desiredStatus);
+        if (conflictItems.length > 0) {
+            let conflictNames = conflictItems.map(eq => eq.assetDesc || eq.assetNumber).join(", ");
+            document.getElementById("statusWarning").innerHTML = `⚠️ Cannot perform "${desiredStatus}" on equipment(s) that already have status "${desiredStatus}": ${conflictNames}`;
+            document.getElementById("statusWarning").style.display = "block";
+            return false;
         }
-        modal.remove();
-    };
-}
-
-// Account Management with full user list for admin
-async function accountManagement() {
-    let modal = document.createElement("div"); modal.className = "modal-overlay";
-    let usersList = [];
-    if (currentUserRole === "admin") {
-        const { data } = await supabase.from('users').select('*');
-        usersList = data || [];
+        document.getElementById("statusWarning").style.display = "none";
+        return true;
     }
-    let userListHtml = '';
-    if (currentUserRole === "admin") {
-        userListHtml = `<h4>Existing Users:</h4><ul style="max-height:150px; overflow-y:auto;">${usersList.map(u => `<li>${u.username} (${u.role})</li>`).join('')}</ul>
-        <hr><h4>Create New Super-user</h4><input type="text" id="newUsername" placeholder="Username" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><input type="text" id="newPassword" placeholder="Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><button id="createUserBtn" class="btn btn-primary">Create User</button>`;
-    } else {
-        userListHtml = `<h4>Welcome, ${currentUser}</h4><p>You are logged in as Super-user.</p>`;
+    
+    async function saveRecord() {
+        if (selectedAssetsSet.size === 0) { alert("No equipment selected."); return; }
+        if (!validateStatusSelection()) { alert("Status conflict: Cannot proceed."); return; }
+        let dt = document.getElementById("recordDatetime").value, newStatus = document.getElementById("inOutStatus").value, jobType = document.getElementById("jobType").value, purpose = document.getElementById("purposeInput").value.trim();
+        if (!dt || !jobType || !purpose || !document.getElementById("etSelect").selectedOptions.length || !document.getElementById("setSelect").value || !document.getElementById("phySelect").value) { alert("All mandatory fields required"); return; }
+        if (canvas.toDataURL() === document.createElement('canvas').toDataURL()) { alert("Signature required"); return; }
+        let et = [...document.getElementById("etSelect").selectedOptions].map(o => o.value).join(", ");
+        let set = document.getElementById("setSelect").value, phy = document.getElementById("phySelect").value, others = document.getElementById("othersNames").value.trim(), remarks = document.getElementById("remarksField").value.trim();
+        let signature = canvas.toDataURL(); let selectedEquips = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq)));
+        let equipDetails = selectedEquips.map(eq => ({ key: getKey(eq), assetNumber: eq.assetNumber, assetDesc: eq.assetDesc, manufacturer: eq.manufacturer, serialNo: eq.serialNo, location: eq.location }));
+        let record = { id: Date.now(), displayTime: dt, status: newStatus, jobType, purpose, et, set, physicist: phy, others, remarks, signature, recordStatus: "Verified", editHistory: [], equipmentDetails: equipDetails };
+        historyRecords.unshift(record);
+        selectedAssetsSet.forEach(key => { equipStatus[key] = newStatus; });
+        await fullSyncToCloud();
+        renderEquipment(); renderHistory();
+        alert("Record saved!");
+        document.getElementById("purposeInput").value = "";
     }
-    let changePasswordHtml = `<hr><h4>Change Your Password</h4><input type="password" id="oldPwd" placeholder="Current Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><input type="password" id="newPwd" placeholder="New Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><input type="password" id="confirmPwd" placeholder="Confirm New Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><button id="changePwdBtn" class="btn btn-primary">Change Password</button>`;
-    modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>👤 Account Management - ${currentUser} (${currentUserRole})</h3>${userListHtml}${changePasswordHtml}</div>`;
-    document.body.appendChild(modal);
-    modal.querySelector(".close-modal").onclick = () => modal.remove();
-    if (currentUserRole === "admin" && modal.querySelector("#createUserBtn")) {
-        modal.querySelector("#createUserBtn").onclick = async () => {
-            let newUser = modal.querySelector("#newUsername").value.trim().toLowerCase();
-            let newPwd = modal.querySelector("#newPassword").value.trim();
-            if (!newUser || !newPwd) { alert("Username and password required"); return; }
-            const { data: existing } = await supabase.from('users').select('*').eq('username', newUser);
-            if (existing && existing.length > 0) { alert("User already exists"); return; }
-            await supabase.from('users').insert({ username: newUser, password: newPwd, role: "super" });
-            alert(`User ${newUser} created successfully`);
+    
+    function renderHistory() {
+        let filtered = [...historyRecords];
+        if (historySortOrder === 'asc') filtered.sort((a, b) => new Date(a.displayTime) - new Date(b.displayTime));
+        else filtered.sort((a, b) => new Date(b.displayTime) - new Date(a.displayTime));
+        let tbody = document.getElementById("historyBody"); tbody.innerHTML = "";
+        filtered.forEach(r => {
+            let row = tbody.insertRow();
+            row.insertCell(0).innerText = formatTimestamp(r.displayTime);
+            row.insertCell(1).innerHTML = `<ul style="margin:0; padding-left:16px;">${r.equipmentDetails?.map(d => `<li>${d.assetDesc} | ${d.manufacturer} | SN:${d.serialNo || '-'}</li>`).join('') || '-'}</ul>`;
+            row.insertCell(2).innerHTML = `<span class="status-badge ${r.status === 'IN' ? 'status-in' : 'status-out'}">${r.status}</span>`;
+            row.insertCell(3).innerText = r.jobType || '-'; row.insertCell(4).innerText = r.purpose || '-'; row.insertCell(5).innerText = `ET:${r.et} SET:${r.set} Phy:${r.physicist}`;
+            row.insertCell(6).innerHTML = `<span style="background:${r.recordStatus === 'Verified' ? '#c8f0e1' : '#ffe0db'}; padding:2px 8px; border-radius:40px;">${r.recordStatus}</span>`;
+            row.insertCell(7).innerHTML = r.editHistory?.map(h => `${h.timestamp} | ${h.user}: ${h.reason}`).join('<br>') || '—';
+            let btnCell = row.insertCell(8);
+            let editBtn = document.createElement("button"); editBtn.innerText = "✏️ Edit"; editBtn.className = "btn btn-sm"; editBtn.onclick = () => openEditRecordDialog(r);
+            let previewBtn = document.createElement("button"); previewBtn.innerText = "Preview"; previewBtn.className = "btn btn-sm"; previewBtn.onclick = () => showFullRecordPreview(r);
+            btnCell.append(editBtn, previewBtn);
+        });
+    }
+    
+    function showFullRecordPreview(rec) {
+        let modal = document.createElement("div"); modal.className = "modal-overlay";
+        let equipHtml = rec.equipmentDetails?.map(e => `<tr><td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td><td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td><td style="border:1px solid #ddd; padding:8px;">${e.manufacturer}</td><td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td></tr>`).join('') || '<tr><td colspan="4">No details</tr>';
+        let dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        let win = window.open('', '_blank');
+        win.document.write(`<html><head><title>Preview_${dateStr}</title><style>body{font-family:sans-serif; padding:20px;} .preview-header{background:#166b5c; color:white; padding:15px; border-radius:16px;} .info-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; background:#f8fafc; padding:15px; border-radius:16px; margin:15px 0;} table{border-collapse:collapse; width:100%;} th,td{border:1px solid #ddd; padding:8px;}</style></head><body>
+            <div class="preview-header"><h3>Transaction Record Preview</h3></div>
+            <div class="info-grid"><div><strong>Timestamp:</strong><br>${formatTimestamp(rec.displayTime)}</div><div><strong>Status:</strong><br>${rec.status}</div><div><strong>Job Type:</strong><br>${rec.jobType || '-'}</div><div><strong>Purpose:</strong><br>${rec.purpose || '-'}</div><div><strong>ET/SET/Phy:</strong><br>${rec.et}/${rec.set}/${rec.physicist}</div><div><strong>Remarks:</strong><br>${rec.remarks || '-'}</div><div><strong>Record Status:</strong><br>${rec.recordStatus}</div></div>
+            <h4>Equipment List</h4><table><thead><tr><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th></tr></thead><tbody>${equipHtml}</tbody></table>
+            ${rec.editHistory?.length ? `<h4>Edit History</h4>${rec.editHistory.map(h => `<div>${h.timestamp} | ${h.user}: ${h.reason}</div>`).join('')}` : ''}
+            <div><strong>Signature:</strong><br><img src="${rec.signature}" style="max-width:200px;"></div>
+        </body></html>`);
+        win.document.close(); win.print();
+        modal.querySelector(".close-modal").onclick = () => modal.remove();
+    }
+    
+    function openEditRecordDialog(record) {
+        let modal = document.createElement("div"); modal.className = "modal-overlay";
+        modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>✏️ Edit Transaction Record</h3>
+            <div><label>Status (Cannot Edit)</label><input type="text" value="${record.status}" disabled style="width:100%; padding:8px; border-radius:12px; background:#f0f0f0;"></div>
+            <div class="flex-form"><div><label>Job Type</label><select id="editJobType">${["PM", "CM", "QA", "AT", "OTH"].map(o => `<option ${record.jobType === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+            <div><label>Purpose</label><input type="text" id="editPurpose" value="${record.purpose || ''}"></div></div>
+            <div class="flex-form"><div><label>ET</label><select multiple id="editEt" class="multi-select" size="3">${etNames.map(n => `<option ${record.et?.includes(n) ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+            <div><label>SET</label><select id="editSet"><option value="Reeve" ${record.set === 'Reeve' ? 'selected' : ''}>Reeve</option><option value="Kelvin" ${record.set === 'Kelvin' ? 'selected' : ''}>Kelvin</option><option value="Deputizing" ${record.set === 'Deputizing' ? 'selected' : ''}>Deputizing</option></select></div>
+            <div><label>Physicist</label><select id="editPhy">${["Xiao Li", "Celina", "Keith", "Jacky", "Martin", "RT Phy.", "N/A"].map(p => `<option ${record.physicist === p ? 'selected' : ''}>${p}</option>`).join('')}</select></div></div>
+            <div class="flex-form"><div><label>Others</label><input type="text" id="editOthers" value="${record.others || ''}"></div><div><label>Remarks</label><input type="text" id="editRemarks" value="${record.remarks || ''}"></div></div>
+            <hr><h4>Edit Authorization</h4><div class="flex-form"><div><label>Date *</label><input type="date" id="editDate"></div><div><label>Person Name *</label><input type="text" id="editPerson" value="${currentUser}"></div><div><label>Reason for Edit *</label><input type="text" id="editReason" placeholder="Reason for modification"></div></div>
+            <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px;"><button id="confirmEditRecordBtn" class="btn btn-primary">Confirm Edit</button><button id="cancelEditRecordBtn" class="btn">Cancel</button></div></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector("#editDate").value = getHKTime().toISOString().slice(0, 10);
+        modal.querySelector(".close-modal").onclick = () => modal.remove();
+        modal.querySelector("#cancelEditRecordBtn").onclick = () => modal.remove();
+        modal.querySelector("#confirmEditRecordBtn").onclick = async () => {
+            let editDate = modal.querySelector("#editDate").value, editPerson = modal.querySelector("#editPerson").value.trim(), editReason = modal.querySelector("#editReason").value.trim();
+            if (!editDate || !editPerson || !editReason) { alert("All edit authorization fields required"); return; }
+            record.editHistory = record.editHistory || [];
+            record.editHistory.push({ timestamp: editDate, user: editPerson, reason: editReason, previousStatus: record.status, previousJobType: record.jobType });
+            record.jobType = modal.querySelector("#editJobType").value;
+            record.purpose = modal.querySelector("#editPurpose").value;
+            record.et = [...modal.querySelector("#editEt").selectedOptions].map(o => o.value).join(", ");
+            record.set = modal.querySelector("#editSet").value;
+            record.physicist = modal.querySelector("#editPhy").value;
+            record.others = modal.querySelector("#editOthers").value;
+            record.remarks = modal.querySelector("#editRemarks").value;
+            record.recordStatus = "Edited";
+            await fullSyncToCloud();
+            renderHistory();
+            alert("Record updated with edit history.");
             modal.remove();
         };
     }
-    modal.querySelector("#changePwdBtn").onclick = async () => {
-        let oldPwd = modal.querySelector("#oldPwd").value;
-        let newPwd = modal.querySelector("#newPwd").value;
-        let confirmPwd = modal.querySelector("#confirmPwd").value;
-        const { data: userData } = await supabase.from('users').select('*').eq('username', currentUser);
-        if (!userData || userData[0].password !== oldPwd) { alert("Current password incorrect"); return; }
-        if (newPwd !== confirmPwd) { alert("New passwords do not match"); return; }
-        if (newPwd.length < 3) { alert("Password too short"); return; }
-        await supabase.from('users').update({ password: newPwd }).eq('username', currentUser);
-        alert("Password changed successfully");
-        modal.remove();
-    };
-}
-
-async function login(username, password) {
-    const { data } = await supabase.from('users').select('*').eq('username', username.toLowerCase());
-    if (data && data.length > 0 && data[0].password === password) {
-        currentUser = username;
-        currentUserRole = data[0].role;
-        sessionStorage.setItem("loggedUser", username);
-        sessionStorage.setItem("loggedRole", data[0].role);
-        document.getElementById("loginPage").style.display = "none";
-        document.getElementById("appContainer").classList.add("visible");
-        document.getElementById("aiAssistant").style.display = "block";
-        if (currentUserRole === "super") document.getElementById("dblogsTab").style.display = "none";
-        else document.getElementById("dblogsTab").style.display = "block";
-        await syncAll();
-        initUI();
-        return true;
-    }
-    document.getElementById("loginError").innerText = "Invalid username or password";
-    return false;
-}
-
-function logout() {
-    if (confirm("Are you sure you want to logout?")) {
-        sessionStorage.clear();
-        location.reload();
-    }
-}
-
-function initUI() {
-    updateClock(); setToday(); initCanvas();
-    document.getElementById("etSelect").innerHTML = etNames.map(n => `<option value="${n}">${n}</option>`).join('');
-    document.getElementById("clearSearchBtn").onclick = () => { document.getElementById("equipSearch").value = ""; renderEquipment(); };
-    document.getElementById("clearSelEquipBtn").onclick = () => { selectedAssetsSet.clear(); renderEquipment(); };
-    document.getElementById("selectAllEquipBtn").onclick = () => { equipmentData.forEach(e => selectedAssetsSet.add(getKey(e))); renderEquipment(); };
-    document.getElementById("addNewEquipBtn").onclick = addNewEquipment;
-    document.getElementById("todayBtn").onclick = setToday;
-    document.getElementById("saveRecordBtn").onclick = saveRecord;
-    document.getElementById("clearFormBtnRecord").onclick = () => { document.getElementById("jobType").value = ""; document.getElementById("purposeInput").value = ""; document.getElementById("othersNames").value = ""; document.getElementById("remarksField").value = ""; Array.from(document.getElementById("etSelect").options).forEach(o => o.selected = false); document.getElementById("setSelect").selectedIndex = 0; document.getElementById("phySelect").selectedIndex = 0; clearCanvas(); setToday(); };
-    document.getElementById("clearSignatureBtn").onclick = clearCanvas;
-    document.getElementById("previewRecordBtn").onclick = () => {
-        let selected = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq)));
-        if (selected.length === 0) { alert("No equipment selected."); return; }
-        let modal = document.createElement("div"); modal.className = "modal-overlay";
-        modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>🔍 Preview</h3><div>Date: ${document.getElementById("recordDatetime").value}</div><div>Status: ${document.getElementById("inOutStatus").value}</div><div>Job Type: ${document.getElementById("jobType").value}</div><div>Purpose: ${document.getElementById("purposeInput").value}</div><div>ET/SET/Phy: ${[...document.getElementById("etSelect").selectedOptions].map(o => o.value).join(',')}/${document.getElementById("setSelect").value}/${document.getElementById("phySelect").value}</div><div>Remarks: ${document.getElementById("remarksField").value}</div><hr><ul>${selected.map(e => `<li>${e.assetDesc}</li>`).join('')}</ul><img src="${canvas.toDataURL()}" style="max-width:100%;"></div>`;
-        document.body.appendChild(modal); modal.querySelector(".close-modal").onclick = () => modal.remove();
-    };
-    document.getElementById("exportBtn").onclick = exportWithOptions;
-    document.getElementById("exportDbLogsBtn").onclick = exportDbLogs;
-    document.getElementById("backupBtn").onclick = backupWithOptions;
-    document.getElementById("restoreBtn").onclick = restoreWithOptions;
-    document.getElementById("accountBtn").onclick = accountManagement;
-    document.getElementById("logoutBtn").onclick = logout;
-    document.getElementById("sortHistoryAscBtn").onclick = () => { historySortOrder = 'asc'; renderHistory(); };
-    document.getElementById("sortHistoryDescBtn").onclick = () => { historySortOrder = 'desc'; renderHistory(); };
-    document.getElementById("sortDbLogsAscBtn").onclick = () => { dbLogsSortOrder = 'asc'; if (currentUserRole === "admin") renderDbLogs(); };
-    document.getElementById("sortDbLogsDescBtn").onclick = () => { dbLogsSortOrder = 'desc'; if (currentUserRole === "admin") renderDbLogs(); };
-    document.getElementById("resetHistoryFiltersBtn").onclick = () => { document.getElementById("historySearch").value = ""; document.getElementById("histFilterPurpose").value = ""; document.getElementById("histFilterStatus").value = ""; document.getElementById("histFilterRecordStatus").value = ""; renderHistory(); };
-    document.getElementById("resetDbLogsBtn").onclick = () => { document.getElementById("dbLogSearch").value = ""; document.getElementById("dbLogActionFilter").value = ""; if (currentUserRole === "admin") renderDbLogs(); };
-    document.getElementById("equipSearch").addEventListener("input", () => renderEquipment());
-    document.getElementById("filterLocation").addEventListener("change", () => renderEquipment());
-    document.getElementById("filterParentAsset").addEventListener("change", () => renderEquipment());
-    document.getElementById("filterStatus").addEventListener("change", () => renderEquipment());
-    document.getElementById("historySearch").addEventListener("input", () => renderHistory());
-    document.getElementById("histFilterPurpose").addEventListener("change", () => renderHistory());
-    document.getElementById("histFilterStatus").addEventListener("change", () => renderHistory());
-    document.getElementById("histFilterRecordStatus").addEventListener("change", () => renderHistory());
-    document.getElementById("dbLogSearch").addEventListener("input", () => { if (currentUserRole === "admin") renderDbLogs(); });
-    document.getElementById("dbLogActionFilter").addEventListener("change", () => { if (currentUserRole === "admin") renderDbLogs(); });
-    document.querySelectorAll(".tab").forEach(tab => {
-        tab.addEventListener("click", () => {
-            document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-            document.getElementById(tab.dataset.page + "Page").classList.add("active");
-            document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-            tab.classList.add("active");
-            if (tab.dataset.page === "history") renderHistory();
-            if (tab.dataset.page === "dblogs" && currentUserRole === "admin") renderDbLogs();
+    
+    function renderDbLogs() {
+        if (currentUserRole !== "admin") return;
+        let search = document.getElementById("dbLogSearch").value.toLowerCase();
+        let actionFilter = document.getElementById("dbLogActionFilter").value;
+        let filtered = dbLogs.filter(l => l.action.toLowerCase().includes(search) || l.details.toLowerCase().includes(search));
+        if (actionFilter) filtered = filtered.filter(l => l.action === actionFilter);
+        if (dbLogsSortOrder === 'asc') filtered.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        else filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        let tbody = document.getElementById("dbLogsBody"); tbody.innerHTML = "";
+        filtered.forEach(l => {
+            let row = tbody.insertRow();
+            row.insertCell(0).innerText = formatTimestamp(l.timestamp);
+            row.insertCell(1).innerHTML = `<span style="background:#e9ecef; padding:2px 8px; border-radius:20px;">${l.action}</span>`;
+            row.insertCell(2).innerText = l.recordId;
+            row.insertCell(3).innerText = l.details.length > 80 ? l.details.substring(0, 80) + "..." : l.details;
+            row.insertCell(4).innerText = l.user || '-';
+            row.insertCell(5).innerText = formatTimestamp(l.timestamp);
+            row.insertCell(6).innerText = l.reason || '-';
         });
-    });
-}
-
-// AI Assistant
-let isDraggingAI = false, dragStartXAI, dragStartYAI;
-const aiAssistantDiv = document.getElementById('aiAssistant');
-const aiChatWin = document.getElementById('aiChatWindow');
-const aiHeader = document.getElementById('aiChatHeader');
-if (aiHeader) {
-    aiHeader.addEventListener('mousedown', (e) => { isDraggingAI = true; dragStartXAI = e.clientX - aiChatWin.offsetLeft; dragStartYAI = e.clientY - aiChatWin.offsetTop; aiChatWin.style.position = 'fixed'; });
-    document.addEventListener('mousemove', (e) => { if (isDraggingAI) { let newLeft = e.clientX - dragStartXAI; let newTop = e.clientY - dragStartYAI; newLeft = Math.max(10, Math.min(window.innerWidth - aiChatWin.offsetWidth - 10, newLeft)); newTop = Math.max(10, Math.min(window.innerHeight - aiChatWin.offsetHeight - 10, newTop)); aiChatWin.style.left = newLeft + 'px'; aiChatWin.style.top = newTop + 'px'; aiChatWin.style.right = 'auto'; aiChatWin.style.bottom = 'auto'; } });
-    document.addEventListener('mouseup', () => { isDraggingAI = false; });
-}
-if (aiAssistantDiv) aiAssistantDiv.onclick = () => { aiChatWin.style.display = 'flex'; aiChatWin.style.right = '30px'; aiChatWin.style.bottom = '110px'; aiChatWin.style.left = 'auto'; aiChatWin.style.top = 'auto'; };
-const closeBtn = document.getElementById('closeAiChat');
-if (closeBtn) closeBtn.onclick = () => { aiChatWin.style.display = 'none'; };
-const sendBtn = document.getElementById('aiSendBtn');
-if (sendBtn) {
-    sendBtn.onclick = () => {
-        const msg = document.getElementById('aiInput').value;
-        if (msg) {
-            document.getElementById('aiMessages').innerHTML += `<div class="message user"><div class="message-bubble">${msg}</div></div>`;
-            document.getElementById('aiInput').value = '';
-            setTimeout(() => {
-                document.getElementById('aiMessages').innerHTML += `<div class="message bot"><div class="message-bubble">Thanks for your question! Please refer to the in-app guide for IN/OUT records.</div></div>`;
-                document.getElementById('aiMessages').scrollTop = document.getElementById('aiMessages').scrollHeight;
-            }, 300);
+    }
+    
+    async function backupWithOptions() { await fullSyncToCloud(); alert("Data saved to cloud successfully!"); }
+    async function restoreWithOptions() { await syncAll(); alert("Data restored from cloud!"); }
+    
+    function exportWithOptions() {
+        let modal = document.createElement("div"); modal.className = "modal-overlay";
+        modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>📎 Export History</h3>
+            <div><label>Start Date:</label><input type="date" id="expStart"></div>
+            <div><label>End Date:</label><input type="date" id="expEnd"></div>
+            <div><label>Format:</label><select id="expFormat"><option value="csv">CSV</option><option value="excel">Excel (XLSX format)</option></select></div>
+            <button id="doExportBtn" class="btn btn-primary" style="margin-top:15px;">Export</button></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector(".close-modal").onclick = () => modal.remove();
+        modal.querySelector("#doExportBtn").onclick = () => {
+            let start = modal.querySelector("#expStart").value, end = modal.querySelector("#expEnd").value, format = modal.querySelector("#expFormat").value;
+            let records = historyRecords.filter(r => { let d = r.displayTime.split('T')[0]; if (start && d < start) return false; if (end && d > end) return false; return true; });
+            let dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            let rows = [["Timestamp", "Equipment", "Status", "Job Type", "Purpose", "ET", "SET", "Physicist", "Remarks", "Record Status"]];
+            records.forEach(r => rows.push([formatTimestamp(r.displayTime), r.equipmentDetails?.map(d => d.assetDesc).join("; "), r.status, r.jobType, r.purpose, r.et, r.set, r.physicist, r.remarks, r.recordStatus]));
+            let csv = rows.map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(",")).join("\n");
+            let blob = new Blob(["\uFEFF" + csv], { type: "text/csv" });
+            let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `Export_${dateStr}.${format === 'csv' ? 'csv' : 'xls'}`; a.click();
+            modal.remove();
+        };
+    }
+    
+    function exportDbLogs() {
+        if (currentUserRole !== "admin") return;
+        let modal = document.createElement("div"); modal.className = "modal-overlay";
+        modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>📎 Export DB Logs (Admin Only)</h3>
+            <div><label>Start Date:</label><input type="date" id="expStart"></div>
+            <div><label>End Date:</label><input type="date" id="expEnd"></div>
+            <div><label>Format:</label><select id="expFormat"><option value="csv">CSV</option><option value="excel">Excel (XLSX format)</option><option value="pdf">PDF</option></select></div>
+            <button id="doExportBtn" class="btn btn-primary" style="margin-top:15px;">Export</button></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector(".close-modal").onclick = () => modal.remove();
+        modal.querySelector("#doExportBtn").onclick = () => {
+            let start = modal.querySelector("#expStart").value, end = modal.querySelector("#expEnd").value, format = modal.querySelector("#expFormat").value;
+            let filtered = dbLogs.filter(l => { let d = l.timestamp.split('T')[0]; if (start && d < start) return false; if (end && d > end) return false; return true; });
+            let dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            if (format === "pdf") {
+                let win = window.open('', '_blank');
+                let rowsHtml = filtered.map(l => `<tr><td style="border:1px solid #ddd; padding:8px;">${formatTimestamp(l.timestamp)}</td><td style="border:1px solid #ddd; padding:8px;">${l.action}</td><td style="border:1px solid #ddd; padding:8px;">${l.recordId}</td><td style="border:1px solid #ddd; padding:8px;">${l.details}</td><td style="border:1px solid #ddd; padding:8px;">${l.user || '-'}</td><td style="border:1px solid #ddd; padding:8px;">${l.reason || '-'}</td></tr>`).join('');
+                win.document.write(`<html><head><title>DBLogs_${dateStr}</title><style>body{font-family:sans-serif; padding:20px;} table{border-collapse:collapse; width:100%;} th,td{border:1px solid #ddd; padding:8px;}</style></head><body><h2>Database Logs Export</h2><p>Exported on: ${new Date().toLocaleString()}</p><table><thead><tr><th>Timestamp</th><th>Action Type</th><th>Record ID</th><th>Details</th><th>User</th><th>Reason/Note</th></tr></thead><tbody>${rowsHtml}</tbody></tr></body></html>`);
+                win.document.close(); win.print();
+            } else {
+                let rows = [["Timestamp", "Action Type", "Record ID", "Details", "User", "Reason/Note"]];
+                filtered.forEach(l => rows.push([formatTimestamp(l.timestamp), l.action, l.recordId, l.details, l.user || '-', l.reason || '-']));
+                let csv = rows.map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(",")).join("\n");
+                let blob = new Blob(["\uFEFF" + csv], { type: "text/csv" });
+                let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `DBLogs_${dateStr}.${format === 'csv' ? 'csv' : 'xls'}`; a.click();
+            }
+            modal.remove();
+        };
+    }
+    
+    async function accountManagement() {
+        let modal = document.createElement("div"); modal.className = "modal-overlay";
+        let usersList = [];
+        if (currentUserRole === "admin") {
+            const { data } = await supabaseClient.from('users').select('*');
+            usersList = data || [];
         }
-    };
-}
-
-const savedUser = sessionStorage.getItem("loggedUser");
-if (savedUser) { login(savedUser, ""); } else { document.getElementById("loginPage").style.display = "flex"; document.getElementById("appContainer").classList.remove("visible"); document.getElementById("aiAssistant").style.display = "none"; }
-document.getElementById("loginBtn").onclick = async () => { const username = document.getElementById("loginUsername").value.trim().toLowerCase(); const password = document.getElementById("loginPassword").value; await login(username, password); };
+        let userListHtml = '';
+        if (currentUserRole === "admin") {
+            userListHtml = `<h4>Existing Users:</h4><ul style="max-height:150px; overflow-y:auto;">${usersList.map(u => `<li>${u.username} (${u.role})</li>`).join('')}</ul>
+            <hr><h4>Create New Super-user</h4><input type="text" id="newUsername" placeholder="Username" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><input type="text" id="newPassword" placeholder="Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><button id="createUserBtn" class="btn btn-primary">Create User</button>`;
+        } else {
+            userListHtml = `<h4>Welcome, ${currentUser}</h4><p>You are logged in as Super-user.</p>`;
+        }
+        let changePasswordHtml = `<hr><h4>Change Your Password</h4><input type="password" id="oldPwd" placeholder="Current Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><input type="password" id="newPwd" placeholder="New Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><input type="password" id="confirmPwd" placeholder="Confirm New Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><button id="changePwdBtn" class="btn btn-primary">Change Password</button>`;
+        modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>👤 Account Management - ${currentUser} (${currentUserRole})</h3>${userListHtml}${changePasswordHtml}</div>`;
+        document.body.appendChild(modal);
+        modal.querySelector(".close-modal").onclick = () => modal.remove();
+        if (currentUserRole === "admin" && modal.querySelector("#createUserBtn")) {
+            modal.querySelector("#createUserBtn").onclick = async () => {
+                let newUser = modal.querySelector("#newUsername").value.trim().toLowerCase();
+                let newPwd = modal.querySelector("#newPassword").value.trim();
+                if (!newUser || !newPwd) { alert("Username and password required"); return; }
+                const { data: existing } = await supabaseClient.from('users').select('*').eq('username', newUser);
+                if (existing && existing.length > 0) { alert("User already exists"); return; }
+                await supabaseClient.from('users').insert({ username: newUser, password: newPwd, role: "super" });
+                alert(`User ${newUser} created successfully`);
+                modal.remove();
+            };
+        }
+        modal.querySelector("#changePwdBtn").onclick = async () => {
+            let oldPwd = modal.querySelector("#oldPwd").value;
+            let newPwd = modal.querySelector("#newPwd").value;
+            let confirmPwd = modal.querySelector("#confirmPwd").value;
+            const { data: userData } = await supabaseClient.from('users').select('*').eq('username', currentUser);
+            if (!userData || userData[0].password !== oldPwd) { alert("Current password incorrect"); return; }
+            if (newPwd !== confirmPwd) { alert("New passwords do not match"); return; }
+            if (newPwd.length < 3) { alert("Password too short"); return; }
+            await supabaseClient.from('users').update({ password: newPwd }).eq('username', currentUser);
+            alert("Password changed successfully");
+            modal.remove();
+        };
+    }
+    
+    async function login(username, password) {
+        const { data } = await supabaseClient.from('users').select('*').eq('username', username.toLowerCase());
+        if (data && data.length > 0 && data[0].password === password) {
+            currentUser = username;
+            currentUserRole = data[0].role;
+            sessionStorage.setItem("loggedUser", username);
+            sessionStorage.setItem("loggedRole", data[0].role);
+            document.getElementById("loginPage").style.display = "none";
+            document.getElementById("appContainer").classList.add("visible");
+            document.getElementById("aiAssistant").style.display = "block";
+            if (currentUserRole === "super") document.getElementById("dblogsTab").style.display = "none";
+            else document.getElementById("dblogsTab").style.display = "block";
+            await syncAll();
+            initUI();
+            return true;
+        }
+        document.getElementById("loginError").innerText = "Invalid username or password";
+        return false;
+    }
+    
+    function logout() {
+        if (confirm("Are you sure you want to logout?")) {
+            sessionStorage.clear();
+            location.reload();
+        }
+    }
+    
+    function initUI() {
+        updateClock(); setToday(); initCanvas();
+        document.getElementById("etSelect").innerHTML = etNames.map(n => `<option value="${n}">${n}</option>`).join('');
+        document.getElementById("clearSearchBtn").onclick = () => { document.getElementById("equipSearch").value = ""; renderEquipment(); };
+        document.getElementById("clearSelEquipBtn").onclick = () => { selectedAssetsSet.clear(); renderEquipment(); };
+        document.getElementById("selectAllEquipBtn").onclick = () => { equipmentData.forEach(e => selectedAssetsSet.add(getKey(e))); renderEquipment(); };
+        document.getElementById("addNewEquipBtn").onclick = addNewEquipment;
+        document.getElementById("todayBtn").onclick = setToday;
+        document.getElementById("saveRecordBtn").onclick = saveRecord;
+        document.getElementById("clearFormBtnRecord").onclick = () => { document.getElementById("jobType").value = ""; document.getElementById("purposeInput").value = ""; document.getElementById("othersNames").value = ""; document.getElementById("remarksField").value = ""; Array.from(document.getElementById("etSelect").options).forEach(o => o.selected = false); document.getElementById("setSelect").selectedIndex = 0; document.getElementById("phySelect").selectedIndex = 0; clearCanvas(); setToday(); };
+        document.getElementById("clearSignatureBtn").onclick = clearCanvas;
+        document.getElementById("previewRecordBtn").onclick = () => {
+            let selected = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq)));
+            if (selected.length === 0) { alert("No equipment selected."); return; }
+            let modal = document.createElement("div"); modal.className = "modal-overlay";
+            modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>🔍 Preview</h3><div>Date: ${document.getElementById("recordDatetime").value}</div><div>Status: ${document.getElementById("inOutStatus").value}</div><div>Job Type: ${document.getElementById("jobType").value}</div><div>Purpose: ${document.getElementById("purposeInput").value}</div><div>ET/SET/Phy: ${[...document.getElementById("etSelect").selectedOptions].map(o => o.value).join(',')}/${document.getElementById("setSelect").value}/${document.getElementById("phySelect").value}</div><div>Remarks: ${document.getElementById("remarksField").value}</div><hr><ul>${selected.map(e => `<li>${e.assetDesc}</li>`).join('')}</ul><img src="${canvas.toDataURL()}" style="max-width:100%;"></div>`;
+            document.body.appendChild(modal); modal.querySelector(".close-modal").onclick = () => modal.remove();
+        };
+        document.getElementById("exportBtn").onclick = exportWithOptions;
+        document.getElementById("exportDbLogsBtn").onclick = exportDbLogs;
+        document.getElementById("backupBtn").onclick = backupWithOptions;
+        document.getElementById("restoreBtn").onclick = restoreWithOptions;
+        document.getElementById("accountBtn").onclick = accountManagement;
+        document.getElementById("logoutBtn").onclick = logout;
+        document.getElementById("sortHistoryAscBtn").onclick = () => { historySortOrder = 'asc'; renderHistory(); };
+        document.getElementById("sortHistoryDescBtn").onclick = () => { historySortOrder = 'desc'; renderHistory(); };
+        document.getElementById("sortDbLogsAscBtn").onclick = () => { dbLogsSortOrder = 'asc'; if (currentUserRole === "admin") renderDbLogs(); };
+        document.getElementById("sortDbLogsDescBtn").onclick = () => { dbLogsSortOrder = 'desc'; if (currentUserRole === "admin") renderDbLogs(); };
+        document.getElementById("resetHistoryFiltersBtn").onclick = () => { document.getElementById("historySearch").value = ""; document.getElementById("histFilterPurpose").value = ""; document.getElementById("histFilterStatus").value = ""; document.getElementById("histFilterRecordStatus").value = ""; renderHistory(); };
+        document.getElementById("resetDbLogsBtn").onclick = () => { document.getElementById("dbLogSearch").value = ""; document.getElementById("dbLogActionFilter").value = ""; if (currentUserRole === "admin") renderDbLogs(); };
+        document.getElementById("equipSearch").addEventListener("input", () => renderEquipment());
+        document.getElementById("filterLocation").addEventListener("change", () => renderEquipment());
+        document.getElementById("filterParentAsset").addEventListener("change", () => renderEquipment());
+        document.getElementById("filterStatus").addEventListener("change", () => renderEquipment());
+        document.getElementById("historySearch").addEventListener("input", () => renderHistory());
+        document.getElementById("histFilterPurpose").addEventListener("change", () => renderHistory());
+        document.getElementById("histFilterStatus").addEventListener("change", () => renderHistory());
+        document.getElementById("histFilterRecordStatus").addEventListener("change", () => renderHistory());
+        document.getElementById("dbLogSearch").addEventListener("input", () => { if (currentUserRole === "admin") renderDbLogs(); });
+        document.getElementById("dbLogActionFilter").addEventListener("change", () => { if (currentUserRole === "admin") renderDbLogs(); });
+        document.querySelectorAll(".tab").forEach(tab => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+                document.getElementById(tab.dataset.page + "Page").classList.add("active");
+                document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+                tab.classList.add("active");
+                if (tab.dataset.page === "history") renderHistory();
+                if (tab.dataset.page === "dblogs" && currentUserRole === "admin") renderDbLogs();
+            });
+        });
+    }
+    
+    // AI Assistant
+    let isDraggingAI = false, dragStartXAI, dragStartYAI;
+    const aiAssistantDiv = document.getElementById('aiAssistant');
+    const aiChatWin = document.getElementById('aiChatWindow');
+    const aiHeader = document.getElementById('aiChatHeader');
+    if (aiHeader) {
+        aiHeader.addEventListener('mousedown', (e) => { isDraggingAI = true; dragStartXAI = e.clientX - aiChatWin.offsetLeft; dragStartYAI = e.clientY - aiChatWin.offsetTop; aiChatWin.style.position = 'fixed'; });
+        document.addEventListener('mousemove', (e) => { if (isDraggingAI) { let newLeft = e.clientX - dragStartXAI; let newTop = e.clientY - dragStartYAI; newLeft = Math.max(10, Math.min(window.innerWidth - aiChatWin.offsetWidth - 10, newLeft)); newTop = Math.max(10, Math.min(window.innerHeight - aiChatWin.offsetHeight - 10, newTop)); aiChatWin.style.left = newLeft + 'px'; aiChatWin.style.top = newTop + 'px'; aiChatWin.style.right = 'auto'; aiChatWin.style.bottom = 'auto'; } });
+        document.addEventListener('mouseup', () => { isDraggingAI = false; });
+    }
+    if (aiAssistantDiv) aiAssistantDiv.onclick = () => { aiChatWin.style.display = 'flex'; aiChatWin.style.right = '30px'; aiChatWin.style.bottom = '110px'; aiChatWin.style.left = 'auto'; aiChatWin.style.top = 'auto'; };
+    const closeBtn = document.getElementById('closeAiChat');
+    if (closeBtn) closeBtn.onclick = () => { aiChatWin.style.display = 'none'; };
+    const sendBtn = document.getElementById('aiSendBtn');
+    if (sendBtn) {
+        sendBtn.onclick = () => {
+            const msg = document.getElementById('aiInput').value;
+            if (msg) {
+                document.getElementById('aiMessages').innerHTML += `<div class="message user"><div class="message-bubble">${msg}</div></div>`;
+                document.getElementById('aiInput').value = '';
+                setTimeout(() => {
+                    document.getElementById('aiMessages').innerHTML += `<div class="message bot"><div class="message-bubble">Thanks for your question! Please refer to the in-app guide for IN/OUT records.</div></div>`;
+                    document.getElementById('aiMessages').scrollTop = document.getElementById('aiMessages').scrollHeight;
+                }, 300);
+            }
+        };
+    }
+    
+    // Start the app
+    const savedUser = sessionStorage.getItem("loggedUser");
+    if (savedUser) { login(savedUser, ""); } else { document.getElementById("loginPage").style.display = "flex"; document.getElementById("appContainer").classList.remove("visible"); document.getElementById("aiAssistant").style.display = "none"; }
+    document.getElementById("loginBtn").onclick = async () => { const username = document.getElementById("loginUsername").value.trim().toLowerCase(); const password = document.getElementById("loginPassword").value; await login(username, password); };
+})();
 </script>
 </body>
 </html>
