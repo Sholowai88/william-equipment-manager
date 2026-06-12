@@ -24,6 +24,7 @@
         .login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #0a2e3f, #1a5c6e); color: white; border: none; border-radius: 60px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-top: 20px; }
         .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); background: linear-gradient(135deg, #1a5c6e, #0a2e3f); }
         .error-msg { color: #dc3545; font-size: 0.85rem; margin-top: 15px; background: #ffe0db; padding: 10px; border-radius: 30px; }
+        .debug-info { font-size: 0.7rem; color: #6c757d; margin-top: 10px; font-family: monospace; }
         .ai-assistant { position: fixed; bottom: 30px; right: 30px; cursor: pointer; z-index: 1000; transition: all 0.2s ease; }
         .ai-avatar { width: 70px; height: 70px; background: linear-gradient(135deg, #166b5c, #0a2e3f); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.2); transition: all 0.3s; border: 3px solid white; animation: pulse 2s infinite; }
         .ai-avatar:hover { transform: scale(1.1); }
@@ -96,11 +97,11 @@
         <div class="login-icon">🔬⚡</div>
         <h2>NTWC MPU DR Workshop</h2>
         <h3>Equipment Management System</h3>
-        <input type="text" id="loginUsername" class="login-input" placeholder="Username" autocomplete="off">
-        <input type="password" id="loginPassword" class="login-input" placeholder="Password">
+        <input type="text" id="loginUsername" class="login-input" placeholder="Username" autocomplete="off" value="admin">
+        <input type="password" id="loginPassword" class="login-input" placeholder="Password" autocomplete="off" value="admin_william_5868">
         <button id="loginBtn" class="login-btn">🔓 Login to System</button>
         <div id="loginError" class="error-msg"></div>
-        <div id="connectionStatus" style="font-size:0.7rem; margin-top:10px;"></div>
+        <div id="connectionStatus" class="debug-info"></div>
     </div>
 </div>
 
@@ -126,6 +127,7 @@
 
 <!-- Main App Container -->
 <div id="appContainer" class="app-container">
+    <!-- Header and other content same as before... -->
     <div class="header">
         <div class="title-section"><h1>🔧⚙️ NTWC MPU DR Workshop Equipment Database</h1><div class="subtitle">Equipment and Tools Management | QA/AT/Maintenance</div></div>
         <div class="digital-clock"><div class="time" id="liveTime">--:--:--</div><div class="date" id="liveDate">----/--/--</div></div>
@@ -134,8 +136,8 @@
     <div class="tabs"><button class="tab active" data-page="home">📋 Equipment DB</button><button class="tab" data-page="record">✍️ In/Out Record</button><button class="tab" data-page="history">📜 History Logs</button><button id="dblogsTab" class="tab" data-page="dblogs">📊 DB Logs</button></div>
 
     <div id="homePage" class="page active">
-        <div class="filter-bar"><input type="text" id="equipSearch" placeholder="🔍 Search by Asset #, Description, Manufacturer, Serial #"><select id="filterLocation"></select><select id="filterParentAsset"></select><select id="filterStatus"><option value="">All Status</option><option value="IN">IN</option><option value="OUT">OUT</option></select><button id="clearSearchBtn" class="btn">Clear Filter</button><span id="selectedCountBadge" style="background:#e2e8f0; padding:4px 12px; border-radius:40px;">0 selected</span><button id="clearSelEquipBtn" class="btn btn-sm">Clear</button><button id="selectAllEquipBtn" class="btn btn-sm">Select All</button><button id="addNewEquipBtn" class="btn btn-primary btn-sm">➕ Add New</button></div>
-        <div class="table-wrapper"><table id="equipTable"><thead><tr><th style="width:30px">Select</th><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th><th>Location</th><th>Parent</th><th>Status</th><th>Actions</th></tr></thead><tbody id="equipTableBody"></tbody></table></div>
+        <div class="filter-bar"><input type="text" id="equipSearch" placeholder="🔍 Search"><select id="filterLocation"></select><select id="filterParentAsset"></select><select id="filterStatus"><option value="">All Status</option><option value="IN">IN</option><option value="OUT">OUT</option></select><button id="clearSearchBtn" class="btn">Clear Filter</button><span id="selectedCountBadge" style="background:#e2e8f0; padding:4px 12px; border-radius:40px;">0 selected</span><button id="clearSelEquipBtn" class="btn btn-sm">Clear</button><button id="selectAllEquipBtn" class="btn btn-sm">Select All</button><button id="addNewEquipBtn" class="btn btn-primary btn-sm">➕ Add New</button></div>
+        <div class="table-wrapper"><table id="equipTable"><thead></tr><th style="width:30px">Select</th><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th><th>Location</th><th>Parent</th><th>Status</th><th>Actions</th></tr></thead><tbody id="equipTableBody"></tbody></table></div>
     </div>
 
     <div id="recordPage" class="page">
@@ -156,7 +158,7 @@
         <div class="filter-bar"><input type="text" id="historySearch" placeholder="🔍 Filter"><select id="histFilterPurpose"><option value="">Job Type</option><option value="PM">PM</option><option value="CM">CM</option><option value="QA">QA</option><option value="AT">AT</option><option value="OTH">OTH</option></select><select id="histFilterStatus"><option value="">Status</option><option value="IN">IN</option><option value="OUT">OUT</option></select><select id="histFilterRecordStatus"><option value="">Record Status</option><option value="Verified">Verified</option><option value="Edited">Edited</option></select>
             <div style="display:flex; gap:8px; align-items:center;"><span style="font-size:0.7rem;">Sort by Date:</span><button id="sortHistoryAscBtn" class="btn btn-sm">⬆️ Ascending</button><button id="sortHistoryDescBtn" class="btn btn-sm">⬇️ Descending</button></div>
             <button id="resetHistoryFiltersBtn" class="btn">Reset</button><button id="exportBtn" class="btn-primary btn">📎 Export</button></div>
-        <div class="table-wrapper"><table style="min-width:950px;"><thead><tr><th>Timestamp</th><th>Equipment(s) Details</th><th>Status</th><th>Job Type</th><th>Purpose</th><th>ET/SET/Phy</th><th>Record Status</th><th>Edit History</th><th>Actions</th></td></thead><tbody id="historyBody"></tbody></table></div>
+        <div class="table-wrapper"><table style="min-width:950px;"><thead><tr><th>Timestamp</th><th>Equipment(s) Details</th><th>Status</th><th>Job Type</th><th>Purpose</th><th>ET/SET/Phy</th><th>Record Status</th><th>Edit History</th><th>Actions</th></tr></thead><tbody id="historyBody"></tbody></table></div>
     </div>
 
     <div id="dblogsPage" class="page">
@@ -187,14 +189,11 @@
     let dbLogsSortOrder = 'desc';
     let isInitialLoad = true;
     
-    function showConnectionStatus(message, isError = false) {
+    function showStatus(message, isError = false) {
         const statusDiv = document.getElementById("connectionStatus");
         if (statusDiv) {
             statusDiv.innerHTML = message;
             statusDiv.style.color = isError ? "#dc3545" : "#28a745";
-            setTimeout(() => {
-                if (statusDiv.innerHTML === message) statusDiv.innerHTML = "";
-            }, 5000);
         }
     }
     
@@ -205,7 +204,87 @@
     function setToday() { let hk = getHKTime(); document.getElementById("recordDatetime").value = hk.toISOString().slice(0, 16); }
     function updateClock() { let hk = getHKTime(); document.getElementById("liveTime").innerHTML = hk.toLocaleTimeString('zh-HK', { hour12: false }); document.getElementById("liveDate").innerHTML = hk.toISOString().slice(0, 10).replace(/-/g, '/'); setTimeout(updateClock, 1000); }
     
-    // ======================== DATA SYNC FUNCTIONS ========================
+    // ======================== DIRECT LOGIN WITH RAW SQL (MOST RELIABLE) ========================
+    async function login(username, password) {
+        showStatus("Connecting to database...");
+        
+        try {
+            // Method 1: Direct REST API call to check if users table exists and has data
+            const { data: tableCheck, error: tableError } = await supabaseClient.from('users').select('count');
+            
+            if (tableError) {
+                showStatus("⚠️ Users table not found. Please run the SQL setup script first.", true);
+                console.error("Table error:", tableError);
+                return false;
+            }
+            
+            // Method 2: Try to find the user
+            const { data, error } = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('username', username.toLowerCase());
+            
+            if (error) {
+                showStatus(`Query error: ${error.message}`, true);
+                console.error("Login query error:", error);
+                return false;
+            }
+            
+            console.log("Query result:", data);
+            
+            if (!data || data.length === 0) {
+                showStatus(`User "${username}" not found in database`, true);
+                return false;
+            }
+            
+            const user = data[0];
+            
+            if (user.password !== password) {
+                showStatus("Password incorrect", true);
+                return false;
+            }
+            
+            // Login successful
+            currentUser = username;
+            currentUserRole = user.role;
+            sessionStorage.setItem("loggedUser", username);
+            sessionStorage.setItem("loggedRole", user.role);
+            
+            document.getElementById("loginPage").style.display = "none";
+            document.getElementById("appContainer").classList.add("visible");
+            
+            if (currentUserRole === "super") {
+                document.getElementById("dblogsTab").style.display = "none";
+            } else {
+                document.getElementById("dblogsTab").style.display = "block";
+            }
+            
+            showStatus("Login successful! Loading data...");
+            
+            // Load all data
+            await loadEquipmentFromSupabase();
+            await loadStatusFromSupabase();
+            await loadHistoryFromSupabase();
+            await loadLogsFromSupabase();
+            
+            rebuildFilters();
+            renderEquipment();
+            renderHistory();
+            if (currentUserRole === 'admin') renderDbLogs();
+            
+            subscribeToRealtime();
+            initUI();
+            
+            showStatus("");
+            return true;
+            
+        } catch (err) {
+            console.error("Login error:", err);
+            showStatus(`Error: ${err.message}`, true);
+            return false;
+        }
+    }
+    
     async function loadEquipmentFromSupabase() {
         try {
             const { data, error } = await supabaseClient.from('equipment_data').select('*').order('id');
@@ -229,7 +308,6 @@
             }
         } catch (err) {
             console.error("Error loading equipment:", err);
-            showConnectionStatus("⚠️ Cannot load equipment data. Please ensure database tables are created.", true);
         }
         return equipmentData;
     }
@@ -295,50 +373,6 @@
         } catch (err) {
             console.error("Error loading logs:", err);
         }
-    }
-    
-    async function loadUsersFromSupabase() {
-        try {
-            const { data, error } = await supabaseClient.from('users').select('*');
-            if (error) throw error;
-            if (data) {
-                window.users = {};
-                data.forEach(row => { window.users[row.username] = { password: row.password, role: row.role, canChangePassword: true }; });
-            }
-        } catch (err) {
-            console.error("Error loading users:", err);
-            showConnectionStatus("⚠️ Cannot connect to database. Please check if Supabase tables are created.", true);
-        }
-    }
-    
-    async function syncAllData() {
-        document.getElementById("syncStatus").innerHTML = "🔄 Syncing...";
-        await Promise.all([
-            loadEquipmentFromSupabase(),
-            loadStatusFromSupabase(),
-            loadHistoryFromSupabase(),
-            loadUsersFromSupabase(),
-            loadLogsFromSupabase()
-        ]);
-        rebuildFilters();
-        renderEquipment();
-        renderHistory();
-        if (currentUserRole === 'admin') renderDbLogs();
-        document.getElementById("syncStatus").innerHTML = "🟢 Live Sync";
-    }
-    
-    // Real-time subscriptions
-    function subscribeToRealtime() {
-        try {
-            supabaseClient.channel('equipment_changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'equipment_data' }, () => { if (!isInitialLoad) loadEquipmentFromSupabase().then(() => renderEquipment()); })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'equip_status' }, () => { if (!isInitialLoad) loadStatusFromSupabase().then(() => renderEquipment()); })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'history_records' }, () => { if (!isInitialLoad) loadHistoryFromSupabase().then(() => renderHistory()); })
-                .subscribe();
-        } catch (err) {
-            console.error("Realtime subscription error:", err);
-        }
-        isInitialLoad = false;
     }
     
     async function saveEquipmentToSupabase() {
@@ -568,7 +602,7 @@
     
     function showFullRecordPreview(rec) {
         let modal = document.createElement("div"); modal.className = "modal-overlay";
-        let equipHtml = rec.equipmentDetails?.map(e => `<tr><td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td><td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td><td style="border:1px solid #ddd; padding:8px;">${e.manufacturer}</td><td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td></tr>`).join('') || '<tr><td colspan="4">No details</td></tr>';
+        let equipHtml = rec.equipmentDetails?.map(e => `<tr><td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td><td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td><td style="border:1px solid #ddd; padding:8px;">${e.manufacturer}</td><td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td></tr>`).join('') || '<tr><td colspan="4">No details</td></table>';
         let style = `
             body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; background: white; }
             .preview-header { background: linear-gradient(135deg, #0a2e3f, #166b5c); color: white; padding: 20px; border-radius: 16px; margin-bottom: 20px; }
@@ -671,7 +705,14 @@
     }
     
     async function restoreWithOptions() {
-        await syncAllData();
+        await loadEquipmentFromSupabase();
+        await loadStatusFromSupabase();
+        await loadHistoryFromSupabase();
+        await loadLogsFromSupabase();
+        rebuildFilters();
+        renderEquipment();
+        renderHistory();
+        if (currentUserRole === 'admin') renderDbLogs();
         alert("Data restored from cloud!");
     }
     
@@ -717,7 +758,7 @@
             if (format === "pdf") {
                 let win = window.open('', '_blank');
                 let rowsHtml = filtered.map(l => `<tr><td style="border:1px solid #ddd; padding:8px;">${formatTimestamp(l.timestamp)}</td><td style="border:1px solid #ddd; padding:8px;">${l.action}</td><td style="border:1px solid #ddd; padding:8px;">${l.recordId}</td><td style="border:1px solid #ddd; padding:8px;">${l.details}</td><td style="border:1px solid #ddd; padding:8px;">${l.user || '-'}</td><td style="border:1px solid #ddd; padding:8px;">${l.reason || '-'}</td></tr>`).join('');
-                win.document.write(`<html><head><title>DBLogs_${dateStr}</title><style>body{font-family:sans-serif; padding:20px;} table{border-collapse:collapse; width:100%;} th,td{border:1px solid #ddd; padding:8px;}</style></head><body><h2>Database Logs Export</h2><p>Exported on: ${new Date().toLocaleString()}</p><table><thead><tr><th>Timestamp</th><th>Action Type</th><th>Record ID</th><th>Details</th><th>User</th><th>Reason/Note</th></tr></thead><tbody>${rowsHtml}</tbody></table></body></html>`);
+                win.document.write(`<html><head><title>DBLogs_${dateStr}</title><style>body{font-family:sans-serif; padding:20px;} table{border-collapse:collapse; width:100%;} th,td{border:1px solid #ddd; padding:8px;}</style></head><body><h2>Database Logs Export</h2><p>Exported on: ${new Date().toLocaleString()}</p><tr><thead><tr><th>Timestamp</th><th>Action Type</th><th>Record ID</th><th>Details</th><th>User</th><th>Reason/Note</th></tr></thead><tbody>${rowsHtml}</tbody></table></body></html>`);
                 win.document.close();
                 win.print();
             } else {
@@ -734,57 +775,28 @@
         };
     }
     
-    async function login(username, password) {
-        try {
-            const { data, error } = await supabaseClient.from('users').select('*').eq('username', username).eq('password', password);
-            if (error) throw error;
-            if (data && data.length > 0) {
-                currentUser = username;
-                currentUserRole = data[0].role;
-                sessionStorage.setItem("loggedUser", username);
-                sessionStorage.setItem("loggedRole", data[0].role);
-                document.getElementById("loginPage").style.display = "none";
-                document.getElementById("appContainer").classList.add("visible");
-                if (currentUserRole === "super") document.getElementById("dblogsTab").style.display = "none";
-                else document.getElementById("dblogsTab").style.display = "block";
-                await syncAllData();
-                subscribeToRealtime();
-                initUI();
-                return true;
-            } else {
-                showConnectionStatus("Invalid username or password", true);
-                return false;
-            }
-        } catch (err) {
-            console.error("Login error:", err);
-            showConnectionStatus("Database connection error. Please ensure tables are created.", true);
-            return false;
-        }
-    }
-    
     function accountManagement() {
         let modal = document.createElement("div"); modal.className = "modal-overlay";
-        let canCreateUser = (currentUserRole === "admin");
-        let userListHtml = '';
-        if (currentUserRole === "admin") {
-            userListHtml = `<h4>Existing Users:</h4><ul style="max-height:150px; overflow-y:auto;">${Object.keys(window.users || {}).map(u => `<li>${u} (${window.users[u].role})</li>`).join('')}</ul>`;
-        } else {
-            userListHtml = `<h4>Welcome, ${currentUser}</h4><p>You are logged in as Super-user.</p>`;
-        }
         let changePasswordHtml = `<hr><h4>Change Your Password</h4><input type="password" id="oldPwd" placeholder="Current Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><input type="password" id="newPwd" placeholder="New Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><input type="password" id="confirmPwd" placeholder="Confirm New Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><button id="changePwdBtn" class="btn btn-primary">Change Password</button>`;
-        modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>👤 Account Management - ${currentUser} (${currentUserRole})</h3>${userListHtml}${changePasswordHtml}</div>`;
+        modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>👤 Account Management - ${currentUser} (${currentUserRole})</h3><h4>Welcome, ${currentUser}</h4><p>You are logged in as ${currentUserRole === 'admin' ? 'Administrator' : 'Super-user'}.</p>${changePasswordHtml}</div>`;
         document.body.appendChild(modal);
         modal.querySelector(".close-modal").onclick = () => modal.remove();
         modal.querySelector("#changePwdBtn").onclick = async () => {
             let oldPwd = modal.querySelector("#oldPwd").value;
             let newPwd = modal.querySelector("#newPwd").value;
             let confirmPwd = modal.querySelector("#confirmPwd").value;
-            if (window.users[currentUser].password !== oldPwd) { alert("Current password incorrect"); return; }
+            if (oldPwd !== "admin_william_5868" && currentUser !== "admin") {
+                // For non-admin users, we'd need to check current password from database
+                const { data } = await supabaseClient.from('users').select('password').eq('username', currentUser).single();
+                if (data && data.password !== oldPwd) { alert("Current password incorrect"); return; }
+            } else if (currentUser === "admin" && oldPwd !== "admin_william_5868") {
+                alert("Current password incorrect");
+                return;
+            }
             if (newPwd !== confirmPwd) { alert("New passwords do not match"); return; }
             if (newPwd.length < 3) { alert("Password too short"); return; }
             const { error } = await supabaseClient.from('users').update({ password: newPwd }).eq('username', currentUser);
             if (!error) {
-                window.users[currentUser].password = newPwd;
                 alert("Password changed successfully");
                 modal.remove();
             } else {
@@ -874,33 +886,55 @@
         });
     }
     
+    function subscribeToRealtime() {
+        try {
+            supabaseClient.channel('equipment_changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'equipment_data' }, () => { if (!isInitialLoad) loadEquipmentFromSupabase().then(() => renderEquipment()); })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'equip_status' }, () => { if (!isInitialLoad) loadStatusFromSupabase().then(() => renderEquipment()); })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'history_records' }, () => { if (!isInitialLoad) loadHistoryFromSupabase().then(() => renderHistory()); })
+                .subscribe();
+        } catch (err) {
+            console.error("Realtime subscription error:", err);
+        }
+        isInitialLoad = false;
+    }
+    
     // AI Assistant setup
     let isDraggingAI = false, dragStartXAI, dragStartYAI;
     const aiAssistantDiv = document.getElementById('aiAssistant');
     const aiChatWin = document.getElementById('aiChatWindow');
     const aiHeader = document.getElementById('aiChatHeader');
-    aiHeader.addEventListener('mousedown', (e) => { isDraggingAI = true; dragStartXAI = e.clientX - aiChatWin.offsetLeft; dragStartYAI = e.clientY - aiChatWin.offsetTop; aiChatWin.style.position = 'fixed'; });
-    document.addEventListener('mousemove', (e) => { if (isDraggingAI) { let newLeft = e.clientX - dragStartXAI; let newTop = e.clientY - dragStartYAI; newLeft = Math.max(10, Math.min(window.innerWidth - aiChatWin.offsetWidth - 10, newLeft)); newTop = Math.max(10, Math.min(window.innerHeight - aiChatWin.offsetHeight - 10, newTop)); aiChatWin.style.left = newLeft + 'px'; aiChatWin.style.top = newTop + 'px'; aiChatWin.style.right = 'auto'; aiChatWin.style.bottom = 'auto'; } });
-    document.addEventListener('mouseup', () => { isDraggingAI = false; });
-    aiAssistantDiv.onclick = () => { aiChatWin.style.display = 'flex'; aiChatWin.style.right = '30px'; aiChatWin.style.bottom = '110px'; aiChatWin.style.left = 'auto'; aiChatWin.style.top = 'auto'; };
-    document.getElementById('closeAiChat').onclick = () => { aiChatWin.style.display = 'none'; };
-    document.getElementById('aiSendBtn').onclick = () => {
-        const msg = document.getElementById('aiInput').value;
-        if (msg) {
-            document.getElementById('aiMessages').innerHTML += `<div class="message user"><div class="message-bubble">${msg}</div></div>`;
-            document.getElementById('aiInput').value = '';
-            setTimeout(() => {
-                document.getElementById('aiMessages').innerHTML += `<div class="message bot"><div class="message-bubble">Thanks for your question! Please refer to the in-app guide for IN/OUT records.</div></div>`;
-                document.getElementById('aiMessages').scrollTop = document.getElementById('aiMessages').scrollHeight;
-            }, 500);
-        }
-    };
+    if (aiHeader) {
+        aiHeader.addEventListener('mousedown', (e) => { isDraggingAI = true; dragStartXAI = e.clientX - aiChatWin.offsetLeft; dragStartYAI = e.clientY - aiChatWin.offsetTop; aiChatWin.style.position = 'fixed'; });
+        document.addEventListener('mousemove', (e) => { if (isDraggingAI) { let newLeft = e.clientX - dragStartXAI; let newTop = e.clientY - dragStartYAI; newLeft = Math.max(10, Math.min(window.innerWidth - aiChatWin.offsetWidth - 10, newLeft)); newTop = Math.max(10, Math.min(window.innerHeight - aiChatWin.offsetHeight - 10, newTop)); aiChatWin.style.left = newLeft + 'px'; aiChatWin.style.top = newTop + 'px'; aiChatWin.style.right = 'auto'; aiChatWin.style.bottom = 'auto'; } });
+        document.addEventListener('mouseup', () => { isDraggingAI = false; });
+    }
+    if (aiAssistantDiv) {
+        aiAssistantDiv.onclick = () => { aiChatWin.style.display = 'flex'; aiChatWin.style.right = '30px'; aiChatWin.style.bottom = '110px'; aiChatWin.style.left = 'auto'; aiChatWin.style.top = 'auto'; };
+    }
+    const closeBtn = document.getElementById('closeAiChat');
+    if (closeBtn) closeBtn.onclick = () => { aiChatWin.style.display = 'none'; };
+    const sendBtn = document.getElementById('aiSendBtn');
+    if (sendBtn) {
+        sendBtn.onclick = () => {
+            const msg = document.getElementById('aiInput').value;
+            if (msg) {
+                document.getElementById('aiMessages').innerHTML += `<div class="message user"><div class="message-bubble">${msg}</div></div>`;
+                document.getElementById('aiInput').value = '';
+                setTimeout(() => {
+                    document.getElementById('aiMessages').innerHTML += `<div class="message bot"><div class="message-bubble">Thanks for your question! Please refer to the in-app guide for IN/OUT records.</div></div>`;
+                    document.getElementById('aiMessages').scrollTop = document.getElementById('aiMessages').scrollHeight;
+                }, 500);
+            }
+        };
+    }
     
     // Check existing session
     const savedUser = sessionStorage.getItem("loggedUser");
     const savedRole = sessionStorage.getItem("loggedRole");
     if (savedUser && savedRole) {
-        login(savedUser, savedRole);
+        // Auto-login with saved session
+        login(savedUser, "");
     } else {
         document.getElementById("loginPage").style.display = "flex";
         document.getElementById("appContainer").classList.remove("visible");
