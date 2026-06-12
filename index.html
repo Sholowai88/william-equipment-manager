@@ -637,7 +637,22 @@
         document.getElementById("exportDbLogsBtn").onclick = exportDbLogsCSV;
         document.getElementById("backupBtn").onclick = backupToFile;
         document.getElementById("restoreBtn").onclick = restoreFromFile;
-        document.getElementById("refreshBtn").onclick = () => { syncAll(); alert("Data refreshed from cloud!"); };
+        document.getElementById("refreshBtn").onclick = async () => { 
+           const btn = document.getElementById("refreshBtn");
+           const originalText = btn.innerHTML;
+           btn.innerHTML = "🔄 Refreshing...";
+           btn.disabled = true;
+           try {
+                await syncAll();
+                alert("✅ Database refreshed successfully!\n\nAll data has been synchronized from the cloud.");
+           } catch (error) {
+               console.error("Refresh error:", error);
+               alert("❌ Refresh failed. Please check your network connection.");
+           } finally {
+              btn.innerHTML = originalText;
+              btn.disabled = false;
+           }
+        };
         document.getElementById("accountBtn").onclick = accountManagement;
         document.getElementById("logoutBtn").onclick = logout;
         document.getElementById("sortHistoryAscBtn").onclick = () => { historySortOrder = 'asc'; renderHistory(); };
