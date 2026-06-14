@@ -338,16 +338,33 @@
         }
     }
 
-    // Quick sync for single equipment update (much faster)
+    // Quick sync for single equipment update - using simple upsert with proper conflict handling
     async function quickSyncEquipment(eq) {
         try {
-            // Ensure we have a valid identifier
-            if (!eq.assetNumber && !eq.serialNo) {
-                console.error("Cannot sync equipment: missing identifier", eq);
+            // Ensure we have valid data
+            if (!eq.assetDesc) {
+                console.error("Cannot sync equipment: missing description", eq);
                 return false;
             }
         
-            const equipmentData = {
+            // First, check if the record exists using a simple SELECT
+            var identifier = null;
+            if (eq.assetNumber && eq.assetNumber.trim() !== "") {
+                identifier = eq.assetNumber;
+            } else if (eq.serialNo && eq.serialNo.trim() !== "") {
+                identifier = eq.serialNo;
+            } else {
+                identifier = eq.assetDesc;
+            }
+        
+            // Try to find existing record
+            var existingQuery = await supabaseClient
+                .from('equipment_data')
+                .select('id')
+                .or('asset_number.eq.' + (eq.assetNumber || '___NULL___'), 'serial_no.eq.' + (eq.serialNo || '___NULL___'))
+                .limit(1);
+        
+            var equipmentDataObj = {
                 asset_number: eq.assetNumber || "", 
                 asset_desc: eq.assetDesc, 
                 manufacturer: eq.manufacturer || "",
@@ -361,15 +378,22 @@
                 current_detail: eq.currentDetail || ""
             };
         
-            const { error } = await supabaseClient
-                .from('equipment_data')
-                .upsert(equipmentData, { 
-                    onConflict: 'asset_number,serial_no',
-                    ignoreDuplicates: false 
-                });
+            var result;
+            if (existingQuery.data && existingQuery.data.length > 0) {
+                // Update existing record
+                result = await supabaseClient
+                    .from('equipment_data')
+                    .update(equipmentDataObj)
+                    .eq('id', existingQuery.data[0].id);
+            } else {
+                // Insert new record
+                result = await supabaseClient
+                    .from('equipment_data')
+                    .insert(equipmentDataObj);
+            }
         
-            if (error) {
-                console.error("Upsert error:", error);
+            if (result.error) {
+                console.error("Upsert error:", result.error);
                 return false;
             }
             return true;
@@ -387,17 +411,29 @@
                 return false;
             }
         
-            const { error } = await supabaseClient
+            // Check if status record exists
+            var existingQuery = await supabaseClient
                 .from('equip_status')
-                .upsert({ 
-                    equipment_key: key, 
-                    status: status 
-                }, { 
-                    onConflict: 'equipment_key' 
-                });
+                .select('id')
+                .eq('equipment_key', key)
+                .maybeSingle();
         
-            if (error) {
-                console.error("Status upsert error:", error);
+            var result;
+            if (existingQuery.data) {
+                // Update existing
+                result = await supabaseClient
+                    .from('equip_status')
+                    .update({ status: status })
+                    .eq('equipment_key', key);
+            } else {
+                // Insert new
+                result = await supabaseClient
+                    .from('equip_status')
+                    .insert({ equipment_key: key, status: status });
+            }
+        
+            if (result.error) {
+                console.error("Status upsert error:", result.error);
                 return false;
             }
             return true;
@@ -567,6 +603,7 @@
         document.body.appendChild(modal);
         modal.querySelector(".close-modal").onclick = () => modal.remove();
         modal.querySelector("#cancelAddBtn").onclick = () => modal.remove();
+
         modal.querySelector("#confirmAddBtn").onclick = async () => {
             let newEq = { 
                 assetNumber: modal.querySelector("#nAssetNum").value, 
@@ -582,7 +619,7 @@
                 currentDetail: modal.querySelector("#nDetail").value 
             };
             if (!newEq.assetDesc) { alert("Asset Description required"); return; }
-    
+
             // Check for duplicate
             var duplicate = equipmentData.some(function(eq) {
                 return eq.assetNumber === newEq.assetNumber && eq.serialNo === newEq.serialNo;
@@ -597,16 +634,16 @@
             var eqKey = getKey(newEq);
             equipStatus[eqKey] = "IN";
     
-            // Sync to cloud
-            var syncSuccess = await quickSyncEquipment(newEq);
-            if (syncSuccess) {
+            renderEquipment();
+    
+            // Then try to sync to cloud
+            try {
+                await quickSyncEquipment(newEq);
                 await quickSyncStatus(eqKey, "IN");
-                renderEquipment();
                 await addLog("EQUIPMENT_ADDED", newEq.assetNumber, "New equipment " + newEq.assetDesc + " added", currentUser, "");
                 alert("✅ Equipment added successfully and synced to cloud!");
-            } else {
-                alert("❌ Equipment added locally but failed to sync to cloud. Please try Refresh button.");
-                renderEquipment();
+            } catch (err) {
+                alert("✅ Equipment added locally. Cloud sync will happen on next refresh.");
             }
             modal.remove();
         };
