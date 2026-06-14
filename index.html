@@ -199,6 +199,21 @@
         document.getElementById("recordDatetime").value = year + "-" + month + "-" + day + "T" + hours + ":" + minutes;
     }
     function updateClock() { let hk = getHKTime(); document.getElementById("liveTime").innerHTML = hk.toLocaleTimeString('zh-HK', { hour12: false }); document.getElementById("liveDate").innerHTML = hk.toISOString().slice(0, 10).replace(/-/g, '/'); setTimeout(updateClock, 1000); }
+
+    async function loadUsersFromSupabase() {
+        try {
+            const { data, error } = await supabaseClient.from('users').select('*');
+            if (error) throw error;
+            if (data) {
+                window.users = {};
+                data.forEach(function(row) {
+                    window.users[row.username] = { password: row.password, role: row.role, canChangePassword: true };
+                });
+            }
+        } catch (err) {
+            console.error("Error loading users:", err);
+        }
+    }
     
     async function addLog(action, recordId, details, user, reason) {
         try {
@@ -245,6 +260,7 @@
             await loadStatus();
             await loadHistory();
             if (currentUserRole === 'admin') await loadDbLogs();
+            await loadUsersFromSupabase();
             rebuildFilters();
             renderEquipment();
             renderHistory();
@@ -325,37 +341,69 @@
     // Quick sync for single equipment update (much faster)
     async function quickSyncEquipment(eq) {
         try {
-            const equipmentForUpsert = [{
-                asset_number: eq.assetNumber, 
+            // Ensure we have a valid identifier
+            if (!eq.assetNumber && !eq.serialNo) {
+                console.error("Cannot sync equipment: missing identifier", eq);
+                return false;
+            }
+        
+            const equipmentData = {
+                asset_number: eq.assetNumber || "", 
                 asset_desc: eq.assetDesc, 
-                manufacturer: eq.manufacturer,
-                parent_asset: eq.parentAsset, 
-                asset_owner: eq.assetOwner, 
-                serial_no: eq.serialNo,
-                location: eq.location, 
-                po_number: eq.poNumber, 
-                acceptance_date: eq.acceptanceDate,
-                calibration_date: eq.calibrationDate, 
-                current_detail: eq.currentDetail
-            }];
-            await supabaseClient.from('equipment_data').upsert(equipmentForUpsert, {
-                onConflict: 'asset_number,serial_no',
-                ignoreDuplicates: false
-            });
+                manufacturer: eq.manufacturer || "",
+                parent_asset: eq.parentAsset || "", 
+                asset_owner: eq.assetOwner || "", 
+                serial_no: eq.serialNo || "",
+                location: eq.location || "", 
+                po_number: eq.poNumber || "", 
+                acceptance_date: eq.acceptanceDate || "",
+                calibration_date: eq.calibrationDate || "", 
+                current_detail: eq.currentDetail || ""
+            };
+        
+            const { error } = await supabaseClient
+                .from('equipment_data')
+                .upsert(equipmentData, { 
+                    onConflict: 'asset_number,serial_no',
+                    ignoreDuplicates: false 
+                });
+        
+            if (error) {
+                console.error("Upsert error:", error);
+                return false;
+            }
+            return true;
         } catch (err) {
             console.error("Quick sync equipment error:", err);
+            return false;
         }
     }
 
     // Quick sync for status update
     async function quickSyncStatus(key, status) {
         try {
-            await supabaseClient.from('equip_status').upsert([{
-                equipment_key: key,
-                status: status
-            }], { onConflict: 'equipment_key' });
+            if (!key) {
+                console.error("Cannot sync status: missing equipment key");
+                return false;
+            }
+        
+            const { error } = await supabaseClient
+                .from('equip_status')
+                .upsert({ 
+                    equipment_key: key, 
+                    status: status 
+                }, { 
+                    onConflict: 'equipment_key' 
+                });
+        
+            if (error) {
+                console.error("Status upsert error:", error);
+                return false;
+            }
+            return true;
         } catch (err) {
             console.error("Quick sync status error:", err);
+            return false;
         }
     }
     
@@ -458,6 +506,9 @@
         modal.querySelector(".close-modal").onclick = () => modal.remove();
         modal.querySelector("#cancelEquipEdit").onclick = () => modal.remove();
         modal.querySelector("#saveEquipEdit").onclick = async () => {
+            // Store original values for comparison
+            var originalAssetNumber = eq.assetNumber;
+    
             eq.assetNumber = modal.querySelector("#eAssetNum").value; 
             eq.assetDesc = modal.querySelector("#eAssetDesc").value; 
             eq.manufacturer = modal.querySelector("#eMfg").value;
@@ -470,13 +521,30 @@
             eq.calibrationDate = modal.querySelector("#eCal").value; 
             eq.currentDetail = modal.querySelector("#eDetail").value;
     
-            // Quick sync only this equipment
-            await quickSyncEquipment(eq);
+            // Sync to cloud
+            var syncSuccess = await quickSyncEquipment(eq);
     
-            renderEquipment();
-            addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited", currentUser, "");
-    
-            alert("✅ Equipment updated successfully!");
+            if (syncSuccess) {
+                // If asset number changed, update status key as well
+                if (originalAssetNumber !== eq.assetNumber && originalAssetNumber) {
+                    var oldStatus = equipStatus[originalAssetNumber];
+                    if (oldStatus) {
+                        delete equipStatus[originalAssetNumber];
+                        equipStatus[getKey(eq)] = oldStatus;
+                        await quickSyncStatus(getKey(eq), oldStatus);
+                        await supabaseClient.from('equip_status').delete().eq('equipment_key', originalAssetNumber);
+                    }
+                } else {
+                    await quickSyncStatus(getKey(eq), equipStatus[getKey(eq)] || "IN");
+                }
+        
+                renderEquipment();
+                await addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited", currentUser, "");
+                alert("✅ Equipment updated successfully and synced to cloud!");
+            } else {
+                alert("❌ Equipment updated locally but failed to sync to cloud. Please try Refresh button.");
+                renderEquipment();
+            }
             modal.remove();
         };
     }
@@ -515,26 +583,31 @@
             };
             if (!newEq.assetDesc) { alert("Asset Description required"); return; }
     
-            // Check for duplicate quickly
+            // Check for duplicate
             var duplicate = equipmentData.some(function(eq) {
-                return eq.assetNumber === newEq.assetNumber && eq.assetDesc === newEq.assetDesc;
+                return eq.assetNumber === newEq.assetNumber && eq.serialNo === newEq.serialNo;
             });
             if (duplicate) {
                 alert("⚠️ Equipment already exists!");
                 return;
             }
     
+            // Add to local array first
             equipmentData.push(newEq);
-            equipStatus[getKey(newEq)] = "IN";
+            var eqKey = getKey(newEq);
+            equipStatus[eqKey] = "IN";
     
-            // Use quick sync instead of full sync
-            await quickSyncEquipment(newEq);
-            await quickSyncStatus(getKey(newEq), "IN");
-    
-            renderEquipment();
-            addLog("EQUIPMENT_ADDED", newEq.assetNumber, "New equipment " + newEq.assetDesc + " added", currentUser, "");
-    
-            alert("✅ Equipment added successfully!");
+            // Sync to cloud
+            var syncSuccess = await quickSyncEquipment(newEq);
+            if (syncSuccess) {
+                await quickSyncStatus(eqKey, "IN");
+                renderEquipment();
+                await addLog("EQUIPMENT_ADDED", newEq.assetNumber, "New equipment " + newEq.assetDesc + " added", currentUser, "");
+                alert("✅ Equipment added successfully and synced to cloud!");
+            } else {
+                alert("❌ Equipment added locally but failed to sync to cloud. Please try Refresh button.");
+                renderEquipment();
+            }
             modal.remove();
         };
     }
@@ -910,29 +983,59 @@
         document.getElementById("exportDbLogsBtn").onclick = exportDbLogsCSV;
         document.getElementById("backupBtn").onclick = backupToFile;
         document.getElementById("restoreBtn").onclick = restoreFromFile;
-        // Refresh button - only updates display from existing local data (no cloud sync)
-        document.getElementById("refreshBtn").onclick = function() { 
+        
+        // Refresh button with rate limiting (once every 5 seconds)
+        var lastRefreshTime = 0;
+        var refreshCooldown = 5000; // 5 seconds in milliseconds
+
+        document.getElementById("refreshBtn").onclick = async function() { 
+            var now = Date.now();
+            var timeSinceLastRefresh = now - lastRefreshTime;
+    
+            if (timeSinceLastRefresh < refreshCooldown) {
+                var waitSeconds = Math.ceil((refreshCooldown - timeSinceLastRefresh) / 1000);
+                alert("⏳ Please wait " + waitSeconds + " second(s) before refreshing again.\n\nThis prevents database overload.");
+                return;
+            }
+    
             var btn = document.getElementById("refreshBtn");
             var originalText = btn.innerHTML;
             btn.innerHTML = "🔄 Refreshing...";
             btn.disabled = true;
+    
             try {
+                // Show status message
+                document.getElementById("syncStatusText").innerHTML = "Refreshing...";
+        
+                // Reload ALL data from Supabase
+                await loadEquipment();
+                await loadStatus();
+                await loadHistory();
+                if (currentUserRole === 'admin') await loadDbLogs();
+                await loadUsersFromSupabase();
+        
+                // Rebuild and re-render
                 rebuildFilters();
                 renderEquipment();
                 renderHistory();
                 if (currentUserRole === 'admin') renderDbLogs();
+        
+                // Update last refresh time
+                lastRefreshTime = now;
+        
                 document.getElementById("syncStatusText").innerHTML = "Live Sync";
-                setTimeout(function() {
-                    alert("✅ Page refreshed successfully!\n\nDisplay updated from current data.");
-                }, 100);
+                alert("✅ Database refreshed successfully!\n\nAll data has been synchronized from the cloud.\n\nNext refresh available in 5 seconds.");
+        
             } catch (error) {
                 console.error("Refresh error:", error);
-                alert("❌ Refresh failed.");
+                document.getElementById("syncStatusText").innerHTML = "Sync Error";
+                alert("❌ Refresh failed. Please check your network connection.");
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         };
+        
         document.getElementById("accountBtn").onclick = accountManagement;
         document.getElementById("logoutBtn").onclick = logout;
         document.getElementById("sortHistoryAscBtn").onclick = () => { historySortOrder = 'asc'; renderHistory(); };
