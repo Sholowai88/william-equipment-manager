@@ -181,8 +181,23 @@
     
     function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
     function formatTimestamp(isoString) { let d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; }
-    function getHKTime() { let now = new Date(); return new Date(now.getTime() + (480 + now.getTimezoneOffset()) * 60000); }
-    function setToday() { let hk = getHKTime(); document.getElementById("recordDatetime").value = hk.toISOString().slice(0, 16); }
+    function getHKTime() { 
+        var now = new Date(); 
+        // Hong Kong is UTC+8 (no daylight saving)
+        var hkOffset = 8 * 60; // 480 minutes
+        var localOffset = now.getTimezoneOffset();
+        var hkTime = new Date(now.getTime() + (hkOffset + localOffset) * 60000);
+        return hkTime;
+    }
+    function setToday() { 
+        var hk = getHKTime(); 
+        var year = hk.getFullYear();
+        var month = String(hk.getMonth() + 1).padStart(2, '0');
+        var day = String(hk.getDate()).padStart(2, '0');
+        var hours = String(hk.getHours()).padStart(2, '0');
+        var minutes = String(hk.getMinutes()).padStart(2, '0');
+        document.getElementById("recordDatetime").value = year + "-" + month + "-" + day + "T" + hours + ":" + minutes;
+    }
     function updateClock() { let hk = getHKTime(); document.getElementById("liveTime").innerHTML = hk.toLocaleTimeString('zh-HK', { hour12: false }); document.getElementById("liveDate").innerHTML = hk.toISOString().slice(0, 10).replace(/-/g, '/'); setTimeout(updateClock, 1000); }
     
     async function addLog(action, recordId, details, user, reason) {
@@ -243,17 +258,29 @@
     
     async function fullSyncToCloud() {
         try {
-            // ========== 1. UPSERT equipment_data ==========
+            // ========== 1. UPSERT equipment_data using asset_number as primary key ==========
             for (var i = 0; i < equipmentData.length; i++) {
                 var eq = equipmentData[i];
+                var eqKey = getKey(eq);
+            
+                // First check if equipment exists by asset_number (primary identifier)
                 var existing = await supabaseClient
-                     .from('equipment_data')
+                    .from('equipment_data')
                     .select('id')
                     .eq('asset_number', eq.assetNumber || '')
-                    .eq('serial_no', eq.serialNo || '')
                     .maybeSingle();
             
+                // Also check by serial number if asset number is empty
+                if (!existing.data && eq.serialNo) {
+                    existing = await supabaseClient
+                        .from('equipment_data')
+                        .select('id')
+                        .eq('serial_no', eq.serialNo)
+                        .maybeSingle();
+                }
+            
                 if (existing.data && existing.data.id) {
+                    // UPDATE existing record
                     await supabaseClient.from('equipment_data')
                         .update({
                             asset_number: eq.assetNumber, 
@@ -270,6 +297,7 @@
                         })
                         .eq('id', existing.data.id);
                 } else {
+                    // INSERT new record only if it doesn't exist
                     await supabaseClient.from('equipment_data').insert({
                         asset_number: eq.assetNumber, 
                         asset_desc: eq.assetDesc, 
@@ -286,7 +314,7 @@
                 }
             }
         
-            // ========== 2. UPSERT equip_status ==========
+            // ========== 2. Sync equip_status ==========
             for (var key in equipStatus) {
                 if (equipStatus.hasOwnProperty(key)) {
                     var status = equipStatus[key];
@@ -307,7 +335,7 @@
                 }
             }
         
-            // ========== 3. UPSERT history_records (FIXED - ADDED THIS SECTION) ==========
+            // ========== 3. Sync history_records ==========
             for (var j = 0; j < historyRecords.length; j++) {
                 var rec = historyRecords[j];
                 var existingHistory = await supabaseClient
@@ -353,10 +381,9 @@
                             equipment_details: rec.equipmentDetails || []
                         });
                 }
-            }
+            }    
         
-            console.log("Full sync completed successfully - all tables UPSERTed");
-        
+            console.log("Full sync completed - equipment count: " + equipmentData.length);
         } catch (err) {
             console.error("Full sync error:", err);
         }
@@ -461,15 +488,25 @@
         modal.querySelector(".close-modal").onclick = () => modal.remove();
         modal.querySelector("#cancelEquipEdit").onclick = () => modal.remove();
         modal.querySelector("#saveEquipEdit").onclick = async () => {
-            eq.assetNumber = modal.querySelector("#eAssetNum").value; eq.assetDesc = modal.querySelector("#eAssetDesc").value; eq.manufacturer = modal.querySelector("#eMfg").value;
-            eq.serialNo = modal.querySelector("#eSerial").value; eq.location = modal.querySelector("#eLocation").value; eq.parentAsset = modal.querySelector("#eParent").value;
-            eq.assetOwner = modal.querySelector("#eOwner").value; eq.poNumber = modal.querySelector("#ePo").value; eq.acceptanceDate = modal.querySelector("#eAccept").value;
-            eq.calibrationDate = modal.querySelector("#eCal").value; eq.currentDetail = modal.querySelector("#eDetail").value;
+            eq.assetNumber = modal.querySelector("#eAssetNum").value; 
+            eq.assetDesc = modal.querySelector("#eAssetDesc").value; 
+            eq.manufacturer = modal.querySelector("#eMfg").value;
+            eq.serialNo = modal.querySelector("#eSerial").value; 
+            eq.location = modal.querySelector("#eLocation").value; 
+            eq.parentAsset = modal.querySelector("#eParent").value;
+            eq.assetOwner = modal.querySelector("#eOwner").value; 
+            eq.poNumber = modal.querySelector("#ePo").value; 
+            eq.acceptanceDate = modal.querySelector("#eAccept").value;
+            eq.calibrationDate = modal.querySelector("#eCal").value; 
+            eq.currentDetail = modal.querySelector("#eDetail").value;
+    
             await fullSyncToCloud();
             renderEquipment();
-            await addLog("EQUIPMENT_EDITED", eq.assetNumber, `Equipment ${eq.assetDesc} edited`, currentUser, "");
-            alert("✅ Equipment updated!");
-            modal.remove();
+            await addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited", currentUser, "");
+    
+            // Show confirmation and close modal
+            alert("✅ Equipment updated successfully!");
+            modal.remove(); // Close the edit window
         };
     }
     
@@ -492,15 +529,39 @@
         modal.querySelector(".close-modal").onclick = () => modal.remove();
         modal.querySelector("#cancelAddBtn").onclick = () => modal.remove();
         modal.querySelector("#confirmAddBtn").onclick = async () => {
-            let newEq = { assetNumber: modal.querySelector("#nAssetNum").value, assetDesc: modal.querySelector("#nAssetDesc").value, manufacturer: modal.querySelector("#nMfg").value, parentAsset: modal.querySelector("#nParent").value, assetOwner: modal.querySelector("#nOwner").value, serialNo: modal.querySelector("#nSerial").value, location: modal.querySelector("#nLocation").value, poNumber: modal.querySelector("#nPo").value, acceptanceDate: "", calibrationDate: "", currentDetail: modal.querySelector("#nDetail").value };
+            let newEq = { 
+                assetNumber: modal.querySelector("#nAssetNum").value, 
+                assetDesc: modal.querySelector("#nAssetDesc").value, 
+                manufacturer: modal.querySelector("#nMfg").value, 
+                parentAsset: modal.querySelector("#nParent").value, 
+                assetOwner: modal.querySelector("#nOwner").value, 
+                serialNo: modal.querySelector("#nSerial").value, 
+                location: modal.querySelector("#nLocation").value, 
+                poNumber: modal.querySelector("#nPo").value, 
+                acceptanceDate: "", 
+                calibrationDate: "", 
+                currentDetail: modal.querySelector("#nDetail").value 
+            };
             if (!newEq.assetDesc) { alert("Asset Description required"); return; }
+    
+            // Check for duplicate
+            var duplicate = equipmentData.some(function(eq) {
+                return eq.assetNumber === newEq.assetNumber && eq.serialNo === newEq.serialNo;
+            });
+            if (duplicate) {
+                alert("⚠️ Equipment already exists! Duplicate not allowed.");
+                return;
+            }
+    
             equipmentData.push(newEq);
             equipStatus[getKey(newEq)] = "IN";
             await fullSyncToCloud();
             renderEquipment();
-            await addLog("EQUIPMENT_ADDED", newEq.assetNumber, `New equipment ${newEq.assetDesc} added`, currentUser, "");
-            alert("✅ Equipment added!");
-            modal.remove();
+            await addLog("EQUIPMENT_ADDED", newEq.assetNumber, "New equipment " + newEq.assetDesc + " added", currentUser, "");
+    
+            // Show confirmation and close modal
+            alert("✅ Equipment added successfully!");
+            modal.remove(); // Close the window
         };
     }
     
@@ -579,13 +640,14 @@
         });
     
         // After successful save
+        await fullSyncToCloud();
         renderEquipment(); 
         renderHistory();
-        alert("✅ Record saved!");
-        document.getElementById("purposeInput").value = "";
+        await addLog("RECORD_CREATED", record.id, "Record created for " + selectedEquips.length + " equipment", currentUser, "");
 
-        // Add log asynchronously without blocking
-        addLog("RECORD_CREATED", record.id, "Record created for " + selectedEquips.length + " equipment", currentUser, "").catch(console.error);
+        // Show confirmation (no window to close here, just alert)
+        alert("✅ Record saved successfully!");
+        document.getElementById("purposeInput").value = "";
     }
     
     function renderHistory() {
@@ -645,23 +707,38 @@
         modal.querySelector(".close-modal").onclick = () => modal.remove();
         modal.querySelector("#cancelEditRecordBtn").onclick = () => modal.remove();
         modal.querySelector("#confirmEditRecordBtn").onclick = async () => {
-            let editDate = modal.querySelector("#editDate").value, editPerson = modal.querySelector("#editPerson").value.trim(), editReason = modal.querySelector("#editReason").value.trim();
-            if (!editDate || !editPerson || !editReason) { alert("All edit authorization fields required"); return; }
+            let editDate = modal.querySelector("#editDate").value, 
+                editPerson = modal.querySelector("#editPerson").value.trim(), 
+                editReason = modal.querySelector("#editReason").value.trim();
+            if (!editDate || !editPerson || !editReason) { 
+                alert("All edit authorization fields required"); 
+                return; 
+            }
+    
             record.editHistory = record.editHistory || [];
-            record.editHistory.push({ timestamp: editDate, user: editPerson, reason: editReason, previousStatus: record.status, previousJobType: record.jobType });
+            record.editHistory.push({ 
+                timestamp: editDate, 
+                user: editPerson, 
+                reason: editReason, 
+                previousStatus: record.status, 
+                previousJobType: record.jobType 
+            });
             record.jobType = modal.querySelector("#editJobType").value;
             record.purpose = modal.querySelector("#editPurpose").value;
-            record.et = [...modal.querySelector("#editEt").selectedOptions].map(o => o.value).join(", ");
+            record.et = [...modal.querySelector("#editEt").selectedOptions].map(function(o) { return o.value; }).join(", ");
             record.set = modal.querySelector("#editSet").value;
             record.physicist = modal.querySelector("#editPhy").value;
             record.others = modal.querySelector("#editOthers").value;
             record.remarks = modal.querySelector("#editRemarks").value;
             record.recordStatus = "Edited";
+    
             await fullSyncToCloud();
             renderHistory();
-            await addLog("RECORD_EDITED", record.id, `Record edited by ${editPerson}`, editPerson, editReason);
-            alert("✅ Record updated with edit history.");
-            modal.remove();
+            await addLog("RECORD_EDITED", record.id, "Record edited by " + editPerson, editPerson, editReason);
+    
+            // Show confirmation and close modal
+            alert("✅ Record updated with edit history!");
+            modal.remove(); // Close the edit window
         };
     }
     
