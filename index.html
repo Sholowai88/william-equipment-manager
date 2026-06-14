@@ -258,134 +258,104 @@
     
     async function fullSyncToCloud() {
         try {
-            // ========== 1. UPSERT equipment_data using asset_number as primary key ==========
-            for (var i = 0; i < equipmentData.length; i++) {
-                var eq = equipmentData[i];
-                var eqKey = getKey(eq);
+            // Batch UPSERT for equipment_data using Supabase's upsert
+            if (equipmentData.length > 0) {
+                const equipmentForUpsert = equipmentData.map(eq => ({
+                    asset_number: eq.assetNumber, 
+                    asset_desc: eq.assetDesc, 
+                    manufacturer: eq.manufacturer,
+                    parent_asset: eq.parentAsset, 
+                    asset_owner: eq.assetOwner, 
+                    serial_no: eq.serialNo,
+                    location: eq.location, 
+                    po_number: eq.poNumber, 
+                    acceptance_date: eq.acceptanceDate,
+                    calibration_date: eq.calibrationDate, 
+                    current_detail: eq.currentDetail
+                }));
             
-                // First check if equipment exists by asset_number (primary identifier)
-                var existing = await supabaseClient
-                    .from('equipment_data')
-                    .select('id')
-                    .eq('asset_number', eq.assetNumber || '')
-                    .maybeSingle();
-            
-                // Also check by serial number if asset number is empty
-                if (!existing.data && eq.serialNo) {
-                    existing = await supabaseClient
-                        .from('equipment_data')
-                        .select('id')
-                        .eq('serial_no', eq.serialNo)
-                        .maybeSingle();
-                }
-            
-                if (existing.data && existing.data.id) {
-                    // UPDATE existing record
-                    await supabaseClient.from('equipment_data')
-                        .update({
-                            asset_number: eq.assetNumber, 
-                            asset_desc: eq.assetDesc, 
-                            manufacturer: eq.manufacturer,
-                            parent_asset: eq.parentAsset, 
-                            asset_owner: eq.assetOwner, 
-                            serial_no: eq.serialNo,
-                            location: eq.location, 
-                            po_number: eq.poNumber, 
-                            acceptance_date: eq.acceptanceDate,
-                            calibration_date: eq.calibrationDate, 
-                            current_detail: eq.currentDetail
-                        })
-                        .eq('id', existing.data.id);
-                } else {
-                    // INSERT new record only if it doesn't exist
-                    await supabaseClient.from('equipment_data').insert({
-                        asset_number: eq.assetNumber, 
-                        asset_desc: eq.assetDesc, 
-                        manufacturer: eq.manufacturer,
-                        parent_asset: eq.parentAsset, 
-                        asset_owner: eq.assetOwner, 
-                        serial_no: eq.serialNo,
-                        location: eq.location, 
-                        po_number: eq.poNumber, 
-                        acceptance_date: eq.acceptanceDate,
-                        calibration_date: eq.calibrationDate, 
-                        current_detail: eq.currentDetail
-                    });
-                }
+                await supabaseClient.from('equipment_data').upsert(equipmentForUpsert, {
+                    onConflict: 'asset_number,serial_no',
+                    ignoreDuplicates: false
+                });
             }
         
-            // ========== 2. Sync equip_status ==========
-            for (var key in equipStatus) {
-                if (equipStatus.hasOwnProperty(key)) {
-                    var status = equipStatus[key];
-                    var existingStatus = await supabaseClient
-                        .from('equip_status')
-                        .select('id')
-                        .eq('equipment_key', key)
-                        .maybeSingle();
-                
-                    if (existingStatus.data && existingStatus.data.id) {
-                        await supabaseClient.from('equip_status')
-                            .update({ status: status })
-                            .eq('id', existingStatus.data.id);
-                    } else {
-                        await supabaseClient.from('equip_status')
-                            .insert({ equipment_key: key, status: status });
-                    }
-                }
+            // Batch UPSERT for equip_status
+            if (Object.keys(equipStatus).length > 0) {
+                const statusForUpsert = Object.entries(equipStatus).map(([key, status]) => ({
+                    equipment_key: key,
+                    status: status
+                }));
+                await supabaseClient.from('equip_status').upsert(statusForUpsert, {
+                    onConflict: 'equipment_key',
+                    ignoreDuplicates: false
+                });
             }
         
-            // ========== 3. Sync history_records ==========
-            for (var j = 0; j < historyRecords.length; j++) {
-                var rec = historyRecords[j];
-                var existingHistory = await supabaseClient
-                    .from('history_records')
-                    .select('id')
-                    .eq('record_id', rec.id)
-                    .maybeSingle();
-            
-                if (existingHistory.data && existingHistory.data.id) {
-                    await supabaseClient.from('history_records')
-                        .update({
-                            display_time: rec.displayTime,
-                            status: rec.status,
-                            job_type: rec.jobType,
-                            purpose: rec.purpose,
-                            et: rec.et,
-                            set_person: rec.set,
-                            physicist: rec.physicist,
-                            others: rec.others,
-                            remarks: rec.remarks,
-                            signature: rec.signature,
-                            record_status: rec.recordStatus,
-                            edit_history: rec.editHistory || [],
-                            equipment_details: rec.equipmentDetails || []
-                        })
-                        .eq('id', existingHistory.data.id);
-                } else {
-                    await supabaseClient.from('history_records')
-                        .insert({
-                            record_id: rec.id,
-                            display_time: rec.displayTime,
-                            status: rec.status,
-                            job_type: rec.jobType,
-                            purpose: rec.purpose,
-                            et: rec.et,
-                            set_person: rec.set,
-                            physicist: rec.physicist,
-                            others: rec.others,
-                            remarks: rec.remarks,
-                            signature: rec.signature,
-                            record_status: rec.recordStatus,
-                            edit_history: rec.editHistory || [],
-                            equipment_details: rec.equipmentDetails || []
-                        });
-                }
-            }    
+            // Batch UPSERT for history_records
+            if (historyRecords.length > 0) {
+                const historyForUpsert = historyRecords.map(rec => ({
+                    record_id: rec.id,
+                    display_time: rec.displayTime,
+                    status: rec.status,
+                    job_type: rec.jobType,
+                    purpose: rec.purpose,
+                    et: rec.et,
+                    set_person: rec.set,
+                    physicist: rec.physicist,
+                    others: rec.others,
+                    remarks: rec.remarks,
+                    signature: rec.signature,
+                    record_status: rec.recordStatus,
+                    edit_history: rec.editHistory || [],
+                    equipment_details: rec.equipmentDetails || []
+                }));
+                await supabaseClient.from('history_records').upsert(historyForUpsert, {
+                    onConflict: 'record_id',
+                    ignoreDuplicates: false
+                });
+            }
         
-            console.log("Full sync completed - equipment count: " + equipmentData.length);
+            console.log("Quick sync completed - " + equipmentData.length + " equipment synced");
         } catch (err) {
-            console.error("Full sync error:", err);
+            console.error("Sync error:", err);
+        }
+    }
+
+    // Quick sync for single equipment update (much faster)
+    async function quickSyncEquipment(eq) {
+        try {
+            const equipmentForUpsert = [{
+                asset_number: eq.assetNumber, 
+                asset_desc: eq.assetDesc, 
+                manufacturer: eq.manufacturer,
+                parent_asset: eq.parentAsset, 
+                asset_owner: eq.assetOwner, 
+                serial_no: eq.serialNo,
+                location: eq.location, 
+                po_number: eq.poNumber, 
+                acceptance_date: eq.acceptanceDate,
+                calibration_date: eq.calibrationDate, 
+                current_detail: eq.currentDetail
+            }];
+            await supabaseClient.from('equipment_data').upsert(equipmentForUpsert, {
+                onConflict: 'asset_number,serial_no',
+                ignoreDuplicates: false
+            });
+        } catch (err) {
+            console.error("Quick sync equipment error:", err);
+        }
+    }
+
+    // Quick sync for status update
+    async function quickSyncStatus(key, status) {
+        try {
+            await supabaseClient.from('equip_status').upsert([{
+                equipment_key: key,
+                status: status
+            }], { onConflict: 'equipment_key' });
+        } catch (err) {
+            console.error("Quick sync status error:", err);
         }
     }
     
@@ -500,13 +470,14 @@
             eq.calibrationDate = modal.querySelector("#eCal").value; 
             eq.currentDetail = modal.querySelector("#eDetail").value;
     
-            await fullSyncToCloud();
-            renderEquipment();
-            await addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited", currentUser, "");
+            // Quick sync only this equipment
+            await quickSyncEquipment(eq);
     
-            // Show confirmation and close modal
+            renderEquipment();
+            addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited", currentUser, "");
+    
             alert("✅ Equipment updated successfully!");
-            modal.remove(); // Close the edit window
+            modal.remove();
         };
     }
     
@@ -544,24 +515,27 @@
             };
             if (!newEq.assetDesc) { alert("Asset Description required"); return; }
     
-            // Check for duplicate
+            // Check for duplicate quickly
             var duplicate = equipmentData.some(function(eq) {
-                return eq.assetNumber === newEq.assetNumber && eq.serialNo === newEq.serialNo;
+                return eq.assetNumber === newEq.assetNumber && eq.assetDesc === newEq.assetDesc;
             });
             if (duplicate) {
-                alert("⚠️ Equipment already exists! Duplicate not allowed.");
+                alert("⚠️ Equipment already exists!");
                 return;
             }
     
             equipmentData.push(newEq);
             equipStatus[getKey(newEq)] = "IN";
-            await fullSyncToCloud();
-            renderEquipment();
-            await addLog("EQUIPMENT_ADDED", newEq.assetNumber, "New equipment " + newEq.assetDesc + " added", currentUser, "");
     
-            // Show confirmation and close modal
+            // Use quick sync instead of full sync
+            await quickSyncEquipment(newEq);
+            await quickSyncStatus(getKey(newEq), "IN");
+    
+            renderEquipment();
+            addLog("EQUIPMENT_ADDED", newEq.assetNumber, "New equipment " + newEq.assetDesc + " added", currentUser, "");
+    
             alert("✅ Equipment added successfully!");
-            modal.remove(); // Close the window
+            modal.remove();
         };
     }
     
@@ -613,39 +587,86 @@
     async function saveRecord() {
         if (selectedAssetsSet.size === 0) { alert("No equipment selected."); return; }
         if (!validateStatusSelection()) { alert("Status conflict: Cannot proceed."); return; }
-        let dt = document.getElementById("recordDatetime").value, newStatus = document.getElementById("inOutStatus").value, jobType = document.getElementById("jobType").value, purpose = document.getElementById("purposeInput").value.trim();
-        if (!dt || !jobType || !purpose || !document.getElementById("etSelect").selectedOptions.length || !document.getElementById("setSelect").value || !document.getElementById("phySelect").value) { alert("All mandatory fields required"); return; }
-        if (canvas.toDataURL() === document.createElement('canvas').toDataURL()) { alert("Signature required"); return; }
-        let et = [...document.getElementById("etSelect").selectedOptions].map(o => o.value).join(", ");
-        let set = document.getElementById("setSelect").value, phy = document.getElementById("phySelect").value, others = document.getElementById("othersNames").value.trim(), remarks = document.getElementById("remarksField").value.trim();
-        let signature = canvas.toDataURL(); let selectedEquips = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq)));
-        let equipDetails = selectedEquips.map(eq => ({ key: getKey(eq), assetNumber: eq.assetNumber, assetDesc: eq.assetDesc, manufacturer: eq.manufacturer, serialNo: eq.serialNo, location: eq.location }));
-        let record = { id: Date.now(), displayTime: dt, status: newStatus, jobType, purpose, et, set, physicist: phy, others, remarks, signature, recordStatus: "Verified", editHistory: [], equipmentDetails: equipDetails };
-        historyRecords.unshift(record);
-        selectedAssetsSet.forEach(key => { equipStatus[key] = newStatus; });
-        // Instead of fullSyncToCloud(), only update the changed records
-        for (const [key, status] of Object.entries(equipStatus)) {
-            await supabaseClient.from('equip_status')
-                .update({ status, updated_at: new Date() })
-                .eq('equipment_key', key);
+    
+        let dt = document.getElementById("recordDatetime").value, 
+            newStatus = document.getElementById("inOutStatus").value, 
+            jobType = document.getElementById("jobType").value, 
+            purpose = document.getElementById("purposeInput").value.trim();
+    
+        if (!dt || !jobType || !purpose || !document.getElementById("etSelect").selectedOptions.length || 
+            !document.getElementById("setSelect").value || !document.getElementById("phySelect").value) { 
+            alert("All mandatory fields required"); 
+            return; 
         }
     
-        // Insert the new history record
+        if (canvas.toDataURL() === document.createElement('canvas').toDataURL()) { 
+            alert("Signature required"); 
+            return; 
+        }
+    
+        let et = [...document.getElementById("etSelect").selectedOptions].map(o => o.value).join(", ");
+        let set = document.getElementById("setSelect").value, 
+            phy = document.getElementById("phySelect").value, 
+            others = document.getElementById("othersNames").value.trim(), 
+            remarks = document.getElementById("remarksField").value.trim();
+        let signature = canvas.toDataURL(); 
+        let selectedEquips = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq)));
+        let equipDetails = selectedEquips.map(eq => ({ 
+            key: getKey(eq), 
+            assetNumber: eq.assetNumber, 
+            assetDesc: eq.assetDesc, 
+            manufacturer: eq.manufacturer, 
+            serialNo: eq.serialNo, 
+            location: eq.location 
+        }));
+    
+        let record = { 
+            id: Date.now(), 
+            displayTime: dt, 
+            status: newStatus, 
+            jobType, 
+            purpose, 
+            et, 
+            set, 
+            physicist: phy, 
+            others, 
+            remarks, 
+            signature, 
+            recordStatus: "Verified", 
+            editHistory: [], 
+            equipmentDetails: equipDetails 
+        };
+    
+        historyRecords.unshift(record);
+    
+        // Update status for each selected equipment
+        for (let key of selectedAssetsSet) {
+            equipStatus[key] = newStatus;
+            await quickSyncStatus(key, newStatus);
+        }
+    
+        // Insert history record
         await supabaseClient.from('history_records').insert({
-            record_id: record.id, display_time: record.displayTime, status: record.status, job_type: record.jobType,
-            purpose: record.purpose, et: record.et, set_person: record.set, physicist: record.physicist,
-            others: record.others, remarks: record.remarks, signature: record.signature,
-            record_status: record.recordStatus, edit_history: record.editHistory || [],
+            record_id: record.id,
+            display_time: record.displayTime,
+            status: record.status,
+            job_type: record.jobType,
+            purpose: record.purpose,
+            et: record.et,
+            set_person: record.set,
+            physicist: record.physicist,
+            others: record.others,
+            remarks: record.remarks,
+            signature: record.signature,
+            record_status: record.recordStatus,
+            edit_history: record.editHistory || [],
             equipment_details: record.equipmentDetails || []
         });
     
-        // After successful save
-        await fullSyncToCloud();
         renderEquipment(); 
         renderHistory();
-        await addLog("RECORD_CREATED", record.id, "Record created for " + selectedEquips.length + " equipment", currentUser, "");
-
-        // Show confirmation (no window to close here, just alert)
+        addLog("RECORD_CREATED", record.id, "Record created for " + selectedEquips.length + " equipment", currentUser, "");
+    
         alert("✅ Record saved successfully!");
         document.getElementById("purposeInput").value = "";
     }
@@ -732,13 +753,26 @@
             record.remarks = modal.querySelector("#editRemarks").value;
             record.recordStatus = "Edited";
     
-            await fullSyncToCloud();
-            renderHistory();
-            await addLog("RECORD_EDITED", record.id, "Record edited by " + editPerson, editPerson, editReason);
+            // Update history record directly
+            await supabaseClient.from('history_records')
+                .update({
+                    job_type: record.jobType,
+                    purpose: record.purpose,
+                    et: record.et,
+                    set_person: record.set,
+                    physicist: record.physicist,
+                    others: record.others,
+                    remarks: record.remarks,
+                    record_status: record.recordStatus,
+                    edit_history: record.editHistory
+                })
+                .eq('record_id', record.id);
     
-            // Show confirmation and close modal
+            renderHistory();
+            addLog("RECORD_EDITED", record.id, "Record edited by " + editPerson, editPerson, editReason);
+    
             alert("✅ Record updated with edit history!");
-            modal.remove(); // Close the edit window
+            modal.remove();
         };
     }
     
