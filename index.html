@@ -186,21 +186,19 @@
     function updateClock() { let hk = getHKTime(); document.getElementById("liveTime").innerHTML = hk.toLocaleTimeString('zh-HK', { hour12: false }); document.getElementById("liveDate").innerHTML = hk.toISOString().slice(0, 10).replace(/-/g, '/'); setTimeout(updateClock, 1000); }
     
     async function addLog(action, recordId, details, user, reason) {
-        // Allow both admin and super-user to see logs, but only admin can view DB Logs page
-        const log = { 
-            id: Date.now(), 
-            timestamp: getHKTime().toISOString(), 
-            action, 
-            recordId: recordId?.toString() || "N/A", 
-            details, 
-            user: user || currentUser || "System", 
-            reason: reason || ""
-        };
-        dbLogs.unshift(log);
-        if (dbLogs.length > 1000) dbLogs.pop();
-    
-        // Always insert into Supabase for persistence
         try {
+            const log = { 
+                id: Date.now(), 
+                timestamp: getHKTime().toISOString(), 
+                action: action, 
+                recordId: String(recordId || "N/A"), 
+                details: details || "", 
+                user: user || currentUser || "System", 
+                reason: reason || ""
+            };
+            dbLogs.unshift(log);
+            if (dbLogs.length > 1000) dbLogs.pop();
+        
             await supabaseClient.from('db_logs').insert({ 
                 log_id: log.id, 
                 timestamp: log.timestamp, 
@@ -210,13 +208,12 @@
                 user_name: log.user, 
                 reason: log.reason 
             });
+        
+            if (currentUserRole === 'admin') {
+                renderDbLogs();
+            }
         } catch (err) {
             console.error("Failed to insert log:", err);
-        }
-    
-        // Refresh DB Logs display if user is admin
-        if (currentUserRole === 'admin') {
-            renderDbLogs();
         }
     }
     
@@ -226,82 +223,142 @@
     async function loadDbLogs() { if (currentUserRole !== 'admin') return; const { data } = await supabaseClient.from('db_logs').select('*').order('created_at', { ascending: false }); if (data) { dbLogs = data.map(row => ({ id: row.log_id, timestamp: row.timestamp, action: row.action, recordId: row.record_id, details: row.details, user: row.user_name, reason: row.reason })); renderDbLogs(); } }
     
     async function syncAll() {
-        document.getElementById("syncStatusText").innerHTML = "Syncing...";
-        await Promise.all([loadEquipment(), loadStatus(), loadHistory(), loadDbLogs()]);
-        rebuildFilters(); renderEquipment(); renderHistory(); if (currentUserRole === 'admin') renderDbLogs();
-        document.getElementById("syncStatusText").innerHTML = "Live Sync";
+        var statusSpan = document.getElementById("syncStatusText");
+        if (statusSpan) statusSpan.innerHTML = "Syncing...";
+        try {
+            await loadEquipment();
+            await loadStatus();
+            await loadHistory();
+            if (currentUserRole === 'admin') await loadDbLogs();
+            rebuildFilters();
+            renderEquipment();
+            renderHistory();
+            if (currentUserRole === 'admin') renderDbLogs();
+            if (statusSpan) statusSpan.innerHTML = "Live Sync";
+        } catch (err) {
+            console.error("Sync error:", err);
+            if (statusSpan) statusSpan.innerHTML = "Sync Error";
+        }
     }
     
     async function fullSyncToCloud() {
-        // UPSERT equipment_data - update existing, insert new
-        for (const eq of equipmentData) {
-            const key = getKey(eq);
-            const { data: existing } = await supabaseClient
-                .from('equipment_data')
-                .select('id')
-                .eq('asset_number', eq.assetNumber)
-                .eq('serial_no', eq.serialNo)
-                .maybeSingle();
-        
-            if (existing) {
-                await supabaseClient.from('equipment_data')
-                    .update({
-                        asset_number: eq.assetNumber, asset_desc: eq.assetDesc, manufacturer: eq.manufacturer,
-                        parent_asset: eq.parentAsset, asset_owner: eq.assetOwner, serial_no: eq.serialNo,
-                        location: eq.location, po_number: eq.poNumber, acceptance_date: eq.acceptanceDate,
-                        calibration_date: eq.calibrationDate, current_detail: eq.currentDetail
-                    })
-                    .eq('id', existing.id);
-            } else {
-            a    wait supabaseClient.from('equipment_data').insert({
-                    asset_number: eq.assetNumber, asset_desc: eq.assetDesc, manufacturer: eq.manufacturer,
-                    parent_asset: eq.parentAsset, asset_owner: eq.assetOwner, serial_no: eq.serialNo,
-                    location: eq.location, po_number: eq.poNumber, acceptance_date: eq.acceptanceDate,
-                    calibration_date: eq.calibrationDate, current_detail: eq.currentDetail
-                });
+        try {
+            // ========== 1. UPSERT equipment_data ==========
+            for (var i = 0; i < equipmentData.length; i++) {
+                var eq = equipmentData[i];
+                var existing = await supabaseClient
+                     .from('equipment_data')
+                    .select('id')
+                    .eq('asset_number', eq.assetNumber || '')
+                    .eq('serial_no', eq.serialNo || '')
+                    .maybeSingle();
+            
+                if (existing.data && existing.data.id) {
+                    await supabaseClient.from('equipment_data')
+                        .update({
+                            asset_number: eq.assetNumber, 
+                            asset_desc: eq.assetDesc, 
+                            manufacturer: eq.manufacturer,
+                            parent_asset: eq.parentAsset, 
+                            asset_owner: eq.assetOwner, 
+                            serial_no: eq.serialNo,
+                            location: eq.location, 
+                            po_number: eq.poNumber, 
+                            acceptance_date: eq.acceptanceDate,
+                            calibration_date: eq.calibrationDate, 
+                            current_detail: eq.currentDetail
+                        })
+                        .eq('id', existing.data.id);
+                } else {
+                    await supabaseClient.from('equipment_data').insert({
+                        asset_number: eq.assetNumber, 
+                        asset_desc: eq.assetDesc, 
+                        manufacturer: eq.manufacturer,
+                        parent_asset: eq.parentAsset, 
+                        asset_owner: eq.assetOwner, 
+                        serial_no: eq.serialNo,
+                        location: eq.location, 
+                        po_number: eq.poNumber, 
+                        acceptance_date: eq.acceptanceDate,
+                        calibration_date: eq.calibrationDate, 
+                        current_detail: eq.currentDetail
+                    });
+                }
             }
-        }
-    
-        // UPSERT equip_status
-        for (const [key, status] of Object.entries(equipStatus)) {
-            const { data: existing } = await supabaseClient
-                .from('equip_status')
-                .select('id')
-                .eq('equipment_key', key)
-                .maybeSingle();
         
-            if (existing) {
-                await supabaseClient.from('equip_status').update({ status }).eq('id', existing.id);
-            } else {
-                await supabaseClient.from('equip_status').insert({ equipment_key: key, status });
+            // ========== 2. UPSERT equip_status ==========
+            for (var key in equipStatus) {
+                if (equipStatus.hasOwnProperty(key)) {
+                    var status = equipStatus[key];
+                    var existingStatus = await supabaseClient
+                        .from('equip_status')
+                        .select('id')
+                        .eq('equipment_key', key)
+                        .maybeSingle();
+                
+                    if (existingStatus.data && existingStatus.data.id) {
+                        await supabaseClient.from('equip_status')
+                            .update({ status: status })
+                            .eq('id', existingStatus.data.id);
+                    } else {
+                        await supabaseClient.from('equip_status')
+                            .insert({ equipment_key: key, status: status });
+                    }
+                }
             }
-        }
-    
-        // UPSERT history_records
-        for (const rec of historyRecords) {
-            const { data: existing } = await supabaseClient
-                .from('history_records')
-                .select('id')
-                .eq('record_id', rec.id)
-                .maybeSingle();
         
-            if (existing) {
-                await supabaseClient.from('history_records').update({
-                    display_time: rec.displayTime, status: rec.status, job_type: rec.jobType,
-                    purpose: rec.purpose, et: rec.et, set_person: rec.set, physicist: rec.physicist,
-                    others: rec.others, remarks: rec.remarks, signature: rec.signature,
-                    record_status: rec.recordStatus, edit_history: rec.editHistory || [],
-                    equipment_details: rec.equipmentDetails || []
-                }).eq('id', existing.id);
-            } else {
-                await supabaseClient.from('history_records').insert({
-                    record_id: rec.id, display_time: rec.displayTime, status: rec.status, job_type: rec.jobType,
-                    purpose: rec.purpose, et: rec.et, set_person: rec.set, physicist: rec.physicist,
-                    others: rec.others, remarks: rec.remarks, signature: rec.signature,
-                    record_status: rec.recordStatus, edit_history: rec.editHistory || [],
-                    equipment_details: rec.equipmentDetails || []
-                });
+            // ========== 3. UPSERT history_records (FIXED - ADDED THIS SECTION) ==========
+            for (var j = 0; j < historyRecords.length; j++) {
+                var rec = historyRecords[j];
+                var existingHistory = await supabaseClient
+                    .from('history_records')
+                    .select('id')
+                    .eq('record_id', rec.id)
+                    .maybeSingle();
+            
+                if (existingHistory.data && existingHistory.data.id) {
+                    await supabaseClient.from('history_records')
+                        .update({
+                            display_time: rec.displayTime,
+                            status: rec.status,
+                            job_type: rec.jobType,
+                            purpose: rec.purpose,
+                            et: rec.et,
+                            set_person: rec.set,
+                            physicist: rec.physicist,
+                            others: rec.others,
+                            remarks: rec.remarks,
+                            signature: rec.signature,
+                            record_status: rec.recordStatus,
+                            edit_history: rec.editHistory || [],
+                            equipment_details: rec.equipmentDetails || []
+                        })
+                        .eq('id', existingHistory.data.id);
+                } else {
+                    await supabaseClient.from('history_records')
+                        .insert({
+                            record_id: rec.id,
+                            display_time: rec.displayTime,
+                            status: rec.status,
+                            job_type: rec.jobType,
+                            purpose: rec.purpose,
+                            et: rec.et,
+                            set_person: rec.set,
+                            physicist: rec.physicist,
+                            others: rec.others,
+                            remarks: rec.remarks,
+                            signature: rec.signature,
+                            record_status: rec.recordStatus,
+                            edit_history: rec.editHistory || [],
+                            equipment_details: rec.equipmentDetails || []
+                        });
+                }
             }
+        
+            console.log("Full sync completed successfully - all tables UPSERTed");
+        
+        } catch (err) {
+            console.error("Full sync error:", err);
         }
     }
     
@@ -522,15 +579,13 @@
         });
     
         // After successful save
-        try {
-            await addLog("RECORD_CREATED", record.id, `Record created for ${selectedEquips.length} equipment (${selectedEquips.map(e => e.assetDesc).join(", ")})`, currentUser, "");
-        } catch (err) {
-            console.error("Logging failed:", err);
-        }
-        
-        renderEquipment(); renderHistory();
+        renderEquipment(); 
+        renderHistory();
         alert("✅ Record saved!");
         document.getElementById("purposeInput").value = "";
+
+        // Add log asynchronously without blocking
+        addLog("RECORD_CREATED", record.id, "Record created for " + selectedEquips.length + " equipment", currentUser, "").catch(console.error);
     }
     
     function renderHistory() {
@@ -745,20 +800,18 @@
         document.getElementById("backupBtn").onclick = backupToFile;
         document.getElementById("restoreBtn").onclick = restoreFromFile;
         // Refresh button - only updates display from existing local data (no cloud sync)
-        document.getElementById("refreshBtn").onclick = async () => { 
-            const btn = document.getElementById("refreshBtn");
-            const originalText = btn.innerHTML;
+        document.getElementById("refreshBtn").onclick = function() { 
+            var btn = document.getElementById("refreshBtn");
+            var originalText = btn.innerHTML;
             btn.innerHTML = "🔄 Refreshing...";
             btn.disabled = true;
             try {
-                // Just re-render from existing local data - no cloud sync
                 rebuildFilters();
                 renderEquipment();
                 renderHistory();
                 if (currentUserRole === 'admin') renderDbLogs();
-                // Update sync status display only
                 document.getElementById("syncStatusText").innerHTML = "Live Sync";
-                setTimeout(() => {
+                setTimeout(function() {
                     alert("✅ Page refreshed successfully!\n\nDisplay updated from current data.");
                 }, 100);
             } catch (error) {
