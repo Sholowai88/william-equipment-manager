@@ -129,7 +129,14 @@
     <div class="header">
         <div class="title-section"><h1>🔧⚙️ NTWC MPU DR Workshop Equipment Database</h1><div class="subtitle">Equipment and Tools Management | QA/AT/Maintenance</div></div>
         <div class="digital-clock"><div class="time" id="liveTime">--:--:--</div><div class="date" id="liveDate">----/--/--</div></div>
-        <div class="action-group"><button id="refreshBtn" class="refresh-btn">🔄 Refresh</button><button id="accountBtn">👤 Account</button><button id="backupBtn">💾 Backup</button><button id="restoreBtn">📂 Restore</button><button id="logoutBtn">🚪 Logout</button><div class="sync-status"><span class="sync-dot"></span><span id="syncStatusText">Live Sync</span></div></div>
+        <div class="action-group">
+            <button id="refreshBtn" class="refresh-btn">🔄 Refresh</button>
+            <button id="accountBtn">👤 Account</button>
+            <button id="backupBtn" class="admin-only" style="display:inline-block;">💾 Backup</button>
+            <button id="restoreBtn" class="admin-only" style="display:inline-block;">📂 Restore</button>
+            <button id="logoutBtn">🚪 Logout</button>
+            <div class="sync-status"><span class="sync-dot"></span><span id="syncStatusText">Live Sync</span></div>
+        </div>
     </div>
     <div class="tabs"><button class="tab active" data-page="home">📋 Equipment DB</button><button class="tab" data-page="record">✍️ In/Out Record</button><button class="tab" data-page="history">📜 History Logs</button><button id="dblogsTab" class="tab" data-page="dblogs">📊 DB Logs</button></div>
 
@@ -990,11 +997,58 @@
             ${signatureName}
             `);
         
-            // Create mailto link with attachment reference
-            var mailtoLink = `mailto:wck131@ha.org.hk?subject=${encodeURIComponent(emailSubject)}&body=${emailBody}`;
-        
-            // Open email client
+        // Enhanced email function for cross-browser compatibility (Safari, Chrome, iOS, Desktop)
+        var mailtoLink = `mailto:wck131@ha.org.hk?subject=${encodeURIComponent(emailSubject)}&body=${emailBody}`;
+
+        // Cross-browser email opening function
+        function openEmailClient() {
+            // Method 1: Try using window.location (works on most browsers)
             window.location.href = mailtoLink;
+    
+            // Method 2: Fallback for Safari and mobile browsers
+            setTimeout(function() {
+                var emailWindow = window.open(mailtoLink, '_blank');
+                if (!emailWindow || emailWindow.closed || typeof emailWindow.closed === 'undefined') {
+                        // If popup blocked, try alternative method
+                        var tempLink = document.createElement('a');
+                        tempLink.href = mailtoLink;
+                        tempLink.target = '_blank';
+                        tempLink.click();
+                }
+             }, 100);
+        }
+
+        // Method 3: Create a hidden iframe as fallback for some mobile browsers
+        function fallbackEmailOpen() {
+            var iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = mailtoLink;
+            document.body.appendChild(iframe);
+            setTimeout(function() {
+                document.body.removeChild(iframe);
+            }, 2000);
+        }
+
+        // Try primary method first
+        try {
+            openEmailClient();
+    
+            // Additional fallback for Safari on iOS
+            setTimeout(function() {
+                if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
+                    // For iOS devices, create a temporary link
+                    var tempLink = document.createElement('a');
+                    tempLink.href = mailtoLink;
+                    tempLink.target = '_blank';
+                    document.body.appendChild(tempLink);
+                    tempLink.click();
+                    document.body.removeChild(tempLink);
+                }
+            }, 200);
+        } catch (err) {
+            console.error("Email open error:", err);
+            fallbackEmailOpen();
+        }
         
             // Also open print window for PDF generation (optional)
             printWindow.document.write(`
@@ -1218,8 +1272,24 @@
             document.getElementById("loginPage").style.display = "none";
             document.getElementById("appContainer").classList.add("visible");
             document.getElementById("aiAssistant").style.display = "block";
-            if (currentUserRole === "super") document.getElementById("dblogsTab").style.display = "none";
-            else document.getElementById("dblogsTab").style.display = "block";
+    
+            // Control visibility of admin-only elements based on user role
+            if (currentUserRole === "super") {
+                document.getElementById("dblogsTab").style.display = "none";
+                // Hide backup and restore buttons for super-users
+                var adminButtons = document.querySelectorAll('.admin-only');
+                adminButtons.forEach(function(btn) {
+                    btn.style.display = "none";
+                });
+            } else {
+                document.getElementById("dblogsTab").style.display = "block";
+                // Show backup and restore buttons for admin
+                var adminButtons = document.querySelectorAll('.admin-only');
+                adminButtons.forEach(function(btn) {
+                    btn.style.display = "inline-block";
+                });
+            }
+    
             await syncAll();
             initUI();
             return true;
@@ -1350,32 +1420,187 @@
         });
     }
     
-    // AI Assistant
+    // Enhanced AI Assistant with Intelligence
     let isDraggingAI = false, dragStartXAI, dragStartYAI;
     const aiAssistantDiv = document.getElementById('aiAssistant');
     const aiChatWin = document.getElementById('aiChatWindow');
     const aiHeader = document.getElementById('aiChatHeader');
+
+    // Intelligent response database
+    const aiKnowledgeBase = {
+        // Equipment management related
+        'in record': 'To perform an IN record: 1) Select equipment from Equipment DB page, 2) Go to In/Out Record page, 3) Select "IN" status, 4) Fill required fields (Job Type, Purpose, ET, SET, Physicist), 5) Sign and save. The equipment status will update to IN automatically.',
+        'out record': 'To perform an OUT record: 1) Select equipment from Equipment DB page, 2) Go to In/Out Record page, 3) Select "OUT" status, 4) Fill required fields (Job Type, Purpose, ET, SET, Physicist), 5) Sign and save. The equipment status will update to OUT automatically.',
+        'how to in': 'To check IN equipment: Select equipment → In/Out Record → Choose "IN" status → Complete form → Sign → Save. Equipment will be marked as returned.',
+        'how to out': 'To check OUT equipment: Select equipment → In/Out Record → Choose "OUT" status → Complete form → Sign → Save. Equipment will be marked as checked out.',
+        'add equipment': 'To add new equipment: Go to Equipment DB page → Click "Add New" button → Fill equipment details (Asset Number, Description, Manufacturer, Serial Number, Location) → Confirm. Asset Number cannot be changed after creation.',
+        'edit equipment': 'To edit equipment: Find equipment in Equipment DB → Click "Edit" button → Modify allowed fields (Asset Number is locked after creation) → Save changes. All changes are synced to cloud.',
+        'history': 'History Logs page shows all transactions. You can filter by Job Type, Status, Date, and sort records. Each record shows equipment details, personnel, and signature.',
+        'signature': 'Draw your signature on the canvas in In/Out Record page. Use mouse or touch. Clear button resets the signature. Signature is required for all transactions.',
+        'job type': 'Job types include: PM (Preventive Maintenance), CM (Corrective Maintenance), QA (Quality Assurance), AT (Acceptance Test), OTH (Others). Choose the appropriate type for your transaction.',
+        'et': 'ET refers to Engineering Technician. Available ETs: Heung, Andy, Vincent, William, Pal, Joe, Richard, Ray. Multiple ETs can be selected using Ctrl/Cmd+Click.',
+        'set': 'SET options: Reeve, Kelvin, Deputizing. Select the supervisor responsible for the work.',
+        'physicist': 'Physicist options: Xiao Li, Celina, Keith, Jacky, Martin, RT Phy., N/A. Select the physicist involved in the transaction.',
+        'backup': 'Backup function (Admin only): Creates JSON backup of entire database including equipment, status, history, and logs.',
+        'restore': 'Restore function (Admin only): Restores database from backup file. Use carefully as it overwrites current data.',
+        'refresh': 'Refresh button syncs data from cloud. Limited to once every 5 seconds to prevent database overload.',
+        'export': 'Export function creates CSV files of history logs or database logs (Admin only for DB logs).',
+    
+        // General assistance
+        'help': 'I can help you with: Equipment IN/OUT procedures, Adding/Editing equipment, Understanding job types and personnel roles, Database backup/restore (Admin), History logs and exports, Signature requirements. What would you like to know?',
+        'guideline': 'User Guidelines: 1) Always select equipment before IN/OUT transaction, 2) Signature is mandatory, 3) Asset Number cannot be changed after creation, 4) Refresh limited to 5 seconds, 5) Admin has backup/restore privileges.',
+        'troubleshooting': 'Common issues: 1) "Status conflict" - Equipment already has that status, 2) "Sync Error" - Check internet connection and refresh, 3) "Duplicate asset" - Asset number must be unique, 4) "Signature required" - Draw signature before saving.',
+    };
+
+    // Advanced AI response function
+    function getAIResponse(userMessage) {
+        var msg = userMessage.toLowerCase().trim();
+    
+        // Check knowledge base for matching keywords
+        for (var keyword in aiKnowledgeBase) {
+            if (msg.includes(keyword)) {
+                return aiKnowledgeBase[keyword];
+            }
+        }
+    
+        // Statistical analysis responses
+        var totalEquipment = equipmentData ? equipmentData.length : 0;
+        var totalRecords = historyRecords ? historyRecords.length : 0;
+        var inCount = Object.values(equipStatus).filter(s => s === 'IN').length;
+        var outCount = Object.values(equipStatus).filter(s => s === 'OUT').length;
+    
+        if (msg.includes('statistic') || msg.includes('stat') || msg.includes('summary')) {
+            return `📊 Database Statistics:\n\n• Total Equipment: ${totalEquipment}\n• Equipment IN: ${inCount}\n• Equipment OUT: ${outCount}\n• Total Transactions: ${totalRecords}\n• Active Users: ${window.users ? Object.keys(window.users).length : 'Loading...'}\n\nNeed more specific statistics?`;
+        }
+    
+        if (msg.includes('how many') || msg.includes('count')) {
+            return `📈 Current counts:\n- Equipment: ${totalEquipment} items\n- IN status: ${inCount} items\n- OUT status: ${outCount} items\n- History records: ${totalRecords} transactions`;
+        }
+    
+        // Workflow assistance
+        if (msg.includes('workflow') || msg.includes('process')) {
+            return `🔄 Standard Workflow:\n1. Browse equipment in Equipment DB\n2. Select equipment for transaction\n3. Go to In/Out Record page\n4. Fill transaction details (Date, Status, Job Type, Purpose)\n5. Select personnel (ET, SET, Physicist)\n6. Draw signature\n7. Preview and Save\n8. Record appears in History Logs`;
+        }
+    
+        // Role-specific responses
+        if (msg.includes('admin') && currentUserRole === 'admin') {
+            return `👑 Administrator Privileges:\n- Backup/Restore database\n- View DB Logs (all system actions)\n- Create new super-users\n- Edit any equipment\n- View equipment statistics\n- Export all logs\n\nCurrent role: ${currentUserRole}`;
+        }
+    
+        if (msg.includes('super-user') || (msg.includes('my role') && currentUserRole === 'super')) {
+            return `👤 Super-user Privileges:\n- Create IN/OUT records\n- Add new equipment\n- Edit equipment (except Asset Number)\n- View history logs\n- Export history to CSV\n- Change password\n- Cannot access DB Logs or Backup/Restore`;
+        }
+    
+        // Intelligent responses using ML-simulated patterns
+        if (msg.includes('trend') || msg.includes('pattern')) {
+            var recentOuts = historyRecords.filter(r => r.status === 'OUT').slice(0, 10);
+            var frequentEquipment = {};
+            historyRecords.forEach(r => {
+                if (r.equipmentDetails) {
+                    r.equipmentDetails.forEach(e => {
+                        var key = e.assetDesc;
+                        frequentEquipment[key] = (frequentEquipment[key] || 0) + 1;
+                    });
+                }
+            });
+            var sorted = Object.entries(frequentEquipment).sort((a,b) => b[1] - a[1]).slice(0, 3);
+            var topEquipment = sorted.map(s => `${s[0]} (${s[1]}x)`).join(', ');
+            return `📈 Usage Patterns Detected:\n\n• Most used equipment: ${topEquipment || 'No data yet'}\n• Recent OUT transactions: ${recentOuts.length} in last 10 records\n• Total transaction volume: ${totalRecords}\n\nTip: Regular maintenance reduces equipment OUT frequency.`;
+        }
+    
+        if (msg.includes('recommend') || msg.includes('suggest')) {
+            var highUsageEquipment = [];
+            var usageMap = {};
+            historyRecords.forEach(r => {
+                if (r.equipmentDetails) {
+                    r.equipmentDetails.forEach(e => {
+                        usageMap[e.assetDesc] = (usageMap[e.assetDesc] || 0) + 1;
+                    });
+                }
+            });
+            for (var eq in usageMap) {
+                if (usageMap[eq] > 5) highUsageEquipment.push(eq);
+            }
+            if (highUsageEquipment.length > 0) {
+                return `💡 Recommendation: The following equipment has high usage frequency (${highUsageEquipment.length} items). Consider scheduling preventive maintenance:\n${highUsageEquipment.slice(0, 5).join(', ')}`;
+            }
+            return `💡 Recommendation: Regular database refresh ensures data sync. Use filters to find equipment faster. For frequent transactions, prepare purpose templates in advance.`;
+        }
+    
+        // Default intelligent response
+        return `🤖 I'm your AI Engineering Assistant!\n\nI can help with:\n• Equipment IN/OUT procedures\n• Adding/editing equipment\n• Understanding job types (PM, CM, QA, AT)\n• Personnel roles (ET, SET, Physicist)\n• Database statistics and trends\n• Workflow optimization\n\nCurrent database status:\n📊 ${totalEquipment} equipment items, ${totalRecords} transactions\n\nWhat specific assistance do you need?`;
+    }
+
+    // AI Chat functionality
     if (aiHeader) {
         aiHeader.addEventListener('mousedown', (e) => { isDraggingAI = true; dragStartXAI = e.clientX - aiChatWin.offsetLeft; dragStartYAI = e.clientY - aiChatWin.offsetTop; aiChatWin.style.position = 'fixed'; });
         document.addEventListener('mousemove', (e) => { if (isDraggingAI) { let newLeft = e.clientX - dragStartXAI; let newTop = e.clientY - dragStartYAI; newLeft = Math.max(10, Math.min(window.innerWidth - aiChatWin.offsetWidth - 10, newLeft)); newTop = Math.max(10, Math.min(window.innerHeight - aiChatWin.offsetHeight - 10, newTop)); aiChatWin.style.left = newLeft + 'px'; aiChatWin.style.top = newTop + 'px'; aiChatWin.style.right = 'auto'; aiChatWin.style.bottom = 'auto'; } });
         document.addEventListener('mouseup', () => { isDraggingAI = false; });
     }
-    if (aiAssistantDiv) aiAssistantDiv.onclick = () => { aiChatWin.style.display = 'flex'; aiChatWin.style.right = '30px'; aiChatWin.style.bottom = '110px'; aiChatWin.style.left = 'auto'; aiChatWin.style.top = 'auto'; };
-    const closeBtnChat = document.getElementById('closeAiChat');
-    if (closeBtnChat) closeBtnChat.onclick = () => { aiChatWin.style.display = 'none'; };
-    const sendBtnChat = document.getElementById('aiSendBtn');
-    if (sendBtnChat) {
-        sendBtnChat.onclick = () => {
-            const msg = document.getElementById('aiInput').value;
-            if (msg) {
-                document.getElementById('aiMessages').innerHTML += `<div class="message user"><div class="message-bubble">${msg}</div></div>`;
-                document.getElementById('aiInput').value = '';
-                setTimeout(() => {
-                    document.getElementById('aiMessages').innerHTML += `<div class="message bot"><div class="message-bubble">Thanks for your question! Please refer to the in-app guide for IN/OUT records.</div></div>`;
-                    document.getElementById('aiMessages').scrollTop = document.getElementById('aiMessages').scrollHeight;
-                }, 300);
+
+    if (aiAssistantDiv) {
+        aiAssistantDiv.onclick = () => { 
+            aiChatWin.style.display = 'flex'; 
+            aiChatWin.style.right = '30px'; 
+            aiChatWin.style.bottom = '110px'; 
+            aiChatWin.style.left = 'auto'; 
+            aiChatWin.style.top = 'auto';
+            // Add welcome message if conversation is empty
+            var messages = document.getElementById('aiMessages');
+            if (messages.children.length === 0) {
+                messages.innerHTML = `<div class="message bot"><div class="message-bubble">🤖 Hello! I'm your intelligent AI Engineering Assistant. I can help with equipment management, provide statistics, analyze usage patterns, and answer questions about the system. What would you like to know?</div></div>`;
             }
         };
+    }
+
+    const closeBtnChat = document.getElementById('closeAiChat');
+    if (closeBtnChat) closeBtnChat.onclick = () => { aiChatWin.style.display = 'none'; };
+
+    const sendBtnChat = document.getElementById('aiSendBtn');
+    const aiInput = document.getElementById('aiInput');
+
+    function sendAIMessage() {
+        const msg = aiInput.value.trim();
+        if (msg) {
+            // Add user message
+            document.getElementById('aiMessages').innerHTML += `<div class="message user"><div class="message-bubble">${escapeHtml(msg)}</div></div>`;
+            aiInput.value = '';
+        
+            // Show typing indicator
+            document.getElementById('aiMessages').innerHTML += `<div class="message bot" id="typingIndicator"><div class="message-bubble">🤔 Thinking...</div></div>`;
+            document.getElementById('aiMessages').scrollTop = document.getElementById('aiMessages').scrollHeight;
+        
+            // Simulate AI processing time
+            setTimeout(() => {
+                // Remove typing indicator
+                var indicator = document.getElementById('typingIndicator');
+                if (indicator) indicator.remove();
+            
+                // Get intelligent response
+                var response = getAIResponse(msg);
+                document.getElementById('aiMessages').innerHTML += `<div class="message bot"><div class="message-bubble">${response}</div></div>`;
+                document.getElementById('aiMessages').scrollTop = document.getElementById('aiMessages').scrollHeight;
+            }, 500);
+        }
+    }
+
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
+
+    if (sendBtnChat) {
+        sendBtnChat.onclick = sendAIMessage;
+    }
+
+    if (aiInput) {
+        aiInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendAIMessage();
+            }
+        });
     }
     
     const savedUser = sessionStorage.getItem("loggedUser");
