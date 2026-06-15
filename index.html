@@ -668,7 +668,7 @@
         let modal = document.createElement("div"); modal.className = "modal-overlay";
         modal.innerHTML = `<div class="modal-card" style="max-width:800px;"><button class="close-modal">✖</button><h3>➕ Add New Equipment</h3>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
-                <div><label>Asset Number *</label><input id="nAssetNum" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+                <div><label>Asset Number *</label><input id="nAssetNum" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;" placeholder="Unique asset number"></div>
                 <div><label>Asset Description *</label><input id="nAssetDesc" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
                 <div><label>Manufacturer</label><input id="nMfg" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
                 <div><label>Serial Number</label><input id="nSerial" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
@@ -682,11 +682,31 @@
         document.body.appendChild(modal);
         modal.querySelector(".close-modal").onclick = () => modal.remove();
         modal.querySelector("#cancelAddBtn").onclick = () => modal.remove();
-
+    
         modal.querySelector("#confirmAddBtn").onclick = async () => {
+            let assetNum = modal.querySelector("#nAssetNum").value;
+            let assetDesc = modal.querySelector("#nAssetDesc").value;
+            
+            if (!assetDesc) { 
+                alert("Asset Description is required"); 
+                return; 
+            }
+        
+            // Check for duplicate asset_number OR (assetDesc + serialNo combination)
+            var duplicate = equipmentData.some(function(eq) {
+                var sameAssetNum = assetNum && eq.assetNumber === assetNum;
+                var sameDescSerial = eq.assetDesc === assetDesc && eq.serialNo === modal.querySelector("#nSerial").value;
+                return sameAssetNum || sameDescSerial;
+            });
+        
+            if (duplicate) {
+                alert("⚠️ Equipment already exists! Please check:\n- Asset Number must be unique\n- Same Description and Serial Number combination already exists");
+                return;
+            }
+        
             let newEq = { 
-                assetNumber: modal.querySelector("#nAssetNum").value, 
-                assetDesc: modal.querySelector("#nAssetDesc").value, 
+                assetNumber: assetNum, 
+                assetDesc: assetDesc, 
                 manufacturer: modal.querySelector("#nMfg").value, 
                 parentAsset: modal.querySelector("#nParent").value, 
                 assetOwner: modal.querySelector("#nOwner").value, 
@@ -697,31 +717,42 @@
                 calibrationDate: "", 
                 currentDetail: modal.querySelector("#nDetail").value 
             };
-            if (!newEq.assetDesc) { alert("Asset Description required"); return; }
-
-            // Check for duplicate
-            var duplicate = equipmentData.some(function(eq) {
-                return eq.assetNumber === newEq.assetNumber && eq.serialNo === newEq.serialNo;
-            });
-            if (duplicate) {
-                alert("⚠️ Equipment already exists!");
-                return;
-            }
-    
+        
             // Add to local array first
             equipmentData.push(newEq);
             var eqKey = getKey(newEq);
             equipStatus[eqKey] = "IN";
-    
+        
             renderEquipment();
-    
-            // Then try to sync to cloud
+        
+             // Then try to sync to cloud
             try {
-                await quickSyncEquipment(newEq);
-                await quickSyncStatus(eqKey, "IN");
+                // Insert equipment_data
+                var eqDataObj = {
+                    asset_number: newEq.assetNumber || "",
+                    asset_desc: newEq.assetDesc,
+                    manufacturer: newEq.manufacturer || "",
+                    parent_asset: newEq.parentAsset || "",
+                    asset_owner: newEq.assetOwner || "",
+                    serial_no: newEq.serialNo || "",
+                    location: newEq.location || "",
+                    po_number: newEq.poNumber || "",
+                    acceptance_date: newEq.acceptanceDate || "",
+                    calibration_date: newEq.calibrationDate || "",
+                    current_detail: newEq.currentDetail || ""
+                };
+            
+                // Insert equipment
+                await supabaseClient.from('equipment_data').insert(eqDataObj);
+            
+                // Insert status
+                await supabaseClient.from('equip_status').insert({ equipment_key: eqKey, status: "IN" });
+            
                 await addLog("EQUIPMENT_ADDED", newEq.assetNumber, "New equipment " + newEq.assetDesc + " added", currentUser, "");
                 alert("✅ Equipment added successfully and synced to cloud!");
+            
             } catch (err) {
+                console.error("Add equipment error:", err);
                 alert("✅ Equipment added locally. Cloud sync will happen on next refresh.");
             }
             modal.remove();
@@ -881,7 +912,15 @@
             let btnCell = row.insertCell(8);
             let editBtn = document.createElement("button"); editBtn.innerText = "✏️ Edit"; editBtn.className = "btn btn-sm"; editBtn.onclick = () => openEditRecordDialog(r);
             let previewBtn = document.createElement("button"); previewBtn.innerText = "Preview"; previewBtn.className = "btn btn-sm"; previewBtn.onclick = () => showFullRecordPreview(r);
-            btnCell.append(editBtn, previewBtn);
+           
+            let emailBtn = document.createElement("button"); 
+            emailBtn.innerText = "📧 Email"; 
+            emailBtn.className = "btn btn-sm"; 
+            emailBtn.style.background = "#166b5c";
+            emailBtn.style.color = "white";
+            emailBtn.onclick = () => emailRecordPreview(r);
+
+            btnCell.append(editBtn, previewBtn, emailBtn);
         });
     }
     
@@ -898,6 +937,131 @@
         </body></html>`);
         win.document.close(); win.print();
         modal.querySelector(".close-modal")?.onclick?.();
+    }
+
+    async function emailRecordPreview(rec) {
+        try {
+            // Generate PDF preview HTML content
+            let equipHtml = rec.equipmentDetails?.map(e => `
+                <tr>
+                    <td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td>
+                    <td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td>
+                    <td style="border:1px solid #ddd; padding:8px;">${e.manufacturer || '-'}</td>
+                    <td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="4">No details</td></tr>';
+        
+            // Create hidden iframe for PDF generation
+            var printWindow = window.open('', '_blank');
+            var emailSubject = `Equipment Transaction Record - (${rec.jobType || 'N/A'} - ${rec.status || 'N/A'}) ${rec.purpose || ''}`;
+            var emailBody = encodeURIComponent(`
+                Dear Team,
+            
+                Please find attached the equipment transaction record details below:
+            
+                ===========================================
+                TRANSACTION RECORD DETAILS
+                ===========================================
+            
+                Date/Time: ${formatTimestamp(rec.displayTime)}
+                Status: ${rec.status}
+                Job Type: ${rec.jobType || 'N/A'}
+                Purpose: ${rec.purpose || 'N/A'}
+            
+                Personnel:
+                - ET: ${rec.et || 'N/A'}
+                - SET: ${rec.set || 'N/A'}
+                - Physicist: ${rec.physicist || 'N/A'}
+                - Others: ${rec.others || 'N/A'}
+            
+                Remarks: ${rec.remarks || 'N/A'}
+                Record Status: ${rec.recordStatus || 'N/A'}
+            
+                ===========================================
+                EQUIPMENT LIST
+                ===========================================
+            
+                ${rec.equipmentDetails?.map(e => `• ${e.assetDesc} | ${e.manufacturer || '-'} | SN: ${e.serialNo || '-'}`).join('\n') || 'No equipment details'}
+            
+                ===========================================
+            
+                Best regards,
+                Equipment Management System
+            `);
+        
+            // Create mailto link with attachment reference
+            var mailtoLink = `mailto:wck131@ha.org.hk?subject=${encodeURIComponent(emailSubject)}&body=${emailBody}`;
+        
+            // Open email client
+            window.location.href = mailtoLink;
+        
+            // Also open print window for PDF generation (optional)
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Record_Preview_${rec.id}</title>
+                    <style>
+                        body{font-family:'Segoe UI',sans-serif; padding:30px;}
+                        .header{background:linear-gradient(135deg,#0a2e3f,#166b5c); color:white; padding:20px; border-radius:16px;}
+                        .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:20px; border-radius:16px; margin:15px 0;}
+                        .badge{display:inline-block; padding:4px 12px; border-radius:50px;}
+                        .in{background:#00a86b; color:white;}
+                        .out{background:#dc3545; color:white;}
+                        table{border-collapse:collapse; width:100%;}
+                        th,td{border:1px solid #ddd; padding:8px;}
+                        @media print {
+                            body{margin:0; padding:20px;}
+                            .no-print{display:none;}
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="no-print" style="text-align:center; margin-bottom:20px;">
+                        <button onclick="window.print();">Save as PDF</button>
+                        <p>Click above to save as PDF, then attach to your email.</p>
+                    </div>
+                    <div class="header">
+                        <h3>Equipment Transaction Record</h3>
+                        <p>${formatTimestamp(rec.displayTime)}</p>
+                    </div>
+                    <div class="grid">
+                        <div><strong>Status:</strong><br><span class="badge ${rec.status==='IN'?'in':'out'}">${rec.status}</span></div>
+                        <div><strong>Job Type:</strong><br>${rec.jobType||'-'}</div>
+                        <div><strong>Purpose:</strong><br>${rec.purpose||'-'}</div>
+                        <div><strong>ET/SET/Phy:</strong><br>${rec.et}/${rec.set}/${rec.physicist}</div>
+                        <div><strong>Remarks:</strong><br>${rec.remarks||'-'}</div>
+                        <div><strong>Record Status:</strong><br>${rec.recordStatus}</div>
+                    </div>
+                    <h4>Equipment List</h4>
+                    <table>
+                        <thead>
+                            <tr><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th></tr>
+                        </thead>
+                        <tbody>${equipHtml}</tbody>
+                    </table>
+                    ${rec.editHistory?.length ? `
+                    <div style="background:#fef9e6; padding:15px; border-radius:12px; margin-top:20px;">
+                        <h4>Edit History</h4>
+                        ${rec.editHistory.map(h => `<div>${h.timestamp} | ${h.user}: ${h.reason}</div>`).join('')}
+                    </div>` : ''}
+                    <div style="margin-top:20px;">
+                        <strong>Signature:</strong><br>
+                        <img src="${rec.signature}" style="max-width:200px; border:1px solid #ddd; border-radius:8px;">
+                    </div>
+                    <div class="no-print" style="margin-top:30px; text-align:center; color:#666;">
+                        <p>Email has been opened. Please save this page as PDF and attach to your email.</p>
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        
+            alert(`✅ Email draft opened!\n\nSubject: ${emailSubject}\nRecipient: wck131@ha.org.hk\n\nPlease save the opened window as PDF and attach to your email.`);
+        
+        } catch (err) {
+            console.error("Email error:", err);
+            alert("❌ Failed to open email. Please try again.");
+        }
     }
     
     function openEditRecordDialog(record) {
