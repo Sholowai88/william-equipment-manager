@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+        <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -525,7 +525,7 @@
         let modal = document.createElement("div"); modal.className = "modal-overlay";
         modal.innerHTML = `<div class="modal-card" style="max-width:800px;"><button class="close-modal">✖</button><h3>✏️ Edit Equipment</h3>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
-                <div><label>Asset Number</label><input id="eAssetNum" value="${eq.assetNumber||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+                <div><label>Asset Number (Cannot be edited)</label><input id="eAssetNum" value="${eq.assetNumber||''}" readonly style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc; background:#f0f0f0;"></div>
                 <div><label>Asset Description *</label><input id="eAssetDesc" value="${eq.assetDesc||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
                 <div><label>Manufacturer</label><input id="eMfg" value="${eq.manufacturer||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
                 <div><label>Serial Number</label><input id="eSerial" value="${eq.serialNo||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
@@ -545,15 +545,10 @@
             var oldKey = getKey(eq);
             var newAssetNumber = modal.querySelector("#eAssetNum").value;
         
-            // Check for duplicate asset_number if changed
-            if (newAssetNumber !== eq.assetNumber && newAssetNumber) {
-                var duplicateExists = equipmentData.some(function(e) {
-                    return e !== eq && e.assetNumber === newAssetNumber;
-                });
-                if (duplicateExists) {
-                    alert("⚠️ Asset Number already exists! Please use a unique asset number.");
-                    return;
-                }
+            // Asset number cannot be changed - it's readonly
+            if (newAssetNumber !== eq.assetNumber) {
+                alert("⚠️ Asset Number cannot be changed. Please contact administrator if correction is needed.");
+                return;
             }
         
             if (!modal.querySelector("#eAssetDesc").value.trim()) {
@@ -954,39 +949,45 @@
             // Create hidden iframe for PDF generation
             var printWindow = window.open('', '_blank');
             var emailSubject = `Equipment Transaction Record - (${rec.jobType || 'N/A'} - ${rec.status || 'N/A'}) ${rec.purpose || ''}`;
+
+            // Get current user name for signature
+            var signatureName = currentUser || "System User";
+            if (currentUserRole === 'admin') signatureName = currentUser + " (Admin)";
+            else if (currentUserRole === 'super') signatureName = currentUser + " (Super-user)";
+
             var emailBody = encodeURIComponent(`
-                Dear Team,
-            
-                Please find attached the equipment transaction record details below:
-            
-                ===========================================
-                TRANSACTION RECORD DETAILS
-                ===========================================
-            
-                Date/Time: ${formatTimestamp(rec.displayTime)}
-                Status: ${rec.status}
-                Job Type: ${rec.jobType || 'N/A'}
-                Purpose: ${rec.purpose || 'N/A'}
-            
-                Personnel:
-                - ET: ${rec.et || 'N/A'}
-                - SET: ${rec.set || 'N/A'}
-                - Physicist: ${rec.physicist || 'N/A'}
-                - Others: ${rec.others || 'N/A'}
-            
-                Remarks: ${rec.remarks || 'N/A'}
-                Record Status: ${rec.recordStatus || 'N/A'}
-            
-                ===========================================
-                EQUIPMENT LIST
-                ===========================================
-            
-                ${rec.equipmentDetails?.map(e => `• ${e.assetDesc} | ${e.manufacturer || '-'} | SN: ${e.serialNo || '-'}`).join('\n') || 'No equipment details'}
-            
-                ===========================================
-            
-                Best regards,
-                Equipment Management System
+            Dear Reeve,
+
+            Please find attached the equipment transaction record details below:
+
+            ===========================================
+            TRANSACTION RECORD DETAILS
+            ===========================================
+
+            Date/Time: ${formatTimestamp(rec.displayTime)}
+            Status: ${rec.status}
+            Job Type: ${rec.jobType || 'N/A'}
+            Purpose: ${rec.purpose || 'N/A'}
+
+            Personnel:
+            - ET: ${rec.et || 'N/A'}
+            - SET: ${rec.set || 'N/A'}
+            - Physicist: ${rec.physicist || 'N/A'}
+            - Others: ${rec.others || 'N/A'}
+
+            Remarks: ${rec.remarks || 'N/A'}
+            Record Status: ${rec.recordStatus || 'N/A'}
+
+            ===========================================
+            EQUIPMENT LIST
+            ===========================================
+
+            ${rec.equipmentDetails?.map(e => `• ${e.assetDesc} | ${e.manufacturer || '-'} | SN: ${e.serialNo || '-'}`).join('\n') || 'No equipment details'}
+
+            ===========================================
+
+            Best regards,
+            ${signatureName}
             `);
         
             // Create mailto link with attachment reference
@@ -1001,24 +1002,26 @@
                 <head>
                     <title>Record_Preview_${rec.id}</title>
                     <style>
-                        body{font-family:'Segoe UI',sans-serif; padding:30px;}
-                        .header{background:linear-gradient(135deg,#0a2e3f,#166b5c); color:white; padding:20px; border-radius:16px;}
-                        .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:20px; border-radius:16px; margin:15px 0;}
+                        body{font-family:'Segoe UI',sans-serif; padding:30px; margin:0; text-align:left;}
+                        .header{background:linear-gradient(135deg,#0a2e3f,#166b5c); color:white; padding:20px; border-radius:16px; text-align:left;}
+                        .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:20px; border-radius:16px; margin:15px 0; text-align:left;}
                         .badge{display:inline-block; padding:4px 12px; border-radius:50px;}
                         .in{background:#00a86b; color:white;}
                         .out{background:#dc3545; color:white;}
-                        table{border-collapse:collapse; width:100%;}
-                        th,td{border:1px solid #ddd; padding:8px;}
+                        table{border-collapse:collapse; width:100%; text-align:left;}
+                        th,td{border:1px solid #ddd; padding:8px; text-align:left; vertical-align:top;}
                         @media print {
                             body{margin:0; padding:20px;}
                             .no-print{display:none;}
                         }
+                        .details-section{margin-bottom:20px; text-align:left;}
+                        h3, h4{text-align:left; margin-top:20px; margin-bottom:10px;}
                     </style>
                 </head>
                 <body>
                     <div class="no-print" style="text-align:center; margin-bottom:20px;">
-                        <button onclick="window.print();">Save as PDF</button>
-                        <p>Click above to save as PDF, then attach to your email.</p>
+                        <button onclick="window.print();" style="padding:10px 20px; background:#166b5c; color:white; border:none; border-radius:8px; cursor:pointer;">📄 Save as PDF</button>
+                        <p style="margin-top:10px;">Click above to save as PDF, then attach to your email.</p>
                     </div>
                     <div class="header">
                         <h3>Equipment Transaction Record</h3>
@@ -1033,23 +1036,24 @@
                         <div><strong>Record Status:</strong><br>${rec.recordStatus}</div>
                     </div>
                     <h4>Equipment List</h4>
-                    <table>
+                    <table border="1" cellpadding="8" style="border-collapse:collapse; width:100%;">
                         <thead>
-                            <tr><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th></tr>
+                            <tr><th style="text-align:left;">Asset #</th><th style="text-align:left;">Description</th><th style="text-align:left;">Manufacturer</th><th style="text-align:left;">Serial #</th></tr>
                         </thead>
                         <tbody>${equipHtml}</tbody>
                     </table>
                     ${rec.editHistory?.length ? `
-                    <div style="background:#fef9e6; padding:15px; border-radius:12px; margin-top:20px;">
+                    <div style="background:#fef9e6; padding:15px; border-radius:12px; margin-top:20px; text-align:left;">
                         <h4>Edit History</h4>
                         ${rec.editHistory.map(h => `<div>${h.timestamp} | ${h.user}: ${h.reason}</div>`).join('')}
                     </div>` : ''}
-                    <div style="margin-top:20px;">
+                    <div style="margin-top:20px; text-align:left;">
                         <strong>Signature:</strong><br>
                         <img src="${rec.signature}" style="max-width:200px; border:1px solid #ddd; border-radius:8px;">
                     </div>
                     <div class="no-print" style="margin-top:30px; text-align:center; color:#666;">
-                        <p>Email has been opened. Please save this page as PDF and attach to your email.</p>
+                        <hr>
+                        <p>📧 Email client has been opened. Please save this page as PDF using the button above and attach to your email.</p>
                     </div>
                 </body>
                 </html>
