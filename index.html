@@ -236,26 +236,38 @@
     
     async function addLog(action, recordId, details, user, reason, additionalInfo = {}) {
         try {
-            // Get detailed user agent and IP info
-            var userAgent = navigator.userAgent || "Unknown";
+            console.log("Adding log:", action, recordId, details, user);
+        
+            // Get basic info - make it fail-safe
+            var userAgent = "Unknown";
             var browserInfo = "Unknown";
-            if (userAgent.includes("Chrome")) browserInfo = "Chrome";
-            else if (userAgent.includes("Safari")) browserInfo = "Safari";
-            else if (userAgent.includes("Firefox")) browserInfo = "Firefox";
-            else if (userAgent.includes("Edge")) browserInfo = "Edge";
-            else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) browserInfo = "iOS Safari";
-        
             var deviceType = "Desktop";
-            if (/(iPhone|iPad|iPod|Android)/i.test(userAgent)) deviceType = "Mobile";
         
-            // Get current timestamp with milliseconds
+            try {
+                userAgent = navigator.userAgent || "Unknown";
+                if (userAgent.includes("Chrome") && !userAgent.includes("Edg")) browserInfo = "Chrome";
+                else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) browserInfo = "Safari";
+                else if (userAgent.includes("Firefox")) browserInfo = "Firefox";
+                else if (userAgent.includes("Edg")) browserInfo = "Edge";
+                else if (/(iPhone|iPad|iPod)/i.test(userAgent)) browserInfo = "iOS Safari";
+                else if (/Android/i.test(userAgent)) browserInfo = "Android Browser";
+            
+                if (/(iPhone|iPad|iPod|Android)/i.test(userAgent)) deviceType = "Mobile";
+            } catch(e) {
+                console.warn("Could not detect browser info:", e);
+            }
+        
+            // Get current timestamp
             var now = getHKTime();
             var timestampMs = now.toISOString();
             var readableTime = formatTimestamp(timestampMs);
         
-            // Create detailed log entry
+            // Create unique log ID
+            var logId = Date.now() + Math.random().toString(36).substr(2, 5);
+        
+            // Create log entry for local storage
             const log = { 
-                id: Date.now(),
+                id: logId,
                 timestamp: timestampMs,
                 readableTime: readableTime,
                 action: action,
@@ -264,37 +276,72 @@
                 user: user || currentUser || "System",
                 reason: reason || "",
                 userRole: currentUserRole || "Unknown",
-                ipAddress: await getClientIP(),
+                ipAddress: "Logging IP",
                 browser: browserInfo,
                 deviceType: deviceType,
                 userAgent: userAgent,
                 additionalInfo: JSON.stringify(additionalInfo)
             };
         
+            // Add to local array
             dbLogs.unshift(log);
-            if (dbLogs.length > 2000) dbLogs.pop(); // Increased limit to 2000 logs
-    
-            await supabaseClient.from('db_logs').insert({ 
+            if (dbLogs.length > 2000) dbLogs.pop();
+        
+            // Prepare insert data - only use columns that definitely exist
+            var insertData = {
                 log_id: log.id,
                 timestamp: log.timestamp,
                 action: log.action,
                 record_id: log.recordId,
                 details: log.details,
                 user_name: log.user,
-                reason: log.reason,
-                user_role: log.userRole,
-                ip_address: log.ipAddress,
-                browser: log.browser,
-                device_type: log.deviceType,
-                user_agent: log.userAgent,
-                additional_info: log.additionalInfo
-            });
-    
-            if (currentUserRole === 'admin') {
+                reason: log.reason
+            };
+        
+            // Try to add optional fields if they exist in the table
+            try {
+                // Check if columns exist by attempting to insert with them
+                // If they don't exist, the insert will fail and we'll retry without them
+                insertData.user_role = log.userRole;
+                insertData.ip_address = log.ipAddress;
+                insertData.browser = log.browser;
+                insertData.device_type = log.deviceType;
+                insertData.user_agent = log.userAgent;
+                insertData.additional_info = log.additionalInfo;
+            } catch(e) {
+                console.warn("Optional fields not available:", e);
+            }
+        
+            // Insert into Supabase
+            var { error } = await supabaseClient.from('db_logs').insert(insertData);
+        
+            if (error) {
+                // If error, try without optional fields
+                console.warn("Error with full insert, trying basic insert:", error);
+                var basicData = {
+                    log_id: log.id,
+                    timestamp: log.timestamp,
+                    action: log.action,
+                    record_id: log.recordId,
+                    details: log.details,
+                    user_name: log.user,
+                    reason: log.reason
+                };
+                var { error: basicError } = await supabaseClient.from('db_logs').insert(basicData);
+                if (basicError) {
+                    console.error("Basic insert also failed:", basicError);
+                }
+            }
+        
+            // Refresh display if admin
+            if (currentUserRole === 'admin' && typeof renderDbLogs === 'function') {
                 renderDbLogs();
             }
+        
+            console.log("Log added successfully");
         } catch (err) {
             console.error("Failed to insert log:", err);
+            // Don't let logging errors break the application
         }
     }
 
@@ -1389,70 +1436,80 @@
     }
 
     async function login(username, password) {
-        const { data } = await supabaseClient.from('users').select('*').eq('username', username.toLowerCase());
-        if (data && data.length > 0 && data[0].password === password) {
-            currentUser = username; currentUserRole = data[0].role;
-            sessionStorage.setItem("loggedUser", username); sessionStorage.setItem("loggedRole", data[0].role);
-            document.getElementById("loginPage").style.display = "none";
-            document.getElementById("appContainer").classList.add("visible");
-            document.getElementById("aiAssistant").style.display = "block";
-        
-            // Control visibility of admin-only elements based on user role
-            if (currentUserRole === "super") {
-                document.getElementById("dblogsTab").style.display = "none";
-                // Hide backup and restore buttons for super-users
-                var adminButtons = document.querySelectorAll('.admin-only');
-                adminButtons.forEach(function(btn) {
-                    btn.style.display = "none";
-                });
+        try {
+            const { data } = await supabaseClient.from('users').select('*').eq('username', username.toLowerCase());
+            if (data && data.length > 0 && data[0].password === password) {
+                currentUser = username; 
+                currentUserRole = data[0].role;
+                sessionStorage.setItem("loggedUser", username); 
+                sessionStorage.setItem("loggedRole", data[0].role);
+                document.getElementById("loginPage").style.display = "none";
+                document.getElementById("appContainer").classList.add("visible");
+                document.getElementById("aiAssistant").style.display = "block";
+            
+                // Control visibility of admin-only elements
+                if (currentUserRole === "super") {
+                    var dlogsTab = document.getElementById("dblogsTab");
+                    if (dlogsTab) dlogsTab.style.display = "none";
+                    var adminButtons = document.querySelectorAll('.admin-only');
+                    adminButtons.forEach(function(btn) {
+                        btn.style.display = "none";
+                    });
+                } else {
+                    var dlogsTab = document.getElementById("dblogsTab");
+                    if (dlogsTab) dlogsTab.style.display = "block";
+                    var adminButtons = document.querySelectorAll('.admin-only');
+                    adminButtons.forEach(function(btn) {
+                        btn.style.display = "inline-block";
+                    });
+                }
+            
+                // Log successful login (don't await to avoid blocking)
+                addLog(
+                    "LOGIN_SUCCESS", 
+                    username, 
+                    `User ${username} (${currentUserRole}) logged in successfully`, 
+                    username, 
+                    "Successful login",
+                    { role: currentUserRole, loginTime: new Date().toISOString() }
+                ).catch(err => console.warn("Login log failed:", err));
+            
+                await syncAll();
+                initUI();
+                return true;
             } else {
-                document.getElementById("dblogsTab").style.display = "block";
-                // Show backup and restore buttons for admin
-                var adminButtons = document.querySelectorAll('.admin-only');
-                adminButtons.forEach(function(btn) {
-                    btn.style.display = "inline-block";
-                });
+                // Log failed login attempt
+                addLog(
+                    "LOGIN_FAILED", 
+                    username.toLowerCase(), 
+                    `Failed login attempt for user ${username}`, 
+                    "Unknown", 
+                    "Invalid credentials"
+                ).catch(err => console.warn("Failed login log error:", err));
+            
+                document.getElementById("loginError").innerText = "Invalid username or password";
+                return false;
             }
-        
-            // Log successful login with detailed information
-            await addLog(
-                "LOGIN_SUCCESS", 
-                username, 
-                `User ${username} (${currentUserRole}) logged in successfully from ${await getClientIP()}`, 
-                username, 
-                "Successful login",
-                { role: currentUserRole, loginTime: new Date().toISOString() }
-            );
-        
-            await syncAll();
-            initUI();
-            return true;
-        } else {
-            // Log failed login attempt
-            var failedUser = username.toLowerCase();
-            await addLog(
-                "LOGIN_FAILED", 
-                failedUser, 
-                `Failed login attempt for user ${failedUser} from IP ${await getClientIP()}`, 
-                "Unknown", 
-                "Invalid credentials",
-                { attemptedUser: failedUser, timestamp: new Date().toISOString() }
-            );
-            document.getElementById("loginError").innerText = "Invalid username or password";
+        } catch (err) {
+            console.error("Login error:", err);
+            document.getElementById("loginError").innerText = "Login system error. Please try again.";
             return false;
         }
     }   
     
     async function logout() { 
         if (confirm("Are you sure you want to logout?")) { 
-            await addLog(
-                "LOGOUT", 
-                currentUser || "Unknown", 
-                `User ${currentUser} (${currentUserRole}) logged out`, 
-                currentUser || "System", 
-                "User initiated logout",
-                { logoutTime: new Date().toISOString() }
-            );
+            try {
+                await addLog(
+                    "LOGOUT", 
+                    currentUser || "Unknown", 
+                    `User ${currentUser} (${currentUserRole}) logged out`, 
+                    currentUser || "System", 
+                    "User initiated logout"
+                );
+            } catch(e) {
+                console.warn("Logout log error:", e);
+            }
             sessionStorage.clear(); 
             location.reload(); 
         } 
