@@ -1289,62 +1289,115 @@
         };
     }
     
-    function renderDbLogs() {
+    async function renderDbLogs() {
         if (currentUserRole !== "admin") return;
-        let search = document.getElementById("dbLogSearch").value.toLowerCase(), actionFilter = document.getElementById("dbLogActionFilter").value;
-        let filtered = dbLogs.filter(l => l.action.toLowerCase().includes(search) || l.details.toLowerCase().includes(search) || (l.user && l.user.toLowerCase().includes(search)));
-        if (actionFilter) filtered = filtered.filter(l => l.action === actionFilter);
-        if (dbLogsSortOrder === 'asc') filtered.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        else filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        let tbody = document.getElementById("dbLogsBody"); tbody.innerHTML = "";
     
-        filtered.forEach(l => {
-            let row = tbody.insertRow();
+        try {
+            // Always reload logs from database first
+            var { data, error } = await supabaseClient
+                .from('db_logs')
+                .select('*')
+                .order('timestamp', { ascending: false })
+                .limit(500);
         
-            // Timestamp
-            row.insertCell(0).innerText = l.readableTime || formatTimestamp(l.timestamp);
-        
-            // Action Type with color coding
-            let actionColor = "#e9ecef";
-            if (l.action === "LOGIN_SUCCESS") actionColor = "#d4edda";
-            if (l.action === "LOGIN_FAILED") actionColor = "#f8d7da";
-            if (l.action === "LOGOUT") actionColor = "#fff3cd";
-            if (l.action === "USER_CREATED") actionColor = "#d1ecf1";
-            if (l.action === "PASSWORD_CHANGED") actionColor = "#d4edda";
-            row.insertCell(1).innerHTML = `<span style="background:${actionColor}; padding:4px 12px; border-radius:20px; font-size:0.7rem; font-weight:bold;">${l.action}</span>`;
-        
-            // Record ID
-            row.insertCell(2).innerText = l.recordId;
-        
-            // Details (show more information)
-            let detailsText = l.details;
-            if (l.browser && l.browser !== "Unknown") {
-                detailsText += ` [${l.browser} | ${l.deviceType}]`;
+            if (error) {
+                console.error("Error loading logs:", error);
+                return;
             }
-            row.insertCell(3).innerHTML = `<div style="max-width:300px; word-wrap:break-word;">${detailsText.length > 100 ? detailsText.substring(0, 100) + "..." : detailsText}</div>`;
         
-            // User with role badge
-            let userRoleDisplay = l.userRole ? ` (${l.userRole})` : '';
-            row.insertCell(4).innerHTML = `<strong>${l.user || '-'}</strong>${userRoleDisplay}`;
-        
-            // Action Timestamp (same as main timestamp)
-            row.insertCell(5).innerText = l.readableTime || formatTimestamp(l.timestamp);
-        
-            // Reason with additional info
-            let reasonText = l.reason || '-';
-            if (l.ipAddress && l.ipAddress !== "Unknown" && l.ipAddress !== "Unable to detect") {
-                reasonText += `<br><small style="color:#666;">📍 IP: ${l.ipAddress}</small>`;
+            if (data && data.length > 0) {
+                dbLogs = data.map(row => ({
+                    id: row.log_id,
+                    timestamp: row.timestamp,
+                    action: row.action,
+                    recordId: row.record_id,
+                    details: row.details,
+                    user: row.user_name,
+                    reason: row.reason,
+                    userRole: row.user_role || "Unknown",
+                    ipAddress: row.ip_address || "N/A",
+                    browser: row.browser || "Unknown",
+                    deviceType: row.device_type || "Unknown"
+                }));
             }
-            if (l.additionalInfo && l.additionalInfo !== "{}") {
-                try {
-                    var additional = JSON.parse(l.additionalInfo);
-                    if (additional.role) reasonText += `<br><small>👤 Role: ${additional.role}</small>`;
-                    if (additional.newUsername) reasonText += `<br><small>➕ New User: ${additional.newUsername}</small>`;
-                    if (additional.createdBy) reasonText += `<br><small>👑 Created by: ${additional.createdBy}</small>`;
-                } catch(e) {}
+        
+            // Apply filters
+            let search = document.getElementById("dbLogSearch").value.toLowerCase();
+            let actionFilter = document.getElementById("dbLogActionFilter").value;
+        
+            let filtered = dbLogs.filter(l => {
+                if (!l) return false;
+                return (l.action && l.action.toLowerCase().includes(search)) || 
+                       (l.details && l.details.toLowerCase().includes(search)) || 
+                       (l.user && l.user.toLowerCase().includes(search));
+            });
+        
+            if (actionFilter) {
+                filtered = filtered.filter(l => l.action === actionFilter);
             }
-            row.insertCell(6).innerHTML = reasonText;
-        });
+        
+            if (dbLogsSortOrder === 'asc') {
+                filtered.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            } else {
+                filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            }
+        
+            let tbody = document.getElementById("dbLogsBody");
+            if (!tbody) return;
+        
+            tbody.innerHTML = "";
+        
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No logs found</td></tr>';
+                return;
+            }
+        
+            filtered.forEach(l => {
+                let row = tbody.insertRow();
+            
+                // Timestamp
+                row.insertCell(0).innerText = l.timestamp ? formatTimestamp(l.timestamp) : "Unknown";
+            
+                // Action Type with color coding
+                let actionColor = "#e9ecef";
+                if (l.action === "LOGIN_SUCCESS") actionColor = "#d4edda";
+                if (l.action === "LOGIN_FAILED") actionColor = "#f8d7da";
+                if (l.action === "LOGOUT") actionColor = "#fff3cd";
+                if (l.action === "USER_CREATED") actionColor = "#d1ecf1";
+                if (l.action === "PASSWORD_CHANGED") actionColor = "#d4edda";
+                row.insertCell(1).innerHTML = `<span style="background:${actionColor}; padding:4px 12px; border-radius:20px; font-size:0.7rem; font-weight:bold;">${l.action || 'N/A'}</span>`;
+            
+                // Record ID
+                row.insertCell(2).innerText = l.recordId || 'N/A';
+            
+                // Details
+                let detailsText = l.details || '';
+                if (l.browser && l.browser !== "Unknown") {
+                    detailsText += ` [${l.browser}]`;
+                }
+                row.insertCell(3).innerHTML = `<div style="max-width:300px; word-wrap:break-word; font-size:0.7rem;">${detailsText.substring(0, 150)}${detailsText.length > 150 ? '...' : ''}</div>`;
+            
+                // User
+                let userRoleDisplay = l.userRole ? ` (${l.userRole})` : '';
+                row.insertCell(4).innerHTML = `<strong>${l.user || '-'}</strong>${userRoleDisplay}`;
+            
+                // Action Timestamp
+                row.insertCell(5).innerText = l.timestamp ? formatTimestamp(l.timestamp) : "Unknown";
+            
+                // Reason
+                let reasonText = l.reason || '-';
+                if (l.ipAddress && l.ipAddress !== "N/A" && l.ipAddress !== "Logging IP") {
+                    reasonText += `<br><small style="color:#666;">📍 IP: ${l.ipAddress}</small>`;
+                }
+                row.insertCell(6).innerHTML = reasonText;
+            });
+        } catch (err) {
+            console.error("Render DB Logs error:", err);
+            var tbody = document.getElementById("dbLogsBody");
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Error loading logs. Please refresh the page.</td></tr>';
+            }
+        }
     }
     
     function exportHistoryCSV() {
@@ -1356,7 +1409,7 @@
         let csv = rows.map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(",")).join("\n");
         let blob = new Blob(["\uFEFF" + csv], { type: "text/csv" });
         let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `history_export_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
-        alert("✅ History exported to CSV!");
+        alert("✅ History exported to CSV!")
     }
     
     function exportDbLogsCSV() {
