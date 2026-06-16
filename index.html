@@ -841,11 +841,11 @@
                     
                         // Update local status object
                         delete equipStatus[oldAssetNumber];
-                    equipStatus[newKey] = oldStatus;
+                        equipStatus[newKey] = oldStatus;
                     }
                 } else {
                     // Just update status if key didn't change
-                await quickSyncStatus(newKey, equipStatus[newKey] || "IN");
+                    await quickSyncStatus(newKey, equipStatus[newKey] || "IN");
                 }
             
                 renderEquipment();
