@@ -197,6 +197,8 @@
     let selectedAssetsSet = new Set();
     const etNames = ["Heung","Andy","Vincent","William","Pal","Joe","Richard","Ray"];
     let historySortOrder = 'desc', dbLogsSortOrder = 'desc';
+    let lastRefreshTime = 0; // Add this line if not present
+    let refreshCooldown = 5000; // Add this line if not present
     
     function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
     function formatTimestamp(isoString) { let d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; }
@@ -359,9 +361,11 @@
     async function loadEquipment() { const { data } = await supabaseClient.from('equipment_data').select('*'); if (data && data.length > 0) equipmentData = data.map(row => ({ assetNumber: row.asset_number || "", assetDesc: row.asset_desc, manufacturer: row.manufacturer || "", parentAsset: row.parent_asset || "", assetOwner: row.asset_owner || "", serialNo: row.serial_no || "", location: row.location || "", poNumber: row.po_number || "", acceptanceDate: row.acceptance_date || "", calibrationDate: row.calibration_date || "", currentDetail: row.current_detail || "" })); }
     async function loadStatus() { const { data } = await supabaseClient.from('equip_status').select('*'); if (data) { equipStatus = {}; data.forEach(row => { equipStatus[row.equipment_key] = row.status; }); } }
     async function loadHistory() { const { data } = await supabaseClient.from('history_records').select('*').order('created_at', { ascending: false }); if (data) { historyRecords = data.map(row => ({ id: row.record_id, displayTime: row.display_time, status: row.status, jobType: row.job_type, purpose: row.purpose, et: row.et, set: row.set_person, physicist: row.physicist, others: row.others, remarks: row.remarks, signature: row.signature, recordStatus: row.record_status, editHistory: row.edit_history || [], equipmentDetails: row.equipment_details || [] })); } }
+
     async function loadDbLogs() { 
         if (currentUserRole !== 'admin') return; 
         try {
+            console.log("📝 Loading DB logs from database...");
             const { data, error } = await supabaseClient
                 .from('db_logs')
                 .select('*')
@@ -374,21 +378,27 @@
             }
         
             if (data && data.length > 0) {
+                console.log("✅ Loaded " + data.length + " logs from database");
                 // Replace local logs with fresh data from database
-                // This is the correct behavior - we want the latest from database
-                dbLogs = data.map(row => ({ 
-                    id: row.log_id, 
-                    timestamp: row.timestamp, 
-                    action: row.action, 
-                    recordId: row.record_id, 
-                    details: row.details, 
-                    user: row.user_name, 
-                    reason: row.reason,
-                    userRole: row.user_role || "Unknown",
-                    ipAddress: row.ip_address || "N/A",
-                    browser: row.browser || "Unknown",
-                    deviceType: row.device_type || "Unknown"
-                }));
+                dbLogs = data.map(function(row) { 
+                    return { 
+                        id: row.log_id, 
+                        timestamp: row.timestamp, 
+                        action: row.action, 
+                        recordId: row.record_id, 
+                        details: row.details, 
+                        user: row.user_name, 
+                        reason: row.reason,
+                        userRole: row.user_role || "Unknown",
+                        ipAddress: row.ip_address || "N/A",
+                        browser: row.browser || "Unknown",
+                        deviceType: row.device_type || "Unknown"
+                    };
+                });
+            } else {
+                console.log("ℹ️ No logs found in database");
+                // Keep existing logs if no data returned
+                // dbLogs = dbLogs; // Preserve existing logs
             }
             // Only render if we're on the DB Logs page
             var dblogsPage = document.getElementById("dblogsPage");
@@ -1706,9 +1716,25 @@
             var now = Date.now();
             var timeSinceLastRefresh = now - lastRefreshTime;
 
+            // Check if refresh is allowed (cooldown period)
             if (timeSinceLastRefresh < refreshCooldown) {
                 var waitSeconds = Math.ceil((refreshCooldown - timeSinceLastRefresh) / 1000);
                 alert("⏳ Please wait " + waitSeconds + " second(s) before refreshing again.\n\nThis prevents database overload.");
+                return;
+            }
+
+            // Show confirmation dialog with reminder
+            var confirmRefresh = confirm(
+                "🔄 Refresh Database?\n\n" +
+                "This will:\n" +
+                "✅ Sync all equipment data from cloud\n" +
+                "✅ Sync all status records from cloud\n" +
+                "✅ Sync all history records from cloud\n" +
+                "✅ Preserve all DB logs (no data loss)\n\n" +
+                "Proceed with refresh?"
+            );
+    
+            if (!confirmRefresh) {
                 return;
             }
 
@@ -1718,21 +1744,37 @@
             btn.disabled = true;
 
             try {
-                // Show status message
-                document.getElementById("syncStatusText").innerHTML = "Refreshing...";
-    
-                // Reload data from Supabase
+                // Update status message
+                var statusSpan = document.getElementById("syncStatusText");
+                if (statusSpan) statusSpan.innerHTML = "🔄 Refreshing data...";
+        
+                // Show progress messages
+                console.log("🔄 Starting database refresh...");
+        
+                // Step 1: Load equipment data
+                console.log("📋 Loading equipment data...");
                 await loadEquipment();
+        
+                // Step 2: Load status data
+                console.log("📊 Loading status data...");
                 await loadStatus();
+        
+                // Step 3: Load history records
+                console.log("📜 Loading history records...");
                 await loadHistory();
         
-                // IMPORTANT: Load logs but preserve them
+                // Step 4: Load DB logs (preserve existing logs)
                 if (currentUserRole === 'admin') {
-                    await loadDbLogs(); // This now correctly refreshes from database
+                    console.log("📝 Loading DB logs...");
+                    await loadDbLogs();
                 }
+        
+                // Step 5: Load users
+                console.log("👤 Loading users...");
                 await loadUsersFromSupabase();
     
-                // Rebuild and re-render
+                // Step 6: Rebuild and re-render
+                console.log("🔄 Rebuilding UI...");
                 rebuildFilters();
                 renderEquipment();
                 renderHistory();
@@ -1748,13 +1790,38 @@
                 // Update last refresh time
                 lastRefreshTime = now;
     
-                document.getElementById("syncStatusText").innerHTML = "Live Sync";
-                console.log("✅ Database refreshed successfully! Logs preserved.");
+                // Update status
+                if (statusSpan) statusSpan.innerHTML = "✅ Live Sync";
+        
+                // Show success message with details
+                var equipmentCount = equipmentData ? equipmentData.length : 0;
+                var historyCount = historyRecords ? historyRecords.length : 0;
+                var logCount = dbLogs ? dbLogs.length : 0;
+        
+                alert(
+                    "✅ Database Refreshed Successfully!\n\n" +
+                    "📊 Summary:\n" +
+                    "• Equipment: " + equipmentCount + " items\n" +
+                    "• History Records: " + historyCount + " records\n" +
+                    "• DB Logs: " + logCount + " logs preserved\n" +
+                    "• Users: " + (window.users ? Object.keys(window.users).length : 0) + " users\n\n" +
+                    "⏳ Next refresh available in 5 seconds.\n" +
+                    "💡 Tip: Use the Refresh button only when needed."
+                );
     
             } catch (error) {
-                console.error("Refresh error:", error);
-                document.getElementById("syncStatusText").innerHTML = "Sync Error";
-                alert("❌ Refresh failed. Please check your network connection.");
+                console.error("❌ Refresh error:", error);
+                var statusSpan = document.getElementById("syncStatusText");
+                if (statusSpan) statusSpan.innerHTML = "❌ Sync Error";
+                alert(
+                    "❌ Refresh Failed!\n\n" +
+                    "Error: " + (error.message || "Unknown error") + "\n\n" +
+                    "Please check:\n" +
+                    "• Internet connection\n" +
+                    "• Supabase service status\n" +
+                    "• Browser console for details\n\n" +
+                    "Try again in a few moments."
+                );
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
