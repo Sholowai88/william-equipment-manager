@@ -267,6 +267,9 @@
             // Create unique log ID
             var logId = Date.now() + Math.random().toString(36).substr(2, 5);
         
+            // Determine user role for logging
+            var logUserRole = currentUserRole || "Unknown";
+        
             // Create log entry for local storage
             const log = { 
                 id: logId,
@@ -277,7 +280,7 @@
                 details: details || "",
                 user: user || currentUser || "System",
                 reason: reason || "",
-                userRole: currentUserRole || "Unknown",
+                userRole: logUserRole,
                 ipAddress: "Logging IP",
                 browser: browserInfo,
                 deviceType: deviceType,
@@ -285,11 +288,12 @@
                 additionalInfo: JSON.stringify(additionalInfo)
             };
         
-            // Add to local array
+            // Add to local array (only if admin, but we still store it)
+            // Actually, let's store it for everyone so admins can see it later
             dbLogs.unshift(log);
             if (dbLogs.length > 2000) dbLogs.pop();
         
-            // Prepare insert data - only use columns that definitely exist
+            // Prepare insert data
             var insertData = {
                 log_id: log.id,
                 timestamp: log.timestamp,
@@ -297,28 +301,19 @@
                 record_id: log.recordId,
                 details: log.details,
                 user_name: log.user,
-                reason: log.reason
+                reason: log.reason,
+                user_role: log.userRole,
+                ip_address: log.ipAddress,
+                browser: log.browser,
+                device_type: log.deviceType,
+                user_agent: log.userAgent,
+                additional_info: log.additionalInfo
             };
-        
-            // Try to add optional fields if they exist in the table
-            try {
-                // Check if columns exist by attempting to insert with them
-                // If they don't exist, the insert will fail and we'll retry without them
-                insertData.user_role = log.userRole;
-                insertData.ip_address = log.ipAddress;
-                insertData.browser = log.browser;
-                insertData.device_type = log.deviceType;
-                insertData.user_agent = log.userAgent;
-                insertData.additional_info = log.additionalInfo;
-            } catch(e) {
-                console.warn("Optional fields not available:", e);
-            }
         
             // Insert into Supabase
             var { error } = await supabaseClient.from('db_logs').insert(insertData);
         
             if (error) {
-                // If error, try without optional fields
                 console.warn("Error with full insert, trying basic insert:", error);
                 var basicData = {
                     log_id: log.id,
@@ -332,15 +327,22 @@
                 var { error: basicError } = await supabaseClient.from('db_logs').insert(basicData);
                 if (basicError) {
                     console.error("Basic insert also failed:", basicError);
+                } else {
+                    console.log("✅ Log inserted with basic data only");
+                }
+            } else {
+                console.log("✅ Log inserted successfully:", action, "by", log.user);
+            }
+         
+            // Refresh display if admin (only admins can see DB Logs page)
+            if (currentUserRole === 'admin' && typeof renderDbLogs === 'function') {
+                // Check if we're on the DB Logs page before rendering
+                var dblogsPage = document.getElementById("dblogsPage");
+                if (dblogsPage && dblogsPage.classList.contains("active")) {
+                    renderDbLogs();
                 }
             }
         
-            // Refresh display if admin
-            if (currentUserRole === 'admin' && typeof renderDbLogs === 'function') {
-                renderDbLogs();
-            }
-        
-            console.log("Log added successfully");
         } catch (err) {
             console.error("Failed to insert log:", err);
             // Don't let logging errors break the application
@@ -1707,7 +1709,28 @@
         document.getElementById("exportDbLogsBtn").onclick = exportDbLogsCSV;
         document.getElementById("backupBtn").onclick = backupToFile;
         document.getElementById("restoreBtn").onclick = restoreFromFile;
-        
+
+        // Add manual refresh for DB Logs if admin
+        if (currentUserRole === 'admin') {
+            // Check if we already have a refresh button in the DB Logs filter bar
+            var refreshDbLogsBtn = document.getElementById("refreshDbLogsBtn");
+            if (!refreshDbLogsBtn) {
+                // If no refresh button exists, we can add one programmatically
+                var filterBar = document.querySelector("#dblogsPage .filter-bar");
+                if (filterBar) {
+                    var newRefreshBtn = document.createElement("button");
+                    newRefreshBtn.id = "refreshDbLogsBtn";
+                    newRefreshBtn.className = "btn btn-primary";
+                    newRefreshBtn.innerHTML = "🔄 Refresh Logs";
+                    newRefreshBtn.onclick = async function() {
+                        await renderDbLogs();
+                        alert("✅ DB Logs refreshed from database!");
+                    };
+                    filterBar.appendChild(newRefreshBtn);
+                }
+            }
+        }
+            
         // Refresh button with rate limiting (once every 5 seconds)
         var lastRefreshTime = 0;
         var refreshCooldown = 5000; // 5 seconds in milliseconds
