@@ -674,8 +674,7 @@
                         }
                     await syncAll();
                     alert("✅ Database restored from backup file!");
-                 catch (err) { alert("Invalid backup file"); }
-            };
+                } catch (err) { alert("Invalid backup file"); };
             reader.readAsText(file);
         };
         input.click();
