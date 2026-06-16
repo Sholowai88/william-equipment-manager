@@ -359,7 +359,46 @@
     async function loadEquipment() { const { data } = await supabaseClient.from('equipment_data').select('*'); if (data && data.length > 0) equipmentData = data.map(row => ({ assetNumber: row.asset_number || "", assetDesc: row.asset_desc, manufacturer: row.manufacturer || "", parentAsset: row.parent_asset || "", assetOwner: row.asset_owner || "", serialNo: row.serial_no || "", location: row.location || "", poNumber: row.po_number || "", acceptanceDate: row.acceptance_date || "", calibrationDate: row.calibration_date || "", currentDetail: row.current_detail || "" })); }
     async function loadStatus() { const { data } = await supabaseClient.from('equip_status').select('*'); if (data) { equipStatus = {}; data.forEach(row => { equipStatus[row.equipment_key] = row.status; }); } }
     async function loadHistory() { const { data } = await supabaseClient.from('history_records').select('*').order('created_at', { ascending: false }); if (data) { historyRecords = data.map(row => ({ id: row.record_id, displayTime: row.display_time, status: row.status, jobType: row.job_type, purpose: row.purpose, et: row.et, set: row.set_person, physicist: row.physicist, others: row.others, remarks: row.remarks, signature: row.signature, recordStatus: row.record_status, editHistory: row.edit_history || [], equipmentDetails: row.equipment_details || [] })); } }
-    async function loadDbLogs() { if (currentUserRole !== 'admin') return; const { data } = await supabaseClient.from('db_logs').select('*').order('created_at', { ascending: false }); if (data) { dbLogs = data.map(row => ({ id: row.log_id, timestamp: row.timestamp, action: row.action, recordId: row.record_id, details: row.details, user: row.user_name, reason: row.reason })); renderDbLogs(); } }
+    async function loadDbLogs() { 
+        if (currentUserRole !== 'admin') return; 
+        try {
+            const { data, error } = await supabaseClient
+                .from('db_logs')
+                .select('*')
+                .order('timestamp', { ascending: false })
+                .limit(500); // Limit to prevent memory issues
+        
+            if (error) {
+                console.error("Error loading DB logs:", error);
+                return;
+            }
+        
+            if (data && data.length > 0) {
+                // Replace local logs with fresh data from database
+                // This is the correct behavior - we want the latest from database
+                dbLogs = data.map(row => ({ 
+                    id: row.log_id, 
+                    timestamp: row.timestamp, 
+                    action: row.action, 
+                    recordId: row.record_id, 
+                    details: row.details, 
+                    user: row.user_name, 
+                    reason: row.reason,
+                    userRole: row.user_role || "Unknown",
+                    ipAddress: row.ip_address || "N/A",
+                    browser: row.browser || "Unknown",
+                    deviceType: row.device_type || "Unknown"
+                }));
+            }
+            // Only render if we're on the DB Logs page
+            var dblogsPage = document.getElementById("dblogsPage");
+            if (dblogsPage && dblogsPage.classList.contains("active")) {
+                renderDbLogs();
+            }
+        } catch (err) {
+            console.error("Load DB logs error:", err);
+        }
+    }
     
     async function syncAll() {
         var statusSpan = document.getElementById("syncStatusText");
@@ -368,12 +407,18 @@
             await loadEquipment();
             await loadStatus();
             await loadHistory();
-            if (currentUserRole === 'admin') await loadDbLogs();
+            // IMPORTANT: Load logs but DON'T clear them
+            if (currentUserRole === 'admin') {
+                // Load logs from database without clearing existing logs
+                await loadDbLogs();
+            }
             await loadUsersFromSupabase();
             rebuildFilters();
             renderEquipment();
             renderHistory();
-            if (currentUserRole === 'admin') renderDbLogs();
+            if (currentUserRole === 'admin') {
+                renderDbLogs();
+            }
             if (statusSpan) statusSpan.innerHTML = "Live Sync";
         } catch (err) {
             console.error("Sync error:", err);
@@ -1293,7 +1338,7 @@
         if (currentUserRole !== "admin") return;
     
         try {
-            // Always reload logs from database first
+            // Get fresh data from database if available
             var { data, error } = await supabaseClient
                 .from('db_logs')
                 .select('*')
@@ -1302,28 +1347,50 @@
         
             if (error) {
                 console.error("Error loading logs:", error);
+                // Use existing dbLogs if database fetch fails
+                if (dbLogs.length === 0) {
+                    var tbody = document.getElementById("dbLogsBody");
+                    if (tbody) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Error loading logs. Please try again.</td></tr>';
+                    }
+                }
                 return;
             }
         
             if (data && data.length > 0) {
-                dbLogs = data.map(row => ({
-                    id: row.log_id,
-                    timestamp: row.timestamp,
-                    action: row.action,
-                    recordId: row.record_id,
-                    details: row.details,
-                    user: row.user_name,
+                // Update dbLogs with fresh data (but preserve any unsaved logs if needed)
+                var newLogs = data.map(row => ({ 
+                    id: row.log_id, 
+                    timestamp: row.timestamp, 
+                    action: row.action, 
+                    recordId: row.record_id, 
+                    details: row.details, 
+                    user: row.user_name, 
                     reason: row.reason,
                     userRole: row.user_role || "Unknown",
                     ipAddress: row.ip_address || "N/A",
                     browser: row.browser || "Unknown",
                     deviceType: row.device_type || "Unknown"
                 }));
+            
+                // Merge with existing logs to prevent duplicates
+                var existingIds = new Set(dbLogs.map(l => l.id));
+                var mergedLogs = [...dbLogs];
+            
+                newLogs.forEach(function(log) {
+                    if (!existingIds.has(log.id)) {
+                        mergedLogs.push(log);
+                    }
+                });
+            
+                // Sort by timestamp (newest first)
+                mergedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                dbLogs = mergedLogs;
             }
         
             // Apply filters
-            let search = document.getElementById("dbLogSearch").value.toLowerCase();
-            let actionFilter = document.getElementById("dbLogActionFilter").value;
+            let search = document.getElementById("dbLogSearch")?.value?.toLowerCase() || "";
+            let actionFilter = document.getElementById("dbLogActionFilter")?.value || "";
         
             let filtered = dbLogs.filter(l => {
                 if (!l) return false;
@@ -1348,7 +1415,7 @@
             tbody.innerHTML = "";
         
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No logs found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No logs found</td></tr>';
                 return;
             }
         
@@ -1626,41 +1693,52 @@
         document.getElementById("refreshBtn").onclick = async function() { 
             var now = Date.now();
             var timeSinceLastRefresh = now - lastRefreshTime;
-    
+
             if (timeSinceLastRefresh < refreshCooldown) {
                 var waitSeconds = Math.ceil((refreshCooldown - timeSinceLastRefresh) / 1000);
                 alert("⏳ Please wait " + waitSeconds + " second(s) before refreshing again.\n\nThis prevents database overload.");
                 return;
             }
-    
+
             var btn = document.getElementById("refreshBtn");
             var originalText = btn.innerHTML;
             btn.innerHTML = "🔄 Refreshing...";
             btn.disabled = true;
-    
+
             try {
                 // Show status message
                 document.getElementById("syncStatusText").innerHTML = "Refreshing...";
-        
-                // Reload ALL data from Supabase
+    
+                // Reload data from Supabase
                 await loadEquipment();
                 await loadStatus();
                 await loadHistory();
-                if (currentUserRole === 'admin') await loadDbLogs();
-                await loadUsersFromSupabase();
         
+                // IMPORTANT: Load logs but preserve them
+                if (currentUserRole === 'admin') {
+                    await loadDbLogs(); // This now correctly refreshes from database
+                }
+                await loadUsersFromSupabase();
+    
                 // Rebuild and re-render
                 rebuildFilters();
                 renderEquipment();
                 renderHistory();
-                if (currentUserRole === 'admin') renderDbLogs();
         
+                // Only render DB logs if admin and on DB Logs page
+                if (currentUserRole === 'admin') {
+                    var dblogsPage = document.getElementById("dblogsPage");
+                    if (dblogsPage && dblogsPage.classList.contains("active")) {
+                        renderDbLogs();
+                    }
+                }
+    
                 // Update last refresh time
                 lastRefreshTime = now;
-        
+    
                 document.getElementById("syncStatusText").innerHTML = "Live Sync";
-                alert("✅ Database refreshed successfully!\n\nAll data has been synchronized from the cloud.\n\nNext refresh available in 5 seconds.");
-        
+                console.log("✅ Database refreshed successfully! Logs preserved.");
+    
             } catch (error) {
                 console.error("Refresh error:", error);
                 document.getElementById("syncStatusText").innerHTML = "Sync Error";
