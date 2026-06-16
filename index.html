@@ -265,16 +265,16 @@
             var now = getHKTime();
             var timestampMs = now.toISOString();
         
-            // Create unique log ID
-            var logId = Date.now() + Math.random().toString(36).substr(2, 5);
+            // Create unique log ID (numeric only for bigint column)
+            var logId = Date.now() + Math.floor(Math.random() * 100000);
         
             // Determine user and role
             var logUser = user || currentUser || "System";
             var logUserRole = currentUserRole || "Unknown";
         
-            // Create log entry
+            // Create log entry - ensure id is a number
             const log = { 
-                id: logId,
+                id: logId, // This will now be a number
                 timestamp: timestampMs,
                 action: action,
                 recordId: String(recordId || "N/A"),
@@ -294,9 +294,10 @@
             if (dbLogs.length > 2000) dbLogs.pop();
             console.log("📊 Local logs count:", dbLogs.length);
         
-            // Prepare insert data for Supabase
+            // Prepare insert data for Supabase - ensure log_id is a number
+            var numericLogId = typeof log.id === 'number' ? log.id : Date.now() + Math.floor(Math.random() * 100000);
             var insertData = {
-                log_id: log.id,
+                log_id: numericLogId,
                 timestamp: log.timestamp,
                 action: log.action,
                 record_id: log.recordId,
@@ -318,8 +319,9 @@
             if (error) {
                 console.error("❌ Supabase insert error:", error);
                 // Try without optional fields
+                var numericLogId = typeof log.id === 'number' ? log.id : Date.now() + Math.floor(Math.random() * 100000);
                 var basicData = {
-                    log_id: log.id,
+                    log_id: numericLogId,
                     timestamp: log.timestamp,
                     action: log.action,
                     record_id: log.recordId,
@@ -657,8 +659,19 @@
                     await fullSyncToCloud();
                     if (currentUserRole === 'admin' && snapshot.dbLogs) {
                         await supabaseClient.from('db_logs').delete().neq('id', 0);
-                        for (const log of dbLogs) { await supabaseClient.from('db_logs').insert({ log_id: log.id, timestamp: log.timestamp, action: log.action, record_id: log.recordId, details: log.details, user_name: log.user, reason: log.reason }); }
-                    }
+                        for (const log of dbLogs) { 
+                            // Ensure log_id is a number
+                            var numericId = typeof log.id === 'number' ? log.id : Date.now() + Math.floor(Math.random() * 100000);
+                            await supabaseClient.from('db_logs').insert({ 
+                                log_id: numericId, 
+                                timestamp: log.timestamp, 
+                                action: log.action, 
+                                record_id: log.recordId, 
+                                details: log.details, 
+                                user_name: log.user, 
+                                reason: log.reason 
+                            }); 
+                        }
                     await syncAll();
                     alert("✅ Database restored from backup file!");
                 } catch (err) { alert("Invalid backup file"); }
