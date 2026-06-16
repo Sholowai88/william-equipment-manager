@@ -199,6 +199,8 @@
     let historySortOrder = 'desc', dbLogsSortOrder = 'desc';
     let lastRefreshTime = 0; // Add this line if not present
     let refreshCooldown = 5000; // Add this line if not present
+    // Add a flag to track if logs have been loaded
+    let logsLoaded = false;
     
     function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
     function formatTimestamp(isoString) { let d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; }
@@ -238,9 +240,9 @@
     
     async function addLog(action, recordId, details, user, reason, additionalInfo = {}) {
         try {
-            console.log("Adding log:", action, recordId, details, user);
+            console.log("📝 Adding log:", action, "by", user || currentUser);
         
-            // Get basic info - make it fail-safe
+            // Get basic info
             var userAgent = "Unknown";
             var browserInfo = "Unknown";
             var deviceType = "Desktop";
@@ -262,23 +264,22 @@
             // Get current timestamp
             var now = getHKTime();
             var timestampMs = now.toISOString();
-            var readableTime = formatTimestamp(timestampMs);
         
             // Create unique log ID
             var logId = Date.now() + Math.random().toString(36).substr(2, 5);
         
-            // Determine user role for logging
+            // Determine user and role
+            var logUser = user || currentUser || "System";
             var logUserRole = currentUserRole || "Unknown";
         
-            // Create log entry for local storage
+            // Create log entry
             const log = { 
                 id: logId,
                 timestamp: timestampMs,
-                readableTime: readableTime,
                 action: action,
                 recordId: String(recordId || "N/A"),
                 details: details || "",
-                user: user || currentUser || "System",
+                user: logUser,
                 reason: reason || "",
                 userRole: logUserRole,
                 ipAddress: "Logging IP",
@@ -288,12 +289,12 @@
                 additionalInfo: JSON.stringify(additionalInfo)
             };
         
-            // Add to local array (only if admin, but we still store it)
-            // Actually, let's store it for everyone so admins can see it later
+            // Add to local array
             dbLogs.unshift(log);
             if (dbLogs.length > 2000) dbLogs.pop();
+            console.log("📊 Local logs count:", dbLogs.length);
         
-            // Prepare insert data
+            // Prepare insert data for Supabase
             var insertData = {
                 log_id: log.id,
                 timestamp: log.timestamp,
@@ -309,12 +310,14 @@
                 user_agent: log.userAgent,
                 additional_info: log.additionalInfo
             };
-        
+          
             // Insert into Supabase
-            var { error } = await supabaseClient.from('db_logs').insert(insertData);
+            console.log("💾 Inserting log into Supabase...");
+            var { data, error } = await supabaseClient.from('db_logs').insert(insertData);
         
             if (error) {
-                console.warn("Error with full insert, trying basic insert:", error);
+                console.error("❌ Supabase insert error:", error);
+                // Try without optional fields
                 var basicData = {
                     log_id: log.id,
                     timestamp: log.timestamp,
@@ -326,29 +329,44 @@
                 };
                 var { error: basicError } = await supabaseClient.from('db_logs').insert(basicData);
                 if (basicError) {
-                    console.error("Basic insert also failed:", basicError);
+                    console.error("❌ Basic insert also failed:", basicError);
                 } else {
-                    console.log("✅ Log inserted with basic data only");
+                    console.log("✅ Log inserted with basic data");
                 }
             } else {
-                console.log("✅ Log inserted successfully:", action, "by", log.user);
+                console.log("✅ Log inserted successfully:", action, "by", logUser);
             }
-         
-            // Refresh display if admin (only admins can see DB Logs page)
+        
+            // Refresh display if admin
             if (currentUserRole === 'admin' && typeof renderDbLogs === 'function') {
-                // Check if we're on the DB Logs page before rendering
                 var dblogsPage = document.getElementById("dblogsPage");
                 if (dblogsPage && dblogsPage.classList.contains("active")) {
-                    renderDbLogs();
+                    setTimeout(function() {
+                        renderDbLogs();
+                    }, 500);
                 }
             }
         
         } catch (err) {
-            console.error("Failed to insert log:", err);
+            console.error("❌ Failed to insert log:", err);
             // Don't let logging errors break the application
         }
     }
 
+    async function testLog() {
+        console.log("🧪 Testing log function...");
+        var testUser = currentUser || "Test User";
+        await addLog(
+            "TEST_LOG",
+            "TEST_001",
+            "This is a test log entry created at " + new Date().toISOString(),
+            testUser,
+            "Testing logging functionality",
+            { test: true, timestamp: new Date().toISOString() }
+        );
+        alert("✅ Test log created! Please check DB Logs page as admin.");
+    }
+        
     // Helper function to get client IP (using free API)
     async function getClientIP() {
         try {
@@ -372,10 +390,10 @@
                 .from('db_logs')
                 .select('*')
                 .order('timestamp', { ascending: false })
-                .limit(500); // Limit to prevent memory issues
+                .limit(500);
         
             if (error) {
-                console.error("Error loading DB logs:", error);
+                console.error("❌ Error loading DB logs:", error);
                 return;
             }
         
@@ -397,18 +415,22 @@
                         deviceType: row.device_type || "Unknown"
                     };
                 });
+                logsLoaded = true;
             } else {
                 console.log("ℹ️ No logs found in database");
-                // Keep existing logs if no data returned
-                // dbLogs = dbLogs; // Preserve existing logs
+                // If no logs in database but we have local logs, keep them
+                if (dbLogs.length > 0) {
+                    console.log("📊 Keeping " + dbLogs.length + " local logs");
+                }
             }
-            // Only render if we're on the DB Logs page
+        
+            // Always render if we're on the DB Logs page
             var dblogsPage = document.getElementById("dblogsPage");
             if (dblogsPage && dblogsPage.classList.contains("active")) {
                 renderDbLogs();
             }
         } catch (err) {
-            console.error("Load DB logs error:", err);
+            console.error("❌ Load DB logs error:", err);
         }
     }
     
@@ -1347,10 +1369,15 @@
     }
     
     async function renderDbLogs() {
-        if (currentUserRole !== "admin") return;
+        if (currentUserRole !== "admin") {
+            console.log("⚠️ Only admin can view DB Logs");
+            return;
+        }
     
         try {
-            // Get fresh data from database if available
+            console.log("🔄 Rendering DB Logs...");
+        
+            // Always load fresh data from database
             var { data, error } = await supabaseClient
                 .from('db_logs')
                 .select('*')
@@ -1358,20 +1385,18 @@
                 .limit(500);
         
             if (error) {
-                console.error("Error loading logs:", error);
-                // Use existing dbLogs if database fetch fails
-                if (dbLogs.length === 0) {
-                    var tbodyElement = document.getElementById("dbLogsBody");
-                    if (tbodyElement) {
-                        tbodyElement.innerHTML = '<tr><td colspan="7" style="text-align:center;">Error loading logs. Please try again.</td></tr>';
-                    }
+                console.error("❌ Error loading logs for display:", error);
+                var tbodyElement = document.getElementById("dbLogsBody");
+                if (tbodyElement) {
+                    tbodyElement.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Error loading logs. Please try again.</td></tr>';
                 }
                 return;
             }
         
             if (data && data.length > 0) {
-                // Update dbLogs with fresh data (but preserve any unsaved logs if needed)
-                var newLogs = data.map(function(row) { 
+                console.log("✅ Found " + data.length + " logs in database");
+                // Update dbLogs with fresh data
+                dbLogs = data.map(function(row) { 
                     return { 
                         id: row.log_id, 
                         timestamp: row.timestamp, 
@@ -1386,22 +1411,13 @@
                         deviceType: row.device_type || "Unknown"
                     };
                 });
-            
-                // Merge with existing logs to prevent duplicates
-                var existingIds = new Set(dbLogs.map(function(l) { return l.id; }));
-                var mergedLogs = dbLogs.slice(); // Copy existing logs
-            
-                newLogs.forEach(function(log) {
-                    if (!existingIds.has(log.id)) {
-                        mergedLogs.push(log);
-                    }
-                });
-            
-                // Sort by timestamp (newest first)
-                mergedLogs.sort(function(a, b) { 
-                    return new Date(b.timestamp) - new Date(a.timestamp); 
-                });
-                dbLogs = mergedLogs;
+                logsLoaded = true;
+            } else {
+                console.log("ℹ️ No logs in database");
+                // Check if we have local logs
+                if (dbLogs.length > 0) {
+                    console.log("📊 Using " + dbLogs.length + " local logs");
+                }
             }
         
             // Apply filters
@@ -1412,16 +1428,12 @@
         
             var filtered = dbLogs.filter(function(l) {
                 if (!l) return false;
-                return (l.action && l.action.toLowerCase().includes(search)) || 
-                       (l.details && l.details.toLowerCase().includes(search)) || 
-                       (l.user && l.user.toLowerCase().includes(search));
+                var matchSearch = (l.action && l.action.toLowerCase().includes(search)) || 
+                               (l.details && l.details.toLowerCase().includes(search)) || 
+                               (l.user && l.user.toLowerCase().includes(search));
+                var matchAction = actionFilter ? l.action === actionFilter : true;
+                return matchSearch && matchAction;
             });
-        
-            if (actionFilter) {
-                filtered = filtered.filter(function(l) { 
-                    return l.action === actionFilter; 
-                });
-            }
         
             if (dbLogsSortOrder === 'asc') {
                 filtered.sort(function(a, b) { 
@@ -1434,12 +1446,19 @@
             }
         
             var tbodyElement = document.getElementById("dbLogsBody");
-            if (!tbodyElement) return;
+            if (!tbodyElement) {
+                console.error("❌ tbody element not found");
+                return;
+            }
         
             tbodyElement.innerHTML = "";
         
             if (filtered.length === 0) {
-                tbodyElement.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No logs found</td></tr>';
+                if (dbLogs.length === 0) {
+                    tbodyElement.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No logs found. Start using the system to generate logs.</td></tr>';
+                } else {
+                    tbodyElement.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No logs match your filters.</td></tr>';
+                }
                 return;
             }
         
@@ -1452,10 +1471,15 @@
                 // Action Type with color coding
                 var actionColor = "#e9ecef";
                 if (l.action === "LOGIN_SUCCESS") actionColor = "#d4edda";
-                if (l.action === "LOGIN_FAILED") actionColor = "#f8d7da";
-                if (l.action === "LOGOUT") actionColor = "#fff3cd";
-                if (l.action === "USER_CREATED") actionColor = "#d1ecf1";
-                if (l.action === "PASSWORD_CHANGED") actionColor = "#d4edda";
+                else if (l.action === "LOGIN_FAILED") actionColor = "#f8d7da";
+                else if (l.action === "LOGOUT") actionColor = "#fff3cd";
+                else if (l.action === "USER_CREATED") actionColor = "#d1ecf1";
+                else if (l.action === "PASSWORD_CHANGED") actionColor = "#d4edda";
+                else if (l.action === "RECORD_CREATED") actionColor = "#c8e6c9";
+                else if (l.action === "RECORD_EDITED") actionColor = "#fff9c4";
+                else if (l.action === "EQUIPMENT_ADDED") actionColor = "#b3e5fc";
+                else if (l.action === "EQUIPMENT_EDITED") actionColor = "#e1bee7";
+            
                 row.insertCell(1).innerHTML = '<span style="background:' + actionColor + '; padding:4px 12px; border-radius:20px; font-size:0.7rem; font-weight:bold;">' + (l.action || 'N/A') + '</span>';
             
                 // Record ID
@@ -1468,22 +1492,25 @@
                 }
                 row.insertCell(3).innerHTML = '<div style="max-width:300px; word-wrap:break-word; font-size:0.7rem;">' + detailsText.substring(0, 150) + (detailsText.length > 150 ? '...' : '') + '</div>';
             
-                // User
+                // User with role
                 var userRoleDisplay = l.userRole ? ' (' + l.userRole + ')' : '';
                 row.insertCell(4).innerHTML = '<strong>' + (l.user || '-') + '</strong>' + userRoleDisplay;
             
                 // Action Timestamp
                 row.insertCell(5).innerText = l.timestamp ? formatTimestamp(l.timestamp) : "Unknown";
             
-                // Reason
+                // Reason with IP
                 var reasonText = l.reason || '-';
                 if (l.ipAddress && l.ipAddress !== "N/A" && l.ipAddress !== "Logging IP") {
                     reasonText += '<br><small style="color:#666;">📍 IP: ' + l.ipAddress + '</small>';
                 }
                 row.insertCell(6).innerHTML = reasonText;
             });
+        
+            console.log("✅ Rendered " + filtered.length + " logs");
+        
         } catch (err) {
-            console.error("Render DB Logs error:", err);
+            console.error("❌ Render DB Logs error:", err);
             var tbodyElement = document.getElementById("dbLogsBody");
             if (tbodyElement) {
                 tbodyElement.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Error loading logs. Please refresh the page.</td></tr>';
@@ -1660,6 +1687,13 @@
     }
         
     function initUI() {
+        // Load DB logs immediately if admin
+        if (currentUserRole === 'admin') {
+            console.log("👑 Admin logged in, loading DB logs...");
+            setTimeout(function() {
+                loadDbLogs();
+            }, 1000);
+        }        
         // Log session start for existing logged-in user (page refresh)
         if (currentUser && !sessionStorage.getItem("sessionLogged")) {
             addLog(
@@ -1710,12 +1744,11 @@
         document.getElementById("backupBtn").onclick = backupToFile;
         document.getElementById("restoreBtn").onclick = restoreFromFile;
 
-        // Add manual refresh for DB Logs if admin
+        // Add a refresh button for DB Logs if admin
         if (currentUserRole === 'admin') {
             // Check if we already have a refresh button in the DB Logs filter bar
             var refreshDbLogsBtn = document.getElementById("refreshDbLogsBtn");
             if (!refreshDbLogsBtn) {
-                // If no refresh button exists, we can add one programmatically
                 var filterBar = document.querySelector("#dblogsPage .filter-bar");
                 if (filterBar) {
                     var newRefreshBtn = document.createElement("button");
@@ -1724,7 +1757,7 @@
                     newRefreshBtn.innerHTML = "🔄 Refresh Logs";
                     newRefreshBtn.onclick = async function() {
                         await renderDbLogs();
-                        alert("✅ DB Logs refreshed from database!");
+                        alert("✅ DB Logs refreshed from database!\n\n" + dbLogs.length + " logs loaded.");
                     };
                     filterBar.appendChild(newRefreshBtn);
                 }
