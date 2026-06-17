@@ -212,8 +212,9 @@
 	function formatTimestampHK(isoString) {
     	if (!isoString) return "Unknown";
     	let d = new Date(isoString);
-    	// Convert to Hong Kong time (UTC+8)
+    	// Hong Kong is UTC+8 - add 8 hours to UTC time
     	let hkTime = new Date(d.getTime() + (8 * 60 * 60 * 1000));
+    	// Use getUTCMethods after adding 8 hours
     	return `${hkTime.getUTCMonth()+1}/${hkTime.getUTCDate()}/${hkTime.getUTCFullYear()}, ${hkTime.getUTCHours().toString().padStart(2,'0')}:${hkTime.getUTCMinutes().toString().padStart(2,'0')}:${hkTime.getUTCSeconds().toString().padStart(2,'0')} ${hkTime.getUTCHours()>=12?'PM':'AM'}`;
 	}
 	function getHKTime() { 
@@ -283,22 +284,26 @@
         	var logUser = user || currentUser || "System";
         	var logUserRole = currentUserRole || "Unknown";
         
-        	// Create log entry
-       		const log = { 
-            		id: logId,
-            		timestamp: timestampMs,
-            		action: action,
-            		recordId: String(recordId || "N/A"),
-            		details: details || "",
-            		user: logUser,
-            		reason: reason || "",
-            		userRole: logUserRole,
-            		ipAddress: "Logging IP",
-           		browser: browserInfo,
-            		deviceType: deviceType,
-            		userAgent: userAgent,
-            		additionalInfo: JSON.stringify(additionalInfo)
-       		};
+        	// Create log entry with enhanced details
+			const log = { 
+    			id: logId,
+    			timestamp: timestampMs,
+    			action: action,
+    			recordId: String(recordId || "N/A"),
+    			details: details || "",
+    			user: logUser,
+    			reason: reason || "",
+    			userRole: logUserRole,
+    			ipAddress: "Logging IP",
+    			browser: browserInfo,
+    			deviceType: deviceType,
+    			userAgent: userAgent,
+    			additionalInfo: JSON.stringify(additionalInfo),
+    			// Enhanced detail fields
+    			location: window.location.href || "Unknown",
+    			userAgentFull: navigator.userAgent || "Unknown",
+    			screenResolution: window.screen ? `${window.screen.width}x${window.screen.height}` : "Unknown"
+			};
         
         	// Add to local array
         	dbLogs.unshift(log);
@@ -1014,7 +1019,20 @@
     
         renderEquipment(); 
         renderHistory();
-        addLog("RECORD_CREATED", record.id, "Record created for " + selectedEquips.length + " equipment", currentUser, "");
+        addLog("RECORD_CREATED", record.id, 
+    		"Record created for " + selectedEquips.length + " equipment - " + purpose, 
+    		currentUser, 
+    		"Job: " + jobType + " | Status: " + newStatus,
+    		{ 
+        		jobType: jobType, 
+        		status: newStatus, 
+        		purpose: purpose,
+        		equipmentCount: selectedEquips.length,
+        		et: et,
+        		set: set,
+        		physicist: phy
+    		}
+		);
     
         alert("✅ Record saved successfully!");
         document.getElementById("purposeInput").value = "";
@@ -1056,7 +1074,13 @@
     function showFullRecordPreview(rec) {
         let modal = document.createElement("div"); modal.className = "modal-overlay";
         let equipHtml = rec.equipmentDetails?.map(e => `<tr><td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td><td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td><td style="border:1px solid #ddd; padding:8px;">${e.manufacturer}</td><td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td></tr>`).join('') || '<tr><td colspan="4">No details</td></tr>';
-        let win = window.open('', '_blank');
+        
+		// Create filename for PDF
+    	var purposeSafe = (rec.purpose || 'record').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+    	var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    	var pdfFilename = `record_preview_${purposeSafe}_${dateStr}`;
+		
+		let win = window.open('', '_blank');
         win.document.write(`<html><head><title>Record_Preview</title><style>body{font-family:'Segoe UI',sans-serif; padding:30px;} .header{background:linear-gradient(135deg,#0a2e3f,#166b5c); color:white; padding:20px; border-radius:16px;} .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:20px; border-radius:16px; margin:15px 0;} .badge{display:inline-block; padding:4px 12px; border-radius:50px;} .in{background:#00a86b; color:white;} .out{background:#dc3545; color:white;} table{border-collapse:collapse; width:100%;} th,td{border:1px solid #ddd; padding:8px;}</style></head><body>
             <div class="header"><h3>Transaction Record Preview</h3><p>${formatTimestamp(rec.displayTime)}</p></div>
             <div class="grid"><div><strong>Status:</strong><br><span class="badge ${rec.status==='IN'?'in':'out'}">${rec.status}</span></div><div><strong>Job Type:</strong><br>${rec.jobType||'-'}</div><div><strong>Purpose:</strong><br>${rec.purpose||'-'}</div><div><strong>ET/SET/Phy:</strong><br>${rec.et}/${rec.set}/${rec.physicist}</div><div><strong>Remarks:</strong><br>${rec.remarks||'-'}</div><div><strong>Record Status:</strong><br>${rec.recordStatus}</div></div>
@@ -1079,6 +1103,39 @@
                     <td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td>
                 </tr>
             `).join('') || '<tr><td colspan="4">No details</td></tr>';
+
+			// Create filename for PDF
+			var purposeSafe = (rec.purpose || 'record').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+			var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+			var pdfFilename = `record_preview_${purposeSafe}_${dateStr}`;
+
+			// Also open print window for PDF generation (optional)
+			printWindow.document.write(`
+    			<html>
+    			<head>
+        			<title>${pdfFilename}</title>
+        			<style>
+            			body{font-family:'Segoe UI',sans-serif; padding:30px; margin:0; text-align:left;}
+            			.header{background:linear-gradient(135deg,#0a2e3f,#166b5c); color:white; padding:20px; border-radius:16px; text-align:left;}
+            			.grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:20px; border-radius:16px; margin:15px 0; text-align:left;}
+            			.badge{display:inline-block; padding:4px 12px; border-radius:50px;}
+            			.in{background:#00a86b; color:white;}
+           				.out{background:#dc3545; color:white;}
+            			table{border-collapse:collapse; width:100%; text-align:left;}
+            			th,td{border:1px solid #ddd; padding:8px; text-align:left; vertical-align:top;}
+            			@media print {
+                			body{margin:0; padding:20px;}
+                			.no-print{display:none;}
+            			}
+            			.details-section{margin-bottom:20px; text-align:left;}
+           				h3, h4{text-align:left; margin-top:20px; margin-bottom:10px;}
+        			</style>
+    			</head>
+    			<body>
+        			<!-- rest of the content -->
+    			</body>
+    			</html>
+			`);
         
             // Create hidden iframe for PDF generation
             var printWindow = window.open('', '_blank');
@@ -1122,6 +1179,10 @@
 
             Best regards,
             ${signatureName}
+
+			---
+			This record was generated from NTWC MPU DRWS Equipment Database.
+			URL: ${window.location.href}
             `);
         
         // Enhanced email function for cross-browser compatibility (Safari, Chrome, iOS, Desktop)
@@ -1382,11 +1443,36 @@
             		row.insertCell(2).innerText = l.recordId || 'N/A';
             
             		// Details - Show more information
-            		var detailsText = l.details || '';
-            		if (l.browser && l.browser !== "Unknown") {
-                		detailsText += ' [' + l.browser + ']';
-            		}
-            		// Add user role to details if available
+					var detailsText = l.details || '';
+					if (l.browser && l.browser !== "Unknown") {
+    					detailsText += ' [Browser: ' + l.browser + ']';
+					}
+					if (l.deviceType && l.deviceType !== "Unknown") {
+    					detailsText += ' [Device: ' + l.deviceType + ']';
+					}
+					if (l.userRole && l.userRole !== "Unknown") {
+    					detailsText += ' (Role: ' + l.userRole + ')';
+					}
+					// Add location info if available
+					if (l.additionalInfo && l.additionalInfo !== "{}") {
+    					try {
+        					var additional = JSON.parse(l.additionalInfo);
+        					if (additional.role) {
+            					detailsText += ' [Role: ' + additional.role + ']';
+        					}
+        					if (additional.loginTime) {
+            					detailsText += ' [Login: ' + formatTimestampHK(additional.loginTime) + ']';
+        					}
+        					// Show job type and status for record actions
+        					if (l.action === "RECORD_CREATED" || l.action === "RECORD_EDITED") {
+            					if (additional.jobType) detailsText += ' [Job: ' + additional.jobType + ']';
+            					if (additional.status) detailsText += ' [Status: ' + additional.status + ']';
+        					}
+    					} catch(e) {}
+					}
+					row.insertCell(3).innerHTML = '<div style="max-width:300px; word-wrap:break-word; font-size:0.7rem;">' + detailsText + '</div>';		
+            		
+					// Add user role to details if available
             		if (l.userRole && l.userRole !== "Unknown") {
               			detailsText += ' (Role: ' + l.userRole + ')';
             		}
