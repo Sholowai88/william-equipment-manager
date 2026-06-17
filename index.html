@@ -203,8 +203,20 @@
     let historySortOrder = 'desc', dbLogsSortOrder = 'desc';
     
     function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
-    function formatTimestamp(isoString) { let d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; }
-    function getHKTime() { 
+    function formatTimestamp(isoString) { 
+    	let d = new Date(isoString); 
+    	return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; 
+	}
+
+	// Special function for DB Logs to display in Hong Kong time
+	function formatTimestampHK(isoString) {
+    	if (!isoString) return "Unknown";
+    	let d = new Date(isoString);
+    	// Convert to Hong Kong time (UTC+8)
+    	let hkTime = new Date(d.getTime() + (8 * 60 * 60 * 1000));
+    	return `${hkTime.getUTCMonth()+1}/${hkTime.getUTCDate()}/${hkTime.getUTCFullYear()}, ${hkTime.getUTCHours().toString().padStart(2,'0')}:${hkTime.getUTCMinutes().toString().padStart(2,'0')}:${hkTime.getUTCSeconds().toString().padStart(2,'0')} ${hkTime.getUTCHours()>=12?'PM':'AM'}`;
+	}
+	function getHKTime() { 
         var now = new Date(); 
         // Hong Kong is UTC+8 (no daylight saving)
         var hkOffset = 8 * 60; // 480 minutes
@@ -354,7 +366,25 @@
     async function loadEquipment() { const { data } = await supabaseClient.from('equipment_data').select('*'); if (data && data.length > 0) equipmentData = data.map(row => ({ assetNumber: row.asset_number || "", assetDesc: row.asset_desc, manufacturer: row.manufacturer || "", parentAsset: row.parent_asset || "", assetOwner: row.asset_owner || "", serialNo: row.serial_no || "", location: row.location || "", poNumber: row.po_number || "", acceptanceDate: row.acceptance_date || "", calibrationDate: row.calibration_date || "", currentDetail: row.current_detail || "" })); }
     async function loadStatus() { const { data } = await supabaseClient.from('equip_status').select('*'); if (data) { equipStatus = {}; data.forEach(row => { equipStatus[row.equipment_key] = row.status; }); } }
     async function loadHistory() { const { data } = await supabaseClient.from('history_records').select('*').order('created_at', { ascending: false }); if (data) { historyRecords = data.map(row => ({ id: row.record_id, displayTime: row.display_time, status: row.status, jobType: row.job_type, purpose: row.purpose, et: row.et, set: row.set_person, physicist: row.physicist, others: row.others, remarks: row.remarks, signature: row.signature, recordStatus: row.record_status, editHistory: row.edit_history || [], equipmentDetails: row.equipment_details || [] })); } }
-    async function loadDbLogs() { if (currentUserRole !== 'admin') return; const { data } = await supabaseClient.from('db_logs').select('*').order('created_at', { ascending: false }); if (data) { dbLogs = data.map(row => ({ id: row.log_id, timestamp: row.timestamp, action: row.action, recordId: row.record_id, details: row.details, user: row.user_name, reason: row.reason })); renderDbLogs(); } }
+    async function loadDbLogs() { if (currentUserRole !== 'admin') return; const { data } = await supabaseClient.from('db_logs').select('*').order('created_at', { ascending: false }); 
+								 	if (data) { 
+												dbLogs = data.map(function(row) { 
+    												return { 
+        												id: row.log_id, 
+        												timestamp: row.timestamp,  // This is stored in UTC from Supabase
+        												action: row.action, 
+        												recordId: row.record_id, 
+        												details: row.details, 
+        												user: row.user_name, 
+        												reason: row.reason,
+        												userRole: row.user_role || "Unknown",
+        												ipAddress: row.ip_address || "N/A",
+        												browser: row.browser || "Unknown",
+        												deviceType: row.device_type || "Unknown",
+        												additionalInfo: row.additional_info || "{}"
+    												};
+												}); 
+									renderDbLogs(); } }
     
     async function syncAll() {
         var statusSpan = document.getElementById("syncStatusText");
@@ -1332,7 +1362,7 @@
             		var row = tbody.insertRow();
             
             		// Timestamp
-            		row.insertCell(0).innerText = l.timestamp ? formatTimestamp(l.timestamp) : "Unknown";
+            		row.insertCell(0).innerText = l.timestamp ? formatTimestampHK(l.timestamp) : "Unknown";
             
             		// Action Type with color coding
             		var actionColor = "#e9ecef";
@@ -1367,7 +1397,7 @@
             		row.insertCell(4).innerHTML = '<strong>' + (l.user || '-') + '</strong>' + userRoleDisplay;
             
             		// Action Timestamp
-            		row.insertCell(5).innerText = l.timestamp ? formatTimestamp(l.timestamp) : "Unknown";
+            		row.insertCell(5).innerText = l.timestamp ? formatTimestampHK(l.timestamp) : "Unknown";
             
             		// Reason with additional info
             		var reasonText = l.reason || '-';
@@ -1515,7 +1545,7 @@
     	var rows = [["Timestamp", "Action Type", "Record ID", "Details", "User", "User Role", "Reason/Note"]];
     	logs.forEach(function(l) {
         	rows.push([
-            	formatTimestamp(l.timestamp), 
+            	formatTimestampHK(l.timestamp), 
             	l.action || '', 
             	l.recordId || '', 
             	l.details || '', 
