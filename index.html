@@ -1401,25 +1401,25 @@
     
     function exportHistoryCSV() {
     	var startDate = document.getElementById("historyStartDate").value;
-    	var endDate = document.getElementById("historyEndDate").value;
+   		var endDate = document.getElementById("historyEndDate").value;
     
     	var records = [...historyRecords];
     
     	// Filter by date range if selected
     	if (startDate) {
-        	var start = new Date(startDate);
-        	start.setHours(0, 0, 0, 0);
+        	var startDateTime = new Date(startDate);
+        	startDateTime.setHours(0, 0, 0, 0);
         	records = records.filter(function(r) {
-            		var recordDate = new Date(r.displayTime);
-            		return recordDate >= start;
+            	var recordDate = new Date(r.displayTime);
+            	return recordDate >= startDateTime;
         	});
     	}
     	if (endDate) {
-        	var end = new Date(endDate);
-        	end.setHours(23, 59, 59, 999);
+        	var endDateTime = new Date(endDate);
+        	endDateTime.setHours(23, 59, 59, 999);
         	records = records.filter(function(r) {
-            		var recordDate = new Date(r.displayTime);
-            		return recordDate <= end;
+            	var recordDate = new Date(r.displayTime);
+            	return recordDate <= endDateTime;
         	});
     	}
     
@@ -1428,38 +1428,55 @@
         	return;
     	}
     
-    	if (historySortOrder === 'asc') records.sort((a, b) => new Date(a.displayTime) - new Date(b.displayTime));
-    	else records.sort((a, b) => new Date(b.displayTime) - new Date(a.displayTime));
+    	if (historySortOrder === 'asc') {
+        	records.sort(function(a, b) { 
+            	return new Date(a.displayTime) - new Date(b.displayTime); 
+        	});
+    	} else {
+        	records.sort(function(a, b) { 
+            	return new Date(b.displayTime) - new Date(a.displayTime); 
+        	});
+    	}
     
     	var rows = [["Timestamp", "Equipment", "Status", "Job Type", "Purpose", "ET", "SET", "Physicist", "Remarks", "Record Status"]];
     	records.forEach(function(r) {
+        	var equipmentList = '';
+        	if (r.equipmentDetails && r.equipmentDetails.length > 0) {
+            	equipmentList = r.equipmentDetails.map(function(d) { 
+                	return d.assetDesc || ''; 
+            	}).join("; ");
+        	}
         	rows.push([
-            		formatTimestamp(r.displayTime), 
-            		r.equipmentDetails?.map(function(d) { return d.assetDesc; }).join("; "), 
-            		r.status, 
-            		r.jobType, 
-            		r.purpose, 
-            		r.et, 
-            		r.set, 
-            		r.physicist, 
-            		r.remarks, 
-            		r.recordStatus
+            	formatTimestamp(r.displayTime), 
+	            equipmentList, 
+            	r.status || '', 
+           		r.jobType || '', 
+           	 	r.purpose || '', 
+            	r.et || '', 
+            	r.set || '', 
+            	r.physicist || '', 
+            	r.remarks || '', 
+            	r.recordStatus || ''
         	]);
-    	});
+   		});
     
     	var csv = rows.map(function(r) {
         	return r.map(function(c) {
-            		return '"' + String(c || '').replace(/"/g, '""') + '"';
-       		}).join(",");
+            	return '"' + String(c || '').replace(/"/g, '""') + '"';
+        	}).join(",");
     	}).join("\n");
     
-    	var blob = new Blob(["\uFEFF" + csv], { type: "text/csv" });
-    	var a = document.createElement("a");
-    	a.href = URL.createObjectURL(blob);
-    	a.download = `history_logs - ${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.csv`;
-    	a.click();
-    	alert("✅ History exported to CSV!");
-    }
+    	var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    	var link = document.createElement("a");
+    	link.href = URL.createObjectURL(blob);
+    	link.download = `history_logs - ${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.csv`;
+    	document.body.appendChild(link);
+    	link.click();
+    	document.body.removeChild(link);
+    	URL.revokeObjectURL(link.href);
+    
+    	alert("✅ History logs exported to CSV!\n\nRecords exported: " + records.length);
+	}
     
     function exportDbLogsCSV() {
     	if (currentUserRole !== "admin") {
@@ -1468,25 +1485,25 @@
     	}
     
     	var startDate = document.getElementById("dbLogStartDate").value;
-    	var endDate = document.getElementById("dbLogEndDate").value;
+   		var endDate = document.getElementById("dbLogEndDate").value;
     
     	var logs = [...dbLogs];
     
     	// Filter by date range if selected
     	if (startDate) {
-        	ar start = new Date(startDate);
-        	start.setHours(0, 0, 0, 0);
+        	var startDateTime = new Date(startDate);
+        	startDateTime.setHours(0, 0, 0, 0);
         	logs = logs.filter(function(l) {
-            		var logDate = new Date(l.timestamp);
-            		return logDate >= start;
+            	var logDate = new Date(l.timestamp);
+            	return logDate >= startDateTime;
         	});
     	}
     	if (endDate) {
-        	var end = new Date(endDate);
-        	end.setHours(23, 59, 59, 999);
+        	var endDateTime = new Date(endDate);
+        	endDateTime.setHours(23, 59, 59, 999);
         	logs = logs.filter(function(l) {
-            		var logDate = new Date(l.timestamp);
-            		return logDate <= end;
+            	var logDate = new Date(l.timestamp);
+            	return logDate <= endDateTime;
         	});
     	}
     
@@ -1495,31 +1512,36 @@
         	return;
     	}
     
-    	var rows = [["Timestamp", "Action Type", "Record ID", "Details", "User", "Reason/Note"]];
+    	var rows = [["Timestamp", "Action Type", "Record ID", "Details", "User", "User Role", "Reason/Note"]];
     	logs.forEach(function(l) {
         	rows.push([
-            		formatTimestamp(l.timestamp), 
-           		l.action, 
-            		l.recordId, 
-            		l.details, 
-            		l.user, 
-            		l.reason
+            	formatTimestamp(l.timestamp), 
+            	l.action || '', 
+            	l.recordId || '', 
+            	l.details || '', 
+            	l.user || '', 
+           		l.userRole || '', 
+            	l.reason || ''
         	]);
     	});
     
     	var csv = rows.map(function(r) {
         	return r.map(function(c) {
-            		return '"' + String(c || '').replace(/"/g, '""') + '"';
+            	return '"' + String(c || '').replace(/"/g, '""') + '"';
         	}).join(",");
     	}).join("\n");
     
-    	var blob = new Blob(["\uFEFF" + csv], { type: "text/csv" });
-    	var a = document.createElement("a");
-    	a.href = URL.createObjectURL(blob);
-    	a.download = `db_logs - ${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.csv`;
-    	a.click();
-    	alert("✅ DB Logs exported to CSV!");
-    }
+    	var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    	var link = document.createElement("a");
+    	link.href = URL.createObjectURL(blob);
+    	link.download = `db_logs - ${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.csv`;
+    	document.body.appendChild(link);
+    	link.click();
+    	document.body.removeChild(link);
+    	URL.revokeObjectURL(link.href);
+    
+    	alert("✅ DB Logs exported to CSV!\n\nLogs exported: " + logs.length);
+	}
     
     async function accountManagement() {
         let modal = document.createElement("div"); modal.className = "modal-overlay";
