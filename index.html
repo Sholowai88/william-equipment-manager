@@ -134,6 +134,7 @@
             <button id="accountBtn">👤 Account</button>
             <button id="backupBtn" class="admin-only" style="display:inline-block;">💾 Backup</button>
             <button id="restoreBtn" class="admin-only" style="display:inline-block;">📂 Restore</button>
+			<button id="supabaseBackupBtn" class="admin-only" style="display:inline-block;">☁️ Supabase Backup</button>
             <button id="logoutBtn">🚪 Logout</button>
             <div class="sync-status"><span class="sync-dot"></span><span id="syncStatusText">Live Sync</span></div>
         </div>
@@ -199,7 +200,7 @@
     let currentUser = null, currentUserRole = null;
     let equipmentData = [], equipStatus = {}, historyRecords = [], dbLogs = [];
     let selectedAssetsSet = new Set();
-    const etNames = ["Heung","Andy","Vincent","William","Pal","Joe","Richard","Ray"];
+    const etNames = ["Heung","Andy","Vincent","William","Pal","Joe","Richard","Ray","N/A"];
     let historySortOrder = 'desc', dbLogsSortOrder = 'desc';
     
     function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
@@ -234,17 +235,30 @@
         	return isoString || "Unknown";
     	}
 	}
-	
 	function getHKTime() { 
     	// Get current time in Hong Kong (UTC+8)
     	var now = new Date();
     	// Get UTC time in milliseconds
     	var utcTime = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 
-                        	   now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
-    	// Add 8 hours for Hong Kong
+                           	   now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
+   		// Add 8 hours for Hong Kong
     	var hkTime = new Date(utcTime + (8 * 60 * 60 * 1000));
     	return hkTime;
 	}
+
+	// Function to get Hong Kong time as ISO string for Supabase storage
+	function getHKTimeISO() {
+    	var hk = getHKTime();
+    	// Format as ISO string with UTC+8 offset
+    	var year = hk.getUTCFullYear();
+    	var month = String(hk.getUTCMonth() + 1).padStart(2, '0');
+    	var day = String(hk.getUTCDate()).padStart(2, '0');
+    	var hours = String(hk.getUTCHours()).padStart(2, '0');
+    	var minutes = String(hk.getUTCMinutes()).padStart(2, '0');
+    	var seconds = String(hk.getUTCSeconds()).padStart(2, '0');
+    	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}+08:00`;
+	}
+	
     function setToday() { 
     	var hk = getHKTime();
     	// Use getUTCMethods since we're working with UTC+8
@@ -308,8 +322,8 @@
         
         	// Get current timestamp
        		var now = getHKTime();
-        	// Store as UTC ISO string
-			var timestampMs = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
+        	// Store as Hong Kong time with +08:00 offset
+			var timestampMs = getHKTimeISO();
         
         	// Create unique numeric log ID
         	var logId = Date.now() + Math.floor(Math.random() * 100000);
@@ -679,6 +693,137 @@
         };
         input.click();
     }
+
+	async function supabaseBackup() {
+    	if (currentUserRole !== "admin") {
+        	alert("⚠️ Only Admin can perform Supabase backup.");
+        	return;
+    	}
+    
+    	try {
+        	alert("☁️ Starting Supabase backup...\n\nThis will export all 5 tables as CSV files.");
+        
+        	// Define tables to backup
+        	var tables = [
+            	{ name: 'db_logs', columns: 'log_id,timestamp,action,record_id,details,user_name,reason,user_role,ip_address,browser,device_type' },
+            	{ name: 'equip_status', columns: 'equipment_key,status' },
+            	{ name: 'equipment_data', columns: 'asset_number,asset_desc,manufacturer,parent_asset,asset_owner,serial_no,location,po_number,acceptance_date,calibration_date,current_detail' },
+            	{ name: 'history_records', columns: 'record_id,display_time,status,job_type,purpose,et,set_person,physicist,others,remarks,signature,record_status,edit_history,equipment_details' },
+            	{ name: 'users', columns: 'username,password,role' }
+        	];
+        
+        	// Create a zip container (using JSZip if available, or download individually)
+        	var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        	var folderName = `supabase_backup_${dateStr}`;
+        
+        	// Check if JSZip is available
+        	if (typeof JSZip === 'undefined') {
+            	// Load JSZip dynamically
+            	var script = document.createElement('script');
+            	script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+            	document.head.appendChild(script);
+            
+            	// Wait for JSZip to load
+            	await new Promise(function(resolve, reject) {
+                	script.onload = resolve;
+	                script.onerror = reject;
+	                setTimeout(reject, 10000);
+            	});
+        	}
+        
+        	var zip = new JSZip();
+        	var totalTables = tables.length;
+        	var completed = 0;
+        
+        	for (var i = 0; i < tables.length; i++) {
+            	var table = tables[i];
+            	console.log(`📥 Exporting table: ${table.name}...`);
+            
+            	try {
+                	// Get all data from the table
+                	var { data, error } = await supabaseClient
+                    	.from(table.name)
+                    	.select('*')
+                    	.order('created_at', { ascending: false })
+                    	.limit(10000); // Limit to prevent memory issues
+                
+                	if (error) {
+                    	console.error(`Error exporting ${table.name}:`, error);
+                    	continue;
+                	}
+                
+                	if (data && data.length > 0) {
+                    	// Create CSV content
+                    	var headers = Object.keys(data[0]);
+                    	var csvRows = [headers.join(',')];
+                    
+                    	data.forEach(function(row) {
+                        	var values = headers.map(function(header) {
+                            	var val = row[header];
+                            	if (val === null || val === undefined) return '';
+                            	if (typeof val === 'string') {
+                                	// Escape quotes and wrap in quotes
+                                	return '"' + val.replace(/"/g, '""') + '"';
+                            	}
+                            	if (typeof val === 'object') {
+                                	return '"' + JSON.stringify(val).replace(/"/g, '""') + '"';
+                           		}
+                            	return val;
+                        	});
+                        	csvRows.push(values.join(','));
+                    	});
+                    
+                    	var csvContent = csvRows.join('\n');
+                    	var blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                    
+                    	// Add to zip
+                    	zip.file(`${table.name}.csv`, blob);
+                    	completed++;
+                	} else {
+                    	// Empty table - create empty CSV with headers
+                    	var headers = table.columns.split(',');
+                    	var csvContent = headers.join(',') + '\n';
+                    	var blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                    	zip.file(`${table.name}.csv`, blob);
+                    	completed++;
+                	}
+                
+            	} catch (err) {
+                	console.error(`Error processing ${table.name}:`, err);
+            	}
+        	}
+        
+        	if (completed === 0) {
+            	alert("❌ No data was exported. Please check your connection and try again.");
+            	return;
+        	}
+        
+        	// Generate and download zip
+        	var zipBlob = await zip.generateAsync({ type: 'blob' });
+        	var link = document.createElement('a');
+        	link.href = URL.createObjectURL(zipBlob);
+        	link.download = `supabase_backup_${dateStr}.zip`;
+        	document.body.appendChild(link);
+        	link.click();
+        	document.body.removeChild(link);
+        	URL.revokeObjectURL(link.href);
+        
+        	alert(`✅ Supabase Backup Completed!\n\n📦 ${completed}/${totalTables} tables exported\n📁 File: supabase_backup_${dateStr}.zip\n\nTables exported:\n${tables.map(t => `• ${t.name}.csv`).join('\n')}`);
+        
+        	// Log the backup
+        	await addLog(
+            	"SUPABASE_BACKUP",
+            	"ALL",
+            	`Admin ${currentUser} created Supabase backup with ${completed} tables`,
+            	currentUser,
+            	"Supabase backup created"
+        	);
+        
+    	} catch (err) {
+        	console.error("Supabase backup error:", err);
+        	alert("❌ Supabase backup failed!\n\nError: " + err.message + "\n\nPlease check:\n• Internet connection\n• JSZip library loading\n• Try again later");
+    	}
+	}
     
     function rebuildFilters() {
         let locSet = new Set(), parentSet = new Set();
@@ -1037,7 +1182,7 @@
     
         let record = { 
             id: Date.now(), 
-            displayTime: dt, 
+            displayTime: dt + '+08:00', // Add Hong Kong timezone offset 
             status: newStatus, 
             jobType, 
             purpose, 
@@ -1396,7 +1541,7 @@
             <hr><h4>Edit Authorization</h4><div class="flex-form"><div><label>Date *</label><input type="date" id="editDate"></div><div><label>Person Name *</label><input type="text" id="editPerson" value="${currentUser}"></div><div><label>Reason for Edit *</label><input type="text" id="editReason" placeholder="Reason for modification"></div></div>
             <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px;"><button id="confirmEditRecordBtn" class="btn btn-primary">Confirm Edit</button><button id="cancelEditRecordBtn" class="btn">Cancel</button></div></div>`;
         document.body.appendChild(modal);
-        modal.querySelector("#editDate").value = getHKTime().toISOString().slice(0, 10);
+        modal.querySelector("#editDate").value = getHKTimeISO().slice(0, 10);
         modal.querySelector(".close-modal").onclick = () => modal.remove();
         modal.querySelector("#cancelEditRecordBtn").onclick = () => modal.remove();
         modal.querySelector("#confirmEditRecordBtn").onclick = async () => {
@@ -1811,20 +1956,20 @@
             
             		// Control visibility of admin-only elements
             		if (currentUserRole === "super") {
-                		var dlogsTab = document.getElementById("dblogsTab");
-                		if (dlogsTab) dlogsTab.style.display = "none";
-                		var adminButtons = document.querySelectorAll('.admin-only');
-                		adminButtons.forEach(function(btn) {
-                    			btn.style.display = "none";
-                		});
-            		} else {
-                		var dlogsTab = document.getElementById("dblogsTab");
-                		if (dlogsTab) dlogsTab.style.display = "block";
-                		var adminButtons = document.querySelectorAll('.admin-only');
-                		adminButtons.forEach(function(btn) {
-                    			btn.style.display = "inline-block";
-                		});
-            		}
+    					var dlogsTab = document.getElementById("dblogsTab");
+    					if (dlogsTab) dlogsTab.style.display = "none";
+    					var adminButtons = document.querySelectorAll('.admin-only');
+    					adminButtons.forEach(function(btn) {
+        					btn.style.display = "none";
+    					});
+					} else {
+    					var dlogsTab = document.getElementById("dblogsTab");
+    					if (dlogsTab) dlogsTab.style.display = "block";
+    					var adminButtons = document.querySelectorAll('.admin-only');
+    					adminButtons.forEach(function(btn) {
+        					btn.style.display = "inline-block";
+    					});
+					}
             
             		// Log successful login
             		await addLog(
@@ -1927,6 +2072,8 @@
         document.getElementById("exportDbLogsBtn").onclick = exportDbLogsCSV;
         document.getElementById("backupBtn").onclick = backupToFile;
         document.getElementById("restoreBtn").onclick = restoreFromFile;
+		// Add Supabase Backup button handler
+		document.getElementById("supabaseBackupBtn").onclick = supabaseBackup;
         
         // Refresh button with rate limiting (once every 5 seconds)
         var lastRefreshTime = 0;
@@ -2028,7 +2175,7 @@
         'history': 'History Logs page shows all transactions. You can filter by Job Type, Status, Date, and sort records. Each record shows equipment details, personnel, and signature.',
         'signature': 'Draw your signature on the canvas in In/Out Record page. Use mouse or touch. Clear button resets the signature. Signature is required for all transactions.',
         'job type': 'Job types include: PM (Preventive Maintenance), CM (Corrective Maintenance), QA (Quality Assurance), AT (Acceptance Test), OTH (Others). Choose the appropriate type for your transaction.',
-        'et': 'ET refers to Engineering Technician. Available ETs: Heung, Andy, Vincent, William, Pal, Joe, Richard, Ray. Multiple ETs can be selected using Ctrl/Cmd+Click.',
+        'et': 'ET refers to Engineering Technician. Available ETs: Heung, Andy, Vincent, William, Pal, Joe, Richard, Ray, N/A. Multiple ETs can be selected using Ctrl/Cmd+Click.',
         'set': 'SET options: Reeve, Kelvin, Deputizing. Select the supervisor responsible for the work.',
         'physicist': 'Physicist options: Xiao Li, Celina, Keith, Jacky, Martin, RT Phy., N/A. Select the physicist involved in the transaction.',
         'backup': 'Backup function (Admin only): Creates JSON backup of entire database including equipment, status, history, and logs.',
