@@ -1093,222 +1093,234 @@
     }
 
     async function emailRecordPreview(rec) {
-        try {
-            // Generate PDF preview HTML content
-            let equipHtml = rec.equipmentDetails?.map(e => `
-                <tr>
-                    <td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td>
-                    <td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td>
-                    <td style="border:1px solid #ddd; padding:8px;">${e.manufacturer || '-'}</td>
-                    <td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td>
-                </tr>
-            `).join('') || '<tr><td colspan="4">No details</td></tr>';
-
-			// Create filename for PDF
-			var purposeSafe = (rec.purpose || 'record').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
-			var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-			var pdfFilename = `record_preview_${purposeSafe}_${dateStr}`;
-
-			// Also open print window for PDF generation (optional)
-			printWindow.document.write(`
-    			<html>
-    			<head>
-        			<title>${pdfFilename}</title>
-        			<style>
-            			body{font-family:'Segoe UI',sans-serif; padding:30px; margin:0; text-align:left;}
-            			.header{background:linear-gradient(135deg,#0a2e3f,#166b5c); color:white; padding:20px; border-radius:16px; text-align:left;}
-            			.grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:20px; border-radius:16px; margin:15px 0; text-align:left;}
-            			.badge{display:inline-block; padding:4px 12px; border-radius:50px;}
-            			.in{background:#00a86b; color:white;}
-           				.out{background:#dc3545; color:white;}
-            			table{border-collapse:collapse; width:100%; text-align:left;}
-            			th,td{border:1px solid #ddd; padding:8px; text-align:left; vertical-align:top;}
-            			@media print {
-                			body{margin:0; padding:20px;}
-                			.no-print{display:none;}
-            			}
-            			.details-section{margin-bottom:20px; text-align:left;}
-           				h3, h4{text-align:left; margin-top:20px; margin-bottom:10px;}
-        			</style>
-    			</head>
-    			<body>
-        			<!-- rest of the content -->
-    			</body>
-    			</html>
-			`);
+    	try {
+        	// Generate PDF preview HTML content
+        	let equipHtml = rec.equipmentDetails?.map(e => `
+            	<tr>
+                	<td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td>
+                	<td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td>
+                	<td style="border:1px solid #ddd; padding:8px;">${e.manufacturer || '-'}</td>
+                	<td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td>
+            	</tr>
+        	`).join('') || '<tr><td colspan="4">No details</td></tr>';
         
-            // Create hidden iframe for PDF generation
-            var printWindow = window.open('', '_blank');
-            var emailSubject = `Equipment Transaction Record - (${rec.jobType || 'N/A'} - ${rec.status || 'N/A'}) ${rec.purpose || ''}`;
-
-            // Get current user name for signature
-            var signatureName = currentUser || "System User";
-            if (currentUserRole === 'admin') signatureName = currentUser + " (Admin)";
-            else if (currentUserRole === 'super') signatureName = currentUser + " (Super-user)";
-
-            var emailBody = encodeURIComponent(`
-            Dear Reeve,
-
-            Please find attached the equipment transaction record details below:
-
-            ===========================================
-            TRANSACTION RECORD DETAILS
-            ===========================================
-
-            Date/Time: ${formatTimestamp(rec.displayTime)}
-            Status: ${rec.status}
-            Job Type: ${rec.jobType || 'N/A'}
-            Purpose: ${rec.purpose || 'N/A'}
-
-            Personnel:
-            - ET: ${rec.et || 'N/A'}
-            - SET: ${rec.set || 'N/A'}
-            - Physicist: ${rec.physicist || 'N/A'}
-            - Others: ${rec.others || 'N/A'}
-
-            Remarks: ${rec.remarks || 'N/A'}
-            Record Status: ${rec.recordStatus || 'N/A'}
-
-            ===========================================
-            EQUIPMENT LIST
-            ===========================================
-
-            ${rec.equipmentDetails?.map(e => `• ${e.assetDesc} | ${e.manufacturer || '-'} | SN: ${e.serialNo || '-'}`).join('\n') || 'No equipment details'}
-
-            ===========================================
-
-            Best regards,
-            ${signatureName}
-
-			---
-			This record was generated from NTWC MPU DRWS Equipment Database.
-			URL: ${window.location.href}
-            `);
+        	// Create filename for PDF
+        	var purposeSafe = (rec.purpose || 'record').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+       		var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+ 	        var pdfFilename = `record_preview_${purposeSafe}_${dateStr}`;
         
-        // Enhanced email function for cross-browser compatibility (Safari, Chrome, iOS, Desktop)
-        var mailtoLink = `mailto:wck131@ha.org.hk?subject=${encodeURIComponent(emailSubject)}&body=${emailBody}`;
+        	// Get current user name for signature
+	        var signatureName = currentUser || "System User";
+        	if (currentUserRole === 'admin') signatureName = currentUser + " (Admin)";
+        	else if (currentUserRole === 'super') signatureName = currentUser + " (Super-user)";
 
-        // Cross-browser email opening function
-        function openEmailClient() {
-            // Method 1: Try using window.location (works on most browsers)
-            window.location.href = mailtoLink;
-    
-            // Method 2: Fallback for Safari and mobile browsers
-            setTimeout(function() {
-                var emailWindow = window.open(mailtoLink, '_blank');
-                if (!emailWindow || emailWindow.closed || typeof emailWindow.closed === 'undefined') {
-                        // If popup blocked, try alternative method
-                        var tempLink = document.createElement('a');
-                        tempLink.href = mailtoLink;
-                        tempLink.target = '_blank';
-                        tempLink.click();
-                }
-             }, 100);
-        }
+        	// Create email subject
+        	var emailSubject = `Equipment Transaction Record - (${rec.jobType || 'N/A'} - ${rec.status || 'N/A'}) ${rec.purpose || ''}`;
 
-        // Method 3: Create a hidden iframe as fallback for some mobile browsers
-        function fallbackEmailOpen() {
-            var iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = mailtoLink;
-            document.body.appendChild(iframe);
-            setTimeout(function() {
-                document.body.removeChild(iframe);
-            }, 2000);
-        }
+        	// Create email body with URL
+        	var emailBody = `
+	Dear Reeve,
 
-        // Try primary method first
-        try {
-            openEmailClient();
-    
-            // Additional fallback for Safari on iOS
-            setTimeout(function() {
-                if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
-                    // For iOS devices, create a temporary link
-                    var tempLink = document.createElement('a');
-                    tempLink.href = mailtoLink;
-                    tempLink.target = '_blank';
-                    document.body.appendChild(tempLink);
-                    tempLink.click();
-                    document.body.removeChild(tempLink);
-                }
-            }, 200);
-        } catch (err) {
-            console.error("Email open error:", err);
-            fallbackEmailOpen();
-        }
+	Please find attached the equipment transaction record details below:
+
+	===========================================
+	TRANSACTION RECORD DETAILS
+	===========================================
+
+	Date/Time: ${formatTimestamp(rec.displayTime)}
+	Status: ${rec.status}
+	Job Type: ${rec.jobType || 'N/A'}
+	Purpose: ${rec.purpose || 'N/A'}
+
+	Personnel:
+	- ET: ${rec.et || 'N/A'}
+	- SET: ${rec.set || 'N/A'}
+	- Physicist: ${rec.physicist || 'N/A'}
+	- Others: ${rec.others || 'N/A'}
+
+	Remarks: ${rec.remarks || 'N/A'}
+	Record Status: ${rec.recordStatus || 'N/A'}
+
+	===========================================
+	EQUIPMENT LIST
+	===========================================
+
+	${rec.equipmentDetails?.map(e => `• ${e.assetDesc} | ${e.manufacturer || '-'} | SN: ${e.serialNo || '-'}`).join('\n') || 'No equipment details'}
+
+	===========================================
+
+	Best regards,
+	${signatureName}
+
+	---
+	This record was generated from the NTWC MPU DRWS Equipment Database.
+	URL: ${window.location.href}
+	`;
+
+        	// Create mailto link
+        	var mailtoLink = `mailto:wck131@ha.org.hk?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
         
-            // Also open print window for PDF generation (optional)
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>Record_Preview_${rec.id}</title>
-                    <style>
-                        body{font-family:'Segoe UI',sans-serif; padding:30px; margin:0; text-align:left;}
-                        .header{background:linear-gradient(135deg,#0a2e3f,#166b5c); color:white; padding:20px; border-radius:16px; text-align:left;}
-                        .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:20px; border-radius:16px; margin:15px 0; text-align:left;}
-                        .badge{display:inline-block; padding:4px 12px; border-radius:50px;}
-                        .in{background:#00a86b; color:white;}
-                        .out{background:#dc3545; color:white;}
-                        table{border-collapse:collapse; width:100%; text-align:left;}
-                        th,td{border:1px solid #ddd; padding:8px; text-align:left; vertical-align:top;}
-                        @media print {
-                            body{margin:0; padding:20px;}
-                            .no-print{display:none;}
-                        }
-                        .details-section{margin-bottom:20px; text-align:left;}
-                        h3, h4{text-align:left; margin-top:20px; margin-bottom:10px;}
-                    </style>
-                </head>
-                <body>
-                    <div class="no-print" style="text-align:center; margin-bottom:20px;">
-                        <button onclick="window.print();" style="padding:10px 20px; background:#166b5c; color:white; border:none; border-radius:8px; cursor:pointer;">📄 Save as PDF</button>
-                        <p style="margin-top:10px;">Click above to save as PDF, then attach to your email.</p>
-                    </div>
-                    <div class="header">
-                        <h3>Equipment Transaction Record</h3>
-                        <p>${formatTimestamp(rec.displayTime)}</p>
-                    </div>
-                    <div class="grid">
-                        <div><strong>Status:</strong><br><span class="badge ${rec.status==='IN'?'in':'out'}">${rec.status}</span></div>
-                        <div><strong>Job Type:</strong><br>${rec.jobType||'-'}</div>
-                        <div><strong>Purpose:</strong><br>${rec.purpose||'-'}</div>
-                        <div><strong>ET/SET/Phy:</strong><br>${rec.et}/${rec.set}/${rec.physicist}</div>
-                        <div><strong>Remarks:</strong><br>${rec.remarks||'-'}</div>
-                        <div><strong>Record Status:</strong><br>${rec.recordStatus}</div>
-                    </div>
-                    <h4>Equipment List</h4>
-                    <table border="1" cellpadding="8" style="border-collapse:collapse; width:100%;">
-                        <thead>
-                            <tr><th style="text-align:left;">Asset #</th><th style="text-align:left;">Description</th><th style="text-align:left;">Manufacturer</th><th style="text-align:left;">Serial #</th></tr>
-                        </thead>
-                        <tbody>${equipHtml}</tbody>
-                    </table>
-                    ${rec.editHistory?.length ? `
-                    <div style="background:#fef9e6; padding:15px; border-radius:12px; margin-top:20px; text-align:left;">
-                        <h4>Edit History</h4>
-                        ${rec.editHistory.map(h => `<div>${h.timestamp} | ${h.user}: ${h.reason}</div>`).join('')}
-                    </div>` : ''}
-                    <div style="margin-top:20px; text-align:left;">
-                        <strong>Signature:</strong><br>
-                        <img src="${rec.signature}" style="max-width:200px; border:1px solid #ddd; border-radius:8px;">
-                    </div>
-                    <div class="no-print" style="margin-top:30px; text-align:center; color:#666;">
-                        <hr>
-                        <p>📧 Email client has been opened. Please save this page as PDF using the button above and attach to your email.</p>
-                    </div>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
+        	// Enhanced cross-browser email opening function
+        	function openEmailClient() {
+            	// Method 1: Try using window.open (works on most browsers)
+            	var emailWindow = window.open(mailtoLink, '_blank');
+            
+            	// Method 2: If window.open fails or is blocked, use location.href
+            	if (!emailWindow || emailWindow.closed || typeof emailWindow.closed === 'undefined') {
+                	window.location.href = mailtoLink;
+                
+                	// Method 3: Fallback for iOS/Safari - create and click a hidden link
+                	setTimeout(function() {
+                    	if (navigator.userAgent.match(/iPhone|iPad|iPod|Android/i)) {
+                        	var tempLink = document.createElement('a');
+                        	tempLink.href = mailtoLink;
+                        	tempLink.target = '_blank';
+                        	tempLink.style.display = 'none';
+                        	document.body.appendChild(tempLink);
+                        	tempLink.click();
+                        	setTimeout(function() {
+                            	document.body.removeChild(tempLink);
+                        	}, 1000);
+                    	}
+                	}, 200);
+            	}
+        	}
+
+        	// Try primary method with user interaction handling
+        	try {
+            	// Show a brief message before opening email
+            	var loadingMsg = document.createElement('div');
+            	loadingMsg.style.position = 'fixed';
+            	loadingMsg.style.top = '50%';
+            	loadingMsg.style.left = '50%';
+            	loadingMsg.style.transform = 'translate(-50%, -50%)';
+            	loadingMsg.style.background = 'rgba(0,0,0,0.8)';
+            	loadingMsg.style.color = 'white';
+            	loadingMsg.style.padding = '20px 40px';
+            	loadingMsg.style.borderRadius = '12px';
+            	loadingMsg.style.zIndex = '9999';
+            	loadingMsg.style.fontSize = '16px';
+            	loadingMsg.innerHTML = '📧 Opening email client...<br><small style="font-size:12px;">Please allow popups if prompted</small>';
+            	document.body.appendChild(loadingMsg);
+            
+            	setTimeout(function() {
+                	document.body.removeChild(loadingMsg);
+            	}, 3000);
+            
+            	// Open email client
+            	openEmailClient();
+            
+            	// Additional fallback for all browsers
+            	setTimeout(function() {
+                	// Try one more time with a direct link if email didn't open
+                	var tempLink = document.createElement('a');
+                	tempLink.href = mailtoLink;
+                	tempLink.style.display = 'none';
+                	document.body.appendChild(tempLink);
+                	tempLink.click();
+                	setTimeout(function() {
+                    	document.body.removeChild(tempLink);
+                	}, 500);
+            	}, 500);
+            
+        	} catch (err) {
+            	console.error("Email open error:", err);
+            	// Ultimate fallback - try location.href
+            	window.location.href = mailtoLink;
+        	}
         
-            alert(`✅ Email draft opened!\n\nSubject: ${emailSubject}\nRecipient: wck131@ha.org.hk\n\nPlease save the opened window as PDF and attach to your email.`);
+        	// Open print window for PDF generation
+        	var printWindow = window.open('', '_blank');
+        	if (printWindow) {
+            	printWindow.document.write(`
+                	<html>
+                	<head>
+                    	<title>${pdfFilename}</title>
+                    	<style>
+                        	body{font-family:'Segoe UI',sans-serif; padding:30px; margin:0; text-align:left;}
+                        	.header{background:linear-gradient(135deg,#0a2e3f,#166b5c); color:white; padding:20px; border-radius:16px; text-align:left;}
+                        	.grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:20px; border-radius:16px; margin:15px 0; text-align:left;}
+                        	.badge{display:inline-block; padding:4px 12px; border-radius:50px;}
+                        	.in{background:#00a86b; color:white;}
+                        	.out{background:#dc3545; color:white;}
+                        	table{border-collapse:collapse; width:100%; text-align:left;}
+                        	th,td{border:1px solid #ddd; padding:8px; text-align:left; vertical-align:top;}
+                        	@media print {
+                            	body{margin:0; padding:20px;}
+                            	.no-print{display:none;}
+                        	}
+                        	.details-section{margin-bottom:20px; text-align:left;}
+                        	h3, h4{text-align:left; margin-top:20px; margin-bottom:10px;}
+                    	</style>
+                	</head>
+                	<body>
+                    	<div class="no-print" style="text-align:center; margin-bottom:20px;">
+                        	<button onclick="window.print();" style="padding:10px 20px; background:#166b5c; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px;">📄 Save as PDF</button>
+                        	<p style="margin-top:10px; font-size:13px;">Click above to save as PDF, then attach to your email.</p>
+                        	<p style="font-size:12px; color:#666;">Email client should open automatically. If not, please check popup blockers.</p>
+                    	</div>
+                    	<div class="header">
+                        	<h3>Equipment Transaction Record</h3>
+                        	<p>${formatTimestamp(rec.displayTime)}</p>
+                    	</div>
+                    	<div class="grid">
+                        	<div><strong>Status:</strong><br><span class="badge ${rec.status==='IN'?'in':'out'}">${rec.status}</span></div>
+                        	<div><strong>Job Type:</strong><br>${rec.jobType||'-'}</div>
+                        	<div><strong>Purpose:</strong><br>${rec.purpose||'-'}</div>
+                        	<div><strong>ET/SET/Phy:</strong><br>${rec.et}/${rec.set}/${rec.physicist}</div>
+                        	<div><strong>Remarks:</strong><br>${rec.remarks||'-'}</div>
+                        	<div><strong>Record Status:</strong><br>${rec.recordStatus}</div>
+                    	</div>
+                    	<h4>Equipment List</h4>
+                    	<table border="1" cellpadding="8" style="border-collapse:collapse; width:100%;">
+                        	<thead>
+                            	<tr><th style="text-align:left;">Asset #</th><th style="text-align:left;">Description</th><th style="text-align:left;">Manufacturer</th><th style="text-align:left;">Serial #</th></tr>
+                        	</thead>
+                        	<tbody>${equipHtml}</tbody>
+                    	</table>
+                    	${rec.editHistory?.length ? `
+                    	<div style="background:#fef9e6; padding:15px; border-radius:12px; margin-top:20px; text-align:left;">
+                        	<h4>Edit History</h4>
+                        	${rec.editHistory.map(h => `<div>${h.timestamp} | ${h.user}: ${h.reason}</div>`).join('')}
+                    	</div>` : ''}
+                    	<div style="margin-top:20px; text-align:left;">
+                        	<strong>Signature:</strong><br>
+                        	<img src="${rec.signature}" style="max-width:200px; border:1px solid #ddd; border-radius:8px;">
+                    	</div>
+                    	<div style="margin-top:30px; text-align:center; font-size:0.8rem; color:#666; border-top:1px solid #ddd; padding-top:20px;">
+                        	<p>Generated from: ${window.location.href}</p>
+                    	</div>
+                    	<div class="no-print" style="margin-top:30px; text-align:center; color:#666;">
+                        	<hr>
+                        	<p>📧 Email client has been opened. Please save this page as PDF using the button above and attach to your email.</p>
+                        <p style="font-size:11px; color:#999;">If email didn't open, please check your default email client settings.</p>
+                    	</div>
+                	</body>
+                	</html>
+            	`);
+            	printWindow.document.close();
+            
+            	// Auto print after a delay
+            	setTimeout(function() {
+                	if (printWindow && !printWindow.closed) {
+                    	printWindow.focus();
+                	}
+            	}, 1000);
+        	} else {
+            	// If popup blocked, open in same window
+            	alert("📧 Please allow popups for this site to generate the PDF preview.\n\nEmail client should open separately.");
+        	}
         
-        } catch (err) {
-            console.error("Email error:", err);
-            alert("❌ Failed to open email. Please try again.");
-        }
-    }
+        	// Show success message with fallback instructions
+        	setTimeout(function() {
+            	alert(`✅ Email draft opened!\n\nSubject: ${emailSubject}\nRecipient: wck131@ha.org.hk\n\n📄 PDF preview window opened.\nPlease save the PDF and attach to your email.\n\nIf email didn't open:\n1. Check your default email client\n2. Allow popups for this site\n3. Try copying the email address manually: wck131@ha.org.hk`);
+        	}, 1000);
+        
+    	} catch (err) {
+        	console.error("Email error:", err);
+        	alert("❌ Failed to open email. Please try again.\n\nYou can manually email: wck131@ha.org.hk\n\nError: " + err.message);
+    	}
+	}
     
     function openEditRecordDialog(record) {
         let modal = document.createElement("div"); modal.className = "modal-overlay";
