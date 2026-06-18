@@ -1157,112 +1157,115 @@
     }
     
     async function saveRecord() {
-        if (selectedAssetsSet.size === 0) { alert("No equipment selected."); return; }
-        if (!validateStatusSelection()) { alert("Status conflict: Cannot proceed."); return; }
+    	if (selectedAssetsSet.size === 0) { alert("No equipment selected."); return; }
+    	if (!validateStatusSelection()) { alert("Status conflict: Cannot proceed."); return; }
     
-        let dt = document.getElementById("recordDatetime").value, 
-            newStatus = document.getElementById("inOutStatus").value, 
-            jobType = document.getElementById("jobType").value, 
-            purpose = document.getElementById("purposeInput").value.trim();
+    	var dt = document.getElementById("recordDatetime").value;
+    	var newStatus = document.getElementById("inOutStatus").value;
+    	var jobType = document.getElementById("jobType").value;
+    	var purpose = document.getElementById("purposeInput").value.trim();
     
-        if (!dt || !jobType || !purpose || !document.getElementById("etSelect").selectedOptions.length || 
-            !document.getElementById("setSelect").value || !document.getElementById("phySelect").value) { 
-            alert("All mandatory fields required"); 
-            return; 
-        }
+    	if (!dt || !jobType || !purpose || !document.getElementById("etSelect").selectedOptions.length || 
+        	!document.getElementById("setSelect").value || !document.getElementById("phySelect").value) { 
+        	alert("All mandatory fields required"); 
+        	return; 
+    	}
     
-        if (canvas.toDataURL() === document.createElement('canvas').toDataURL()) { 
-            alert("Signature required"); 
-            return; 
-        }
+    	if (canvas.toDataURL() === document.createElement('canvas').toDataURL()) { 
+        	alert("Signature required"); 
+        	return; 
+    	}
     
-        let et = [...document.getElementById("etSelect").selectedOptions].map(o => o.value).join(", ");
-        let set = document.getElementById("setSelect").value, 
-            phy = document.getElementById("phySelect").value, 
-            others = document.getElementById("othersNames").value.trim(), 
-            remarks = document.getElementById("remarksField").value.trim();
-        let signature = canvas.toDataURL(); 
-        let selectedEquips = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq)));
-        let equipDetails = selectedEquips.map(eq => ({ 
-            key: getKey(eq), 
-            assetNumber: eq.assetNumber, 
-            assetDesc: eq.assetDesc, 
-            manufacturer: eq.manufacturer, 
-            serialNo: eq.serialNo, 
-            location: eq.location 
-        }));
+    	var et = [...document.getElementById("etSelect").selectedOptions].map(function(o) { return o.value; }).join(", ");
+    	var set = document.getElementById("setSelect").value;
+    	var phy = document.getElementById("phySelect").value;
+    	var others = document.getElementById("othersNames").value.trim();
+    	var remarks = document.getElementById("remarksField").value.trim();
+    	var signature = canvas.toDataURL();
+    	var selectedEquips = equipmentData.filter(function(eq) { return selectedAssetsSet.has(getKey(eq)); });
+    	var equipDetails = selectedEquips.map(function(eq) { 
+        	return { 
+            	key: getKey(eq), 
+            	assetNumber: eq.assetNumber, 
+            	assetDesc: eq.assetDesc, 
+            	manufacturer: eq.manufacturer, 
+            	serialNo: eq.serialNo, 
+            	location: eq.location 
+        	};
+    	});
     
-        let record = { 
-            id: Date.now(), 
-            // Convert the datetime-local value to HK time with +08:00 offset
-			var dtObj = new Date(dt);
-			var year = dtObj.getFullYear();
-			var month = String(dtObj.getMonth() + 1).padStart(2, '0');
-			var day = String(dtObj.getDate()).padStart(2, '0');
-			var hours = String(dtObj.getHours()).padStart(2, '0');
-			var minutes = String(dtObj.getMinutes()).padStart(2, '0');
-			var displayTime = `${year}-${month}-${day}T${hours}:${minutes}:00+08:00`;
-			// Then use displayTime in your record 
-            status: newStatus, 
-            jobType, 
-            purpose, 
-            et, 
-            set, 
-            physicist: phy, 
-            others, 
-            remarks, 
-            signature, 
-            recordStatus: "Verified", 
-            editHistory: [], 
-            equipmentDetails: equipDetails 
-        };
+    	// Convert the datetime-local value to HK time with +08:00 offset
+    	var dtObj = new Date(dt);
+    	var year = dtObj.getFullYear();
+    	var month = String(dtObj.getMonth() + 1).padStart(2, '0');
+    	var day = String(dtObj.getDate()).padStart(2, '0');
+    	var hours = String(dtObj.getHours()).padStart(2, '0');
+    	var minutes = String(dtObj.getMinutes()).padStart(2, '0');
+    	var displayTime = year + "-" + month + "-" + day + "T" + hours + ":" + minutes + ":00+08:00";
     
-        historyRecords.unshift(record);
+    	var record = { 
+        	id: Date.now(), 
+        	displayTime: displayTime,
+        	status: newStatus, 
+        	jobType: jobType, 
+        	purpose: purpose, 
+        	et: et, 
+        	set: set, 
+        	physicist: phy, 
+        	others: others, 
+        	remarks: remarks, 
+        	signature: signature, 
+        	recordStatus: "Verified", 
+        	editHistory: [], 
+        	equipmentDetails: equipDetails 
+   		};
     
-        // Update status for each selected equipment
-        for (let key of selectedAssetsSet) {
-            equipStatus[key] = newStatus;
-            await quickSyncStatus(key, newStatus);
-        }
+    	historyRecords.unshift(record);
     
-        // Insert history record
-        await supabaseClient.from('history_records').insert({
-            record_id: record.id,
-            display_time: record.displayTime,
-            status: record.status,
-            job_type: record.jobType,
-            purpose: record.purpose,
-            et: record.et,
-            set_person: record.set,
-            physicist: record.physicist,
-            others: record.others,
-            remarks: record.remarks,
-            signature: record.signature,
-            record_status: record.recordStatus,
-            edit_history: record.editHistory || [],
-            equipment_details: record.equipmentDetails || []
-        });
+    	// Update status for each selected equipment
+    	for (var key of selectedAssetsSet) {
+        	equipStatus[key] = newStatus;
+        	await quickSyncStatus(key, newStatus);
+    	}
     
-        renderEquipment(); 
-        renderHistory();
-        addLog("RECORD_CREATED", record.id, 
-    		"Record created for " + selectedEquips.length + " equipment - " + purpose, 
-    		currentUser, 
-    		"Job: " + jobType + " | Status: " + newStatus,
-    		{ 
-        		jobType: jobType, 
-        		status: newStatus, 
-        		purpose: purpose,
-        		equipmentCount: selectedEquips.length,
-        		et: et,
-        		set: set,
-        		physicist: phy
-    		}
-		);
+    	// Insert history record
+    	await supabaseClient.from('history_records').insert({
+        	record_id: record.id,
+        	display_time: record.displayTime,
+        	status: record.status,
+        	job_type: record.jobType,
+        	purpose: record.purpose,
+        	et: record.et,
+        	set_person: record.set,
+        	physicist: record.physicist,
+        	others: record.others,
+        	remarks: record.remarks,
+        	signature: record.signature,
+        	record_status: record.recordStatus,
+        	edit_history: record.editHistory || [],
+        	equipment_details: record.equipmentDetails || []
+    	});
     
-        alert("✅ Record saved successfully!");
-        document.getElementById("purposeInput").value = "";
-    }
+    	renderEquipment(); 
+    	renderHistory();
+    	addLog("RECORD_CREATED", record.id, 
+        	"Record created for " + selectedEquips.length + " equipment - " + purpose, 
+        	currentUser, 
+        	"Job: " + jobType + " | Status: " + newStatus,
+        	{ 
+            	jobType: jobType, 
+            	status: newStatus, 
+            	purpose: purpose,
+            	equipmentCount: selectedEquips.length,
+            	et: et,
+            	set: set,
+            	physicist: phy
+        	}
+    	);
+    
+    	alert("✅ Record saved successfully!");
+    	document.getElementById("purposeInput").value = "";
+	}
     
     function renderHistory() {
         let search = document.getElementById("historySearch").value.toLowerCase();
