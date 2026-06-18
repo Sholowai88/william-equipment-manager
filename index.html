@@ -204,59 +204,71 @@
     let historySortOrder = 'desc', dbLogsSortOrder = 'desc';
     
     function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
-    function formatTimestamp(isoString) { 
-    	let d = new Date(isoString); 
-    	return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; 
-	}
 
-	// Special function for DB Logs to display in Hong Kong time
-	function formatTimestampHK(isoString) {
+	function formatTimestamp(isoString) { 
     	if (!isoString) return "Unknown";
     	try {
-        	// Parse the UTC timestamp from Supabase
         	var d = new Date(isoString);
         	if (isNaN(d.getTime())) return "Invalid Date";
-        
-        	// Get UTC components directly from the date object
-        	var year = d.getUTCFullYear();
-        	var month = String(d.getUTCMonth() + 1).padStart(2, '0');
-        	var day = String(d.getUTCDate()).padStart(2, '0');
-        	var hours = String(d.getUTCHours()).padStart(2, '0');
-        	var minutes = String(d.getUTCMinutes()).padStart(2, '0');
-        	var seconds = String(d.getUTCSeconds()).padStart(2, '0');
-        	var ampm = d.getUTCHours() >= 12 ? 'PM' : 'AM';
-        	var hours12 = d.getUTCHours() % 12 || 12;
-        
-        	// Format using UTC components (they are already in UTC)
-        	// Supabase stores timestamps in UTC, so we just format them
+        	// The timestamp already includes +08:00 offset, just format it
+        	var month = String(d.getMonth() + 1).padStart(2, '0');
+        	var day = String(d.getDate()).padStart(2, '0');
+        	var year = d.getFullYear();
+        	var hours = String(d.getHours()).padStart(2, '0');
+        	var minutes = String(d.getMinutes()).padStart(2, '0');
+        	var seconds = String(d.getSeconds()).padStart(2, '0');
+        	var ampm = d.getHours() >= 12 ? 'PM' : 'AM';
+        	var hours12 = d.getHours() % 12 || 12;
         	return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds} ${ampm}`;
     	} catch(e) {
         	console.error("Error formatting timestamp:", e);
         	return isoString || "Unknown";
     	}
 	}
+
+	// Special function for DB Logs to display in Hong Kong time
+	function formatTimestampHK(isoString) {
+    	if (!isoString) return "Unknown";
+    	try {
+        	var d = new Date(isoString);
+        	if (isNaN(d.getTime())) return "Invalid Date";
+        	// The timestamp already includes +08:00 offset, just format it
+        	var year = d.getFullYear();
+        	var month = String(d.getMonth() + 1).padStart(2, '0');
+        	var day = String(d.getDate()).padStart(2, '0');
+        	var hours = String(d.getHours()).padStart(2, '0');
+        	var minutes = String(d.getMinutes()).padStart(2, '0');
+        	var seconds = String(d.getSeconds()).padStart(2, '0');
+        	var ampm = d.getHours() >= 12 ? 'PM' : 'AM';
+        	return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds} ${ampm}`;
+    	} catch(e) {
+        	console.error("Error formatting timestamp:", e);
+        	return isoString || "Unknown";
+    	}
+	}
+	
 	function getHKTime() { 
     	// Get current time in Hong Kong (UTC+8)
     	var now = new Date();
     	// Get UTC time in milliseconds
     	var utcTime = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 
                            	   now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
-   		// Add 8 hours for Hong Kong
+    	// Add 8 hours for Hong Kong
     	var hkTime = new Date(utcTime + (8 * 60 * 60 * 1000));
     	return hkTime;
 	}
 
-	// Function to get Hong Kong time as ISO string for Supabase storage
+	// Function to get Hong Kong time as ISO string with +08:00 offset
 	function getHKTimeISO() {
     	var hk = getHKTime();
-    	// Format as ISO string with UTC+8 offset
     	var year = hk.getUTCFullYear();
     	var month = String(hk.getUTCMonth() + 1).padStart(2, '0');
     	var day = String(hk.getUTCDate()).padStart(2, '0');
     	var hours = String(hk.getUTCHours()).padStart(2, '0');
     	var minutes = String(hk.getUTCMinutes()).padStart(2, '0');
     	var seconds = String(hk.getUTCSeconds()).padStart(2, '0');
-    	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}+08:00`;
+    	// Format with +08:00 timezone offset
+    	return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+08:00`;
 	}
 	
     function setToday() { 
@@ -1182,7 +1194,15 @@
     
         let record = { 
             id: Date.now(), 
-            displayTime: dt + '+08:00', // Add Hong Kong timezone offset 
+            // Convert the datetime-local value to HK time with +08:00 offset
+			var dtObj = new Date(dt);
+			var year = dtObj.getFullYear();
+			var month = String(dtObj.getMonth() + 1).padStart(2, '0');
+			var day = String(dtObj.getDate()).padStart(2, '0');
+			var hours = String(dtObj.getHours()).padStart(2, '0');
+			var minutes = String(dtObj.getMinutes()).padStart(2, '0');
+			var displayTime = `${year}-${month}-${day}T${hours}:${minutes}:00+08:00`;
+			// Then use displayTime in your record 
             status: newStatus, 
             jobType, 
             purpose, 
@@ -1541,7 +1561,13 @@
             <hr><h4>Edit Authorization</h4><div class="flex-form"><div><label>Date *</label><input type="date" id="editDate"></div><div><label>Person Name *</label><input type="text" id="editPerson" value="${currentUser}"></div><div><label>Reason for Edit *</label><input type="text" id="editReason" placeholder="Reason for modification"></div></div>
             <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px;"><button id="confirmEditRecordBtn" class="btn btn-primary">Confirm Edit</button><button id="cancelEditRecordBtn" class="btn">Cancel</button></div></div>`;
         document.body.appendChild(modal);
-        modal.querySelector("#editDate").value = getHKTimeISO().slice(0, 10);
+
+		var hkDate = getHKTime();
+		var year = hkDate.getUTCFullYear();
+		var month = String(hkDate.getUTCMonth() + 1).padStart(2, '0');
+		var day = String(hkDate.getUTCDate()).padStart(2, '0');
+		modal.querySelector("#editDate").value = year + "-" + month + "-" + day;
+		
         modal.querySelector(".close-modal").onclick = () => modal.remove();
         modal.querySelector("#cancelEditRecordBtn").onclick = () => modal.remove();
         modal.querySelector("#confirmEditRecordBtn").onclick = async () => {
