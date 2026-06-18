@@ -129,7 +129,12 @@
     <div class="header">
         <div class="title-section"><h1>🔧⚙️ NTWC MPU DR Workshop Equipment Database</h1><div class="subtitle">Equipment and Tools Management | QA/AT/Maintenance</div></div>
         <div class="digital-clock"><div class="time" id="liveTime">--:--:--</div><div class="date" id="liveDate">----/--/--</div></div>
-        <div class="action-group">
+        <div id="pokeNotification" style="position:relative; cursor:pointer; background:rgba(255,255,255,0.15); padding:6px 14px; border-radius:50px; display:none;" onclick="showPokeDetails()">
+    		<span>🔔</span>
+    		<span id="pokeCount" style="font-weight:bold; color:#ff6b6b;">0</span>
+    		<span style="font-size:0.7rem;">pokes</span>
+		</div>
+		<div class="action-group">
             <button id="refreshBtn" class="refresh-btn">🔄 Refresh</button>
             <button id="accountBtn">👤 Account</button>
             <button id="backupBtn" class="admin-only" style="display:inline-block;">💾 Backup</button>
@@ -181,6 +186,9 @@
     		<option value="RECORD_EDITED">✏️ Record Edited</option>
     		<option value="EQUIPMENT_ADDED">➕ Equipment Added</option>
     		<option value="EQUIPMENT_EDITED">🔧 Equipment Edited</option>
+			<option value="BACKUP">💾 Backup</option>
+    		<option value="RESTORE">📂 Restore</option>
+    		<option value="SUPABASE_BACKUP">☁️ Supabase Backup</option>
 	</select>
 	<input type="date" id="dbLogStartDate" style="width:130px;">
 	<input type="date" id="dbLogEndDate" style="width:130px;">
@@ -202,6 +210,9 @@
     let selectedAssetsSet = new Set();
     const etNames = ["Heung","Andy","Vincent","William","Pal","Joe","Richard","Ray","N/A"];
     let historySortOrder = 'desc', dbLogsSortOrder = 'desc';
+
+	let pokeData = [];
+	let pokeNotifications = [];
     
     function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
 
@@ -677,7 +688,17 @@
         a.download = `backup - ntwc_mpu_drws_equipment_database - ${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.json`;
         a.click();
         URL.revokeObjectURL(a.href);
-        alert("✅ Database backup saved to file!");
+        
+		// Add log for backup action
+    	await addLog(
+        	"BACKUP",
+        	"ALL",
+        	`Admin ${currentUser} created a database backup file`,
+        	currentUser,
+        	"Database backup created"
+    	);
+		
+		alert("✅ Database backup saved to file!");
     }
     
     async function restoreFromFile() {
@@ -698,6 +719,16 @@
                         for (const log of dbLogs) { await supabaseClient.from('db_logs').insert({ log_id: log.id, timestamp: log.timestamp, action: log.action, record_id: log.recordId, details: log.details, user_name: log.user, reason: log.reason }); }
                     }
                     await syncAll();
+
+					// Add log for restore action
+                	await addLog(
+                    	"RESTORE",
+                    	"ALL",
+                    	`Admin ${currentUser} restored the database from backup file`,
+                    	currentUser,
+                    	"Database restored from backup"
+                	);
+					
                     alert("✅ Database restored from backup file!");
                 } catch (err) { alert("Invalid backup file"); }
             };
@@ -724,22 +755,18 @@
             	{ name: 'users', columns: 'username,password,role' }
         	];
         
-        	// Create a zip container (using JSZip if available, or download individually)
         	var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        	var folderName = `supabase_backup_${dateStr}`;
         
         	// Check if JSZip is available
         	if (typeof JSZip === 'undefined') {
-            	// Load JSZip dynamically
             	var script = document.createElement('script');
             	script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
             	document.head.appendChild(script);
             
-            	// Wait for JSZip to load
             	await new Promise(function(resolve, reject) {
                 	script.onload = resolve;
-	                script.onerror = reject;
-	                setTimeout(reject, 10000);
+                	script.onerror = reject;
+                	setTimeout(reject, 10000);
             	});
         	}
         
@@ -749,23 +776,38 @@
         
         	for (var i = 0; i < tables.length; i++) {
             	var table = tables[i];
-            	console.log(`📥 Exporting table: ${table.name}...`);
+            	console.log("📥 Exporting table: " + table.name + "...");
             
             	try {
-                	// Get all data from the table
-                	var { data, error } = await supabaseClient
-                    	.from(table.name)
-                    	.select('*')
-                    	.order('created_at', { ascending: false })
-                    	.limit(10000); // Limit to prevent memory issues
+                	// Try to get data - handle tables without created_at
+                	var query = supabaseClient.from(table.name).select('*');
+                
+                	// Only order by created_at if it exists (skip for equip_status)
+                	if (table.name !== 'equip_status') {
+                    	query = query.order('created_at', { ascending: false });
+                	}
+                
+                	var { data, error } = await query.limit(10000);
                 
                 	if (error) {
-                    	console.error(`Error exporting ${table.name}:`, error);
-                    	continue;
+                    	console.error("Error exporting " + table.name + ":", error);
+                    	// Try without order for equip_status
+                    	if (table.name === 'equip_status') {
+                        	var { data: retryData, error: retryError } = await supabaseClient
+                            	.from(table.name)
+                            	.select('*')
+                            	.limit(10000);
+                        	if (!retryError && retryData) {
+                            	data = retryData;
+                            	error = null;
+                        	}
+                    	}
+                    	if (error) {
+                        	continue;
+                    	}
                 	}
                 
                 	if (data && data.length > 0) {
-                    	// Create CSV content
                     	var headers = Object.keys(data[0]);
                     	var csvRows = [headers.join(',')];
                     
@@ -774,12 +816,11 @@
                             	var val = row[header];
                             	if (val === null || val === undefined) return '';
                             	if (typeof val === 'string') {
-                                	// Escape quotes and wrap in quotes
                                 	return '"' + val.replace(/"/g, '""') + '"';
                             	}
                             	if (typeof val === 'object') {
                                 	return '"' + JSON.stringify(val).replace(/"/g, '""') + '"';
-                           		}
+                            	}
                             	return val;
                         	});
                         	csvRows.push(values.join(','));
@@ -787,52 +828,48 @@
                     
                     	var csvContent = csvRows.join('\n');
                     	var blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                    
-                    	// Add to zip
-                    	zip.file(`${table.name}.csv`, blob);
+                    	zip.file(table.name + '.csv', blob);
                     	completed++;
                 	} else {
                     	// Empty table - create empty CSV with headers
                     	var headers = table.columns.split(',');
                     	var csvContent = headers.join(',') + '\n';
                     	var blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                    	zip.file(`${table.name}.csv`, blob);
+                    	zip.file(table.name + '.csv', blob);
                     	completed++;
                 	}
                 
             	} catch (err) {
-                	console.error(`Error processing ${table.name}:`, err);
+                	console.error("Error processing " + table.name + ":", err);
             	}
         	}
         
-        	if (completed === 0) {
+	        if (completed === 0) {
             	alert("❌ No data was exported. Please check your connection and try again.");
             	return;
         	}
         
-        	// Generate and download zip
         	var zipBlob = await zip.generateAsync({ type: 'blob' });
         	var link = document.createElement('a');
         	link.href = URL.createObjectURL(zipBlob);
-        	link.download = `supabase_backup_${dateStr}.zip`;
+        	link.download = 'supabase_backup_' + dateStr + '.zip';
         	document.body.appendChild(link);
         	link.click();
         	document.body.removeChild(link);
         	URL.revokeObjectURL(link.href);
         
-        	alert(`✅ Supabase Backup Completed!\n\n📦 ${completed}/${totalTables} tables exported\n📁 File: supabase_backup_${dateStr}.zip\n\nTables exported:\n${tables.map(t => `• ${t.name}.csv`).join('\n')}`);
+        	alert("✅ Supabase Backup Completed!\n\n📦 " + completed + "/" + totalTables + " tables exported\n📁 File: supabase_backup_" + dateStr + ".zip\n\nTables exported:\n" + tables.map(function(t) { return '• ' + t.name + '.csv'; }).join('\n'));
         
-        	// Log the backup
         	await addLog(
             	"SUPABASE_BACKUP",
             	"ALL",
-            	`Admin ${currentUser} created Supabase backup with ${completed} tables`,
+            	"Admin " + currentUser + " created Supabase backup with " + completed + " tables",
             	currentUser,
             	"Supabase backup created"
         	);
         
     	} catch (err) {
-        	console.error("Supabase backup error:", err);
+	        console.error("Supabase backup error:", err);
         	alert("❌ Supabase backup failed!\n\nError: " + err.message + "\n\nPlease check:\n• Internet connection\n• JSZip library loading\n• Try again later");
     	}
 	}
@@ -1285,21 +1322,257 @@
             row.insertCell(3).innerText = r.jobType || '-'; row.insertCell(4).innerText = r.purpose || '-'; row.insertCell(5).innerText = `ET:${r.et} SET:${r.set} Phy:${r.physicist}`;
             row.insertCell(6).innerHTML = `<span style="background:${r.recordStatus === 'Verified' ? '#c8f0e1' : '#ffe0db'}; padding:2px 8px; border-radius:40px;">${r.recordStatus}</span>`;
             row.insertCell(7).innerHTML = r.editHistory?.map(h => `<div class="edit-history-item">${h.timestamp} | ${h.user}: ${h.reason}</div>`).join('') || '—';
-            let btnCell = row.insertCell(8);
-            let editBtn = document.createElement("button"); editBtn.innerText = "✏️ Edit"; editBtn.className = "btn btn-sm"; editBtn.onclick = () => openEditRecordDialog(r);
-            let previewBtn = document.createElement("button"); previewBtn.innerText = "Preview"; previewBtn.className = "btn btn-sm"; previewBtn.onclick = () => showFullRecordPreview(r);
-           
-            let emailBtn = document.createElement("button"); 
-            emailBtn.innerText = "📧 Email"; 
-            emailBtn.className = "btn btn-sm"; 
-            emailBtn.style.background = "#166b5c";
-            emailBtn.style.color = "white";
-            emailBtn.onclick = () => emailRecordPreview(r);
+            
+			let btnCell = row.insertCell(8);
+			let editBtn = document.createElement("button"); editBtn.innerText = "✏️ Edit"; editBtn.className = "btn btn-sm"; editBtn.onclick = () => openEditRecordDialog(r);
+			let previewBtn = document.createElement("button"); previewBtn.innerText = "Preview"; previewBtn.className = "btn btn-sm"; previewBtn.onclick = () => showFullRecordPreview(r);
 
-            btnCell.append(editBtn, previewBtn, emailBtn);
+			let emailBtn = document.createElement("button"); 
+			emailBtn.innerText = "📧 Email"; 
+			emailBtn.className = "btn btn-sm"; 
+			emailBtn.style.background = "#166b5c";
+			emailBtn.style.color = "white";
+			emailBtn.onclick = () => emailRecordPreview(r);
+
+			let pokeBtn = document.createElement("button"); 
+			pokeBtn.innerText = "🔔 Poke"; 
+			pokeBtn.className = "btn btn-sm"; 
+			pokeBtn.style.background = "#e67e22";
+			pokeBtn.style.color = "white";
+			pokeBtn.onclick = function() { showPokeDialog(r); };
+
+			btnCell.append(editBtn, previewBtn, emailBtn, pokeBtn);
+			
         });
     }
+
+	// Poke Functions
+	function getPokeableUsers(record) {
+    	var users = [];
+    	if (record.et) {
+        	record.et.split(", ").forEach(function(name) {
+            	if (name && name !== "N/A") users.push({ name: name, role: 'ET' });
+        	});
+    	}
+    	if (record.set && record.set !== "N/A") {
+        	users.push({ name: record.set, role: 'SET' });
+    	}
+    	if (record.physicist && record.physicist !== "N/A") {
+        	users.push({ name: record.physicist, role: 'Physicist' });
+    	}
+    	return users;
+	}
+
+	function showPokeDialog(record) {
+    	var pokeableUsers = getPokeableUsers(record);
+    	if (pokeableUsers.length === 0) {
+        	alert("No pokeable users found for this record (ET, SET, Physicist).");
+        	return;
+    	}
     
+    	var modal = document.createElement("div");
+    	modal.className = "modal-overlay";
+    	modal.innerHTML = `
+        	<div class="modal-card" style="max-width:450px;">
+            	<button class="close-modal">✖</button>
+            	<h3>📌 Poke Someone!</h3>
+            	<p style="font-size:0.8rem; margin-bottom:15px;">Select who to poke for record: <strong>${record.purpose || 'N/A'}</strong></p>
+            	<div id="pokeUserList" style="margin-bottom:15px;"></div>
+            	<div style="display:flex; gap:8px; margin-bottom:15px;">
+                	<button id="pokeAllBtn" class="btn btn-sm">Poke All</button>
+                	<button id="pokeClearBtn" class="btn btn-sm">Clear</button>
+            	</div>
+            	<div style="display:flex; gap:12px; justify-content:flex-end;">
+                	<button id="confirmPokeBtn" class="btn btn-primary">Send Poke</button>
+                	<button id="cancelPokeBtn" class="btn">Cancel</button>
+            	</div>
+        	</div>
+    	`;
+    	document.body.appendChild(modal);
+    
+    	var selectedPokes = [];
+    	var userListDiv = modal.querySelector("#pokeUserList");
+    
+    	pokeableUsers.forEach(function(user) {
+        	var label = document.createElement("label");
+        	label.style.display = "block";
+        	label.style.padding = "6px 0";
+        	label.style.borderBottom = "1px solid #eee";
+        	label.innerHTML = `
+            	<input type="checkbox" class="poke-checkbox" data-name="${user.name}" data-role="${user.role}" style="margin-right:10px;">
+            	<strong>${user.name}</strong> <span style="color:#666; font-size:0.7rem;">(${user.role})</span>
+        	`;
+        	userListDiv.appendChild(label);
+    	});
+    
+    	// Select All
+    	modal.querySelector("#pokeAllBtn").onclick = function() {
+        	var checkboxes = modal.querySelectorAll('.poke-checkbox');
+        	checkboxes.forEach(function(cb) {
+            	cb.checked = true;
+        	});
+    	};
+    
+    	// Clear All
+    	modal.querySelector("#pokeClearBtn").onclick = function() {
+        	var checkboxes = modal.querySelectorAll('.poke-checkbox');
+        	checkboxes.forEach(function(cb) {
+            	cb.checked = false;
+        	});
+    	};
+    
+   		modal.querySelector("#cancelPokeBtn").onclick = function() {
+        	modal.remove();
+    	};
+    
+    	modal.querySelector(".close-modal").onclick = function() {
+        	modal.remove();
+    	};
+    
+    	modal.querySelector("#confirmPokeBtn").onclick = function() {
+        	var checkboxes = modal.querySelectorAll('.poke-checkbox:checked');
+        	if (checkboxes.length === 0) {
+            	alert("Please select at least one person to poke.");
+            	return;
+        	}
+        
+        	var pokedUsers = [];
+        	checkboxes.forEach(function(cb) {
+            	pokedUsers.push({ name: cb.dataset.name, role: cb.dataset.role });
+        	});
+        
+        	// Create poke notification
+        	var pokeMessage = {
+            	id: Date.now(),
+            	recordId: record.id,
+            	purpose: record.purpose || 'N/A',
+            	from: currentUser,
+            	users: pokedUsers,
+            	timestamp: getHKTimeISO(),
+            	status: 'pending'
+        	};
+        
+        	pokeNotifications.push(pokeMessage);
+        	updatePokeNotification();
+        
+        	// Log the poke
+        	addLog(
+            	"POKE_SENT",
+            	record.id,
+            	currentUser + " poked " + pokedUsers.map(function(u) { return u.name + ' (' + u.role + ')'; }).join(', ') + " for record: " + record.purpose,
+            	currentUser,
+            	"Poke sent"
+        	);
+        
+	        alert("✅ Poke sent to " + pokedUsers.length + " person(s)!");
+        	modal.remove();
+    	};
+	}
+
+	function updatePokeNotification() {
+    	var pendingPokes = pokeNotifications.filter(function(p) { return p.status === 'pending'; });
+    	var pokeDiv = document.getElementById("pokeNotification");
+    	var pokeCountSpan = document.getElementById("pokeCount");
+    
+    	if (pendingPokes.length > 0) {
+        	pokeDiv.style.display = "inline-block";
+        	pokeCountSpan.innerText = pendingPokes.length;
+        	// Pulse animation
+        	pokeDiv.style.animation = "pulse-green 1s infinite";
+    	} else {
+        	pokeDiv.style.display = "none";
+    	}
+	}
+
+	function showPokeDetails() {
+    	var pendingPokes = pokeNotifications.filter(function(p) { return p.status === 'pending'; });
+    	if (pendingPokes.length === 0) {
+        	alert("No pending pokes.");
+        	return;
+    	}
+    
+    	var modal = document.createElement("div");
+    	modal.className = "modal-overlay";
+    	var pokeHtml = pendingPokes.map(function(p, index) {
+        	var userList = p.users.map(function(u) { return u.name + ' (' + u.role + ')'; }).join(', ');
+        	return `
+            	<div style="background:#f8fafc; padding:12px; border-radius:12px; margin-bottom:10px; border-left:4px solid #166b5c;">
+                	<div><strong>From:</strong> ${p.from}</div>
+                	<div><strong>Record:</strong> ${p.purpose}</div>
+                	<div><strong>To:</strong> ${userList}</div>
+                	<div><strong>Time:</strong> ${formatTimestamp(p.timestamp)}</div>
+                	<div style="margin-top:8px; display:flex; gap:8px;">
+                    	<button class="btn btn-sm btn-primary" onclick="respondPoke(${index}, 'acknowledge')">👍 Acknowledge</button>
+                    	<button class="btn btn-sm" onclick="respondPoke(${index}, 'ignore')">👋 Ignore</button>
+                    	<button class="btn btn-sm" style="background:#e67e22; color:white;" onclick="respondPoke(${index}, 'poke_back')">🔔 Poke Back</button>
+                	</div>
+            	</div>
+        	`;
+    	}).join('');
+    
+    	modal.innerHTML = `
+        	<div class="modal-card" style="max-width:600px;">
+            	<button class="close-modal">✖</button>
+            	<h3>🔔 Poke Notifications (${pendingPokes.length})</h3>
+            	${pokeHtml}
+            	<div style="margin-top:15px; text-align:center;">
+                	<button class="btn btn-sm" onclick="document.querySelector('.modal-overlay').remove()">Close</button>
+            	</div>
+        	</div>
+    	`;
+    	document.body.appendChild(modal);
+    
+    	modal.querySelector(".close-modal").onclick = function() {
+        	modal.remove();
+    	};
+	}
+
+	function respondPoke(index, action) {
+    	var poke = pokeNotifications[index];
+    	if (!poke) return;
+    
+    	if (action === 'acknowledge') {
+        	poke.status = 'acknowledged';
+        	alert("✅ You acknowledged the poke from " + poke.from);
+    	} else if (action === 'ignore') {
+        	poke.status = 'ignored';
+        	alert("👋 You ignored the poke from " + poke.from);
+    	} else if (action === 'poke_back') {
+	        // Poke back - create a new poke
+        	var pokeBackMessage = {
+            	id: Date.now(),
+            	recordId: poke.recordId,
+            	purpose: poke.purpose,
+            	from: currentUser,
+            	users: [{ name: poke.from, role: 'Original Poke' }],
+            	timestamp: getHKTimeISO(),
+            	status: 'pending',
+            	isPokeBack: true
+        	};
+        	pokeNotifications.push(pokeBackMessage);
+        	poke.status = 'poked_back';
+        	updatePokeNotification();
+        	alert("🔔 You poked back " + poke.from + "!");
+        	addLog(
+            	"POKE_BACK",
+            	poke.recordId,
+            	currentUser + " poked back " + poke.from + " for record: " + poke.purpose,
+            	currentUser,
+            	"Poke back sent"
+        	);
+    	}
+    
+    	// Remove the modal and refresh
+    	var modal = document.querySelector('.modal-overlay');
+    	if (modal) modal.remove();
+    	updatePokeNotification();
+    	showPokeDetails(); // Refresh the modal
+	}
+
+	// Make functions globally accessible
+	window.showPokeDetails = showPokeDetails;
+	window.respondPoke = respondPoke;
+	
     function showFullRecordPreview(rec) {
         let modal = document.createElement("div"); modal.className = "modal-overlay";
         let equipHtml = rec.equipmentDetails?.map(e => `<tr><td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td><td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td><td style="border:1px solid #ddd; padding:8px;">${e.manufacturer}</td><td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td></tr>`).join('') || '<tr><td colspan="4">No details</td></tr>';
