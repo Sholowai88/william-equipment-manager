@@ -25,7 +25,9 @@
         .login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #0a2e3f, #1a5c6e); color: white; border: none; border-radius: 60px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-top: 20px; }
         .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); background: linear-gradient(135deg, #1a5c6e, #0a2e3f); }
         .error-msg { color: #dc3545; font-size: 0.85rem; margin-top: 15px; background: #ffe0db; padding: 10px; border-radius: 30px; }
-        
+		.pokeNotification { transition: all 0.3s ease; display: none; }
+		.pokeNotification.active { display: inline-block !important; animation: pulse-green 1s infinite; }
+		
         .ai-assistant { position: fixed; bottom: 30px; right: 30px; cursor: pointer; z-index: 1000; transition: all 0.2s ease; }
         .ai-avatar { width: 70px; height: 70px; background: linear-gradient(135deg, #166b5c, #0a2e3f); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.2); transition: all 0.3s; border: 3px solid white; animation: pulse 2s infinite; }
         .ai-avatar:hover { transform: scale(1.1); }
@@ -1384,8 +1386,9 @@
 	            return;
 	        }
 	        console.log("📝 Loading pokes for user:", currentUser);
+	        console.log("🔍 Current pokeNotifications before load:", pokeNotifications.length);
 	        
-	        // Try different query approaches
+	        // Query for pokes where this user is the recipient
 	        var { data, error } = await supabaseClient
 	            .from('pokes')
 	            .select('*')
@@ -1394,42 +1397,10 @@
 	        
 	        if (error) {
 	            console.error("❌ Error loading pokes:", error);
-	            // Try alternative query without status filter
-	            var { data: altData, error: altError } = await supabaseClient
-	                .from('pokes')
-	                .select('*')
-	                .eq('to_user', currentUser);
-	            
-	            if (altError) {
-	                console.error("❌ Alternative query also failed:", altError);
-	                return;
-	            }
-	            
-	            if (altData && altData.length > 0) {
-	                // Filter pending manually
-	                var pendingPokes = altData.filter(function(row) { 
-	                    return row.status === 'pending'; 
-	                });
-	                console.log("✅ Found " + pendingPokes.length + " pending pokes via alternative query");
-	                pokeNotifications = pendingPokes.map(function(row) {
-	                    return {
-	                        id: row.id,
-	                        recordId: row.record_id,
-	                        purpose: row.purpose,
-	                        from: row.from_user,
-	                        to: row.to_user,
-	                        toRole: row.to_role,
-	                        timestamp: row.timestamp,
-	                        status: row.status
-	                    };
-	                });
-	            } else {
-	                console.log("ℹ️ No pokes found for " + currentUser);
-	                pokeNotifications = [];
-	            }
-	            updatePokeNotification();
 	            return;
 	        }
+	        
+	        var previousCount = pokeNotifications.length;
 	        
 	        if (data && data.length > 0) {
 	            console.log("✅ Loaded " + data.length + " pending pokes for " + currentUser);
@@ -1445,9 +1416,19 @@
 	                    status: row.status
 	                };
 	            });
+	            
+	            // Log the pokes details
+	            data.forEach(function(poke) {
+	                console.log("🔔 Poke from:", poke.from_user, "for record:", poke.purpose);
+	            });
 	        } else {
 	            console.log("ℹ️ No pending pokes found for " + currentUser);
 	            pokeNotifications = [];
+	        }
+	        
+	        // Update notification if count changed
+	        if (previousCount !== pokeNotifications.length) {
+	            console.log("🔔 Poke count changed from " + previousCount + " to " + pokeNotifications.length);
 	        }
 	        updatePokeNotification();
 	    } catch (err) {
@@ -1455,6 +1436,34 @@
 	    }
 	}
 
+	// Set up real-time subscription for pokes
+	function setupPokeSubscription() {
+	    if (!currentUser) {
+	        console.log("⚠️ No current user, skipping poke subscription");
+	        return;
+	    }
+	    
+	    console.log("🔔 Setting up real-time poke subscription for:", currentUser);
+	    
+	    // Subscribe to changes in the pokes table
+	    var subscription = supabaseClient
+	        .channel('pokes_channel')
+	        .on('postgres_changes', {
+	            event: 'INSERT',
+	            schema: 'public',
+	            table: 'pokes',
+	            filter: 'to_user=eq.' + currentUser
+	        }, function(payload) {
+	            console.log("🔔 Real-time poke received:", payload);
+	            // Reload pokes when a new one is inserted
+	            loadPokes();
+	        })
+	        .subscribe();
+	    
+	    // Store subscription for cleanup
+	    window.pokeSubscription = subscription;
+	}
+	
 	// Periodic check for new pokes (every 30 seconds)
 	function startPokePolling() {
 	    if (window.pokePollingInterval) {
@@ -1743,6 +1752,7 @@
 	    console.log("🔔 Updating poke notification. Pending pokes:", pendingPokes.length, "Current user:", currentUser);
 	    
 	    if (pendingPokes.length > 0) {
+	        // Show the notification
 	        if (pokeDiv) {
 	            pokeDiv.style.display = "inline-block";
 	            pokeDiv.style.cursor = "pointer";
@@ -1751,12 +1761,16 @@
 	            pokeDiv.style.padding = "6px 14px";
 	            pokeDiv.style.animation = "pulse-green 1s infinite";
 	            pokeDiv.style.border = "2px solid #ff6b6b";
+	            // Make sure it's visible
+	            pokeDiv.style.visibility = "visible";
+	            pokeDiv.style.opacity = "1";
 	        }
 	        if (pokeCountSpan) {
 	            pokeCountSpan.innerText = pendingPokes.length;
 	            pokeCountSpan.style.fontWeight = "bold";
 	            pokeCountSpan.style.color = "#ff6b6b";
 	            pokeCountSpan.style.fontSize = "1rem";
+	            pokeCountSpan.style.display = "inline";
 	        }
 	        // Also update the sync status to show notification
 	        var syncStatus = document.getElementById("syncStatusText");
@@ -1765,20 +1779,25 @@
 	            syncStatus.style.color = "#ff6b6b";
 	        }
 	        // Show a browser notification if supported
-	        if (pendingPokes.length > 0 && document.hidden !== true) {
+	        if (pendingPokes.length > 0) {
 	            var firstPoke = pendingPokes[0];
-	            if (Notification && Notification.permission === "granted") {
+	            if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
 	                new Notification("🔔 You have a new poke!", {
 	                    body: "From: " + firstPoke.from + " | Record: " + firstPoke.purpose,
 	                    icon: "🔔"
 	                });
 	            }
 	        }
+	        // Also show a simple alert for testing (remove after fix)
+	        console.log("🔔🔔🔔 POKE NOTIFICATION SHOULD BE VISIBLE NOW! 🔔🔔🔔");
+	        console.log("Pokes:", pendingPokes.length, "from:", pendingPokes.map(function(p) { return p.from; }).join(', '));
+	        
 	    } else {
 	        if (pokeDiv) {
 	            pokeDiv.style.display = "none";
 	            pokeDiv.style.animation = "none";
 	            pokeDiv.style.border = "none";
+	            pokeDiv.style.visibility = "hidden";
 	        }
 	        // Reset sync status
 	        var syncStatus = document.getElementById("syncStatusText");
@@ -2575,12 +2594,14 @@
             		);
             
             		await syncAll();
-            		initUI();
-
-					// Load pokes after login - ensure it's called after everything is set up
+					initUI();
+					
+					// Load pokes after login with delay
+					console.log("🔔 Loading pokes for user after login:", currentUser);
 					setTimeout(async function() {
-    					await loadPokes();
-					}, 1000);
+					    await loadPokes();
+					    setupPokeSubscription();
+					}, 1500);
 				
             		return true;
         	} else {
@@ -2635,11 +2656,13 @@
 		    sessionStorage.setItem("sessionLogged", "true");
 		}
 		
-		// Load pokes for the current user - ensure it runs
+		// Load pokes for the current user
 		if (currentUser) {
 		    console.log("🔔 Loading pokes for user in initUI:", currentUser);
 		    setTimeout(function() {
 		        loadPokes();
+		        // Set up real-time subscription
+		        setupPokeSubscription();
 		    }, 500);
 		}
 		
