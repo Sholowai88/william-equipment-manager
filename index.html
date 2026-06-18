@@ -128,8 +128,11 @@
 <div id="appContainer" class="app-container">
     <div class="header">
         <div class="title-section"><h1>🔧⚙️ NTWC MPU DR Workshop Equipment Database</h1><div class="subtitle">Equipment and Tools Management | QA/AT/Maintenance</div></div>
-        <div class="digital-clock"><div class="time" id="liveTime">--:--:--</div><div class="date" id="liveDate">----/--/--</div></div>
-        <div id="pokeNotification" style="position:relative; cursor:pointer; background:rgba(255,255,255,0.15); padding:6px 14px; border-radius:50px; display:none;" onclick="showPokeDetails()">
+        <div class="digital-clock">
+    		<div class="time" id="liveTime">--:--:--</div>
+    		<div class="date" id="liveDate">----/--/--</div>
+		</div>
+		<div id="pokeNotification" style="position:relative; cursor:pointer; background:rgba(255,255,255,0.15); padding:6px 14px; border-radius:50px; display:none;" onclick="showPokeDetails()">
     		<span>🔔</span>
     		<span id="pokeCount" style="font-weight:bold; color:#ff6b6b;">0</span>
     		<span style="font-size:0.7rem;">pokes</span>
@@ -1381,15 +1384,50 @@
 	            return;
 	        }
 	        console.log("📝 Loading pokes for user:", currentUser);
+	        
+	        // Try different query approaches
 	        var { data, error } = await supabaseClient
 	            .from('pokes')
 	            .select('*')
 	            .eq('to_user', currentUser)
-	            .eq('status', 'pending')
-	            .order('created_at', { ascending: false });
+	            .eq('status', 'pending');
 	        
 	        if (error) {
-	            console.error("Error loading pokes:", error);
+	            console.error("❌ Error loading pokes:", error);
+	            // Try alternative query without status filter
+	            var { data: altData, error: altError } = await supabaseClient
+	                .from('pokes')
+	                .select('*')
+	                .eq('to_user', currentUser);
+	            
+	            if (altError) {
+	                console.error("❌ Alternative query also failed:", altError);
+	                return;
+	            }
+	            
+	            if (altData && altData.length > 0) {
+	                // Filter pending manually
+	                var pendingPokes = altData.filter(function(row) { 
+	                    return row.status === 'pending'; 
+	                });
+	                console.log("✅ Found " + pendingPokes.length + " pending pokes via alternative query");
+	                pokeNotifications = pendingPokes.map(function(row) {
+	                    return {
+	                        id: row.id,
+	                        recordId: row.record_id,
+	                        purpose: row.purpose,
+	                        from: row.from_user,
+	                        to: row.to_user,
+	                        toRole: row.to_role,
+	                        timestamp: row.timestamp,
+	                        status: row.status
+	                    };
+	                });
+	            } else {
+	                console.log("ℹ️ No pokes found for " + currentUser);
+	                pokeNotifications = [];
+	            }
+	            updatePokeNotification();
 	            return;
 	        }
 	        
@@ -1631,12 +1669,12 @@
 	    updatePokeNotification();
 	}
 
-		function updatePokeNotification() {
+	function updatePokeNotification() {
 	    var pendingPokes = pokeNotifications.filter(function(p) { return p.status === 'pending'; });
 	    var pokeDiv = document.getElementById("pokeNotification");
 	    var pokeCountSpan = document.getElementById("pokeCount");
 	    
-	    console.log("🔔 Updating poke notification. Pending pokes:", pendingPokes.length);
+	    console.log("🔔 Updating poke notification. Pending pokes:", pendingPokes.length, "Current user:", currentUser);
 	    
 	    if (pendingPokes.length > 0) {
 	        if (pokeDiv) {
@@ -1646,29 +1684,55 @@
 	            pokeDiv.style.borderRadius = "50px";
 	            pokeDiv.style.padding = "6px 14px";
 	            pokeDiv.style.animation = "pulse-green 1s infinite";
+	            pokeDiv.style.border = "2px solid #ff6b6b";
 	        }
 	        if (pokeCountSpan) {
 	            pokeCountSpan.innerText = pendingPokes.length;
 	            pokeCountSpan.style.fontWeight = "bold";
 	            pokeCountSpan.style.color = "#ff6b6b";
+	            pokeCountSpan.style.fontSize = "1rem";
 	        }
 	        // Also update the sync status to show notification
 	        var syncStatus = document.getElementById("syncStatusText");
 	        if (syncStatus) {
 	            syncStatus.innerHTML = "🔔 " + pendingPokes.length + " poke(s)";
+	            syncStatus.style.color = "#ff6b6b";
+	        }
+	        // Show a browser notification if supported
+	        if (pendingPokes.length > 0 && document.hidden !== true) {
+	            var firstPoke = pendingPokes[0];
+	            if (Notification && Notification.permission === "granted") {
+	                new Notification("🔔 You have a new poke!", {
+	                    body: "From: " + firstPoke.from + " | Record: " + firstPoke.purpose,
+	                    icon: "🔔"
+	                });
+	            }
 	        }
 	    } else {
 	        if (pokeDiv) {
 	            pokeDiv.style.display = "none";
 	            pokeDiv.style.animation = "none";
+	            pokeDiv.style.border = "none";
 	        }
 	        // Reset sync status
 	        var syncStatus = document.getElementById("syncStatusText");
-	        if (syncStatus && !syncStatus.innerHTML.includes("Live Sync")) {
+	        if (syncStatus) {
 	            syncStatus.innerHTML = "Live Sync";
+	            syncStatus.style.color = "";
 	        }
 	    }
 	}
+
+	// Manual function to check pokes (for debugging)
+	function checkPokes() {
+    	console.log("🔍 Manual poke check...");
+    	console.log("Current user:", currentUser);
+    	console.log("Current pokeNotifications:", pokeNotifications);
+    	loadPokes();
+	}
+
+	// Make it globally accessible
+	window.checkPokes = checkPokes;
 	
 	function showPokeDetails() {
 	    var pendingPokes = pokeNotifications.filter(function(p) { return p.status === 'pending'; });
@@ -2447,8 +2511,10 @@
             		await syncAll();
             		initUI();
 
-					// Load pokes after login
-            		await loadPokes();
+					// Load pokes after login - ensure it's called after everything is set up
+					setTimeout(async function() {
+    					await loadPokes();
+					}, 1000);
 				
             		return true;
         	} else {
@@ -2490,24 +2556,26 @@
     }
     
     function initUI() {
-	// Log session start for existing logged-in user (page refresh)
-    	if (currentUser && !sessionStorage.getItem("sessionLogged")) {
-        	addLog(
-            		"SESSION_START", 
-            		currentUser, 
-            		`User ${currentUser} (${currentUserRole}) started new session`, 
-            		currentUser, 
-            		"Page loaded/refreshed",
-            		{ sessionStart: new Date().toISOString() }
-        	);
-        	sessionStorage.setItem("sessionLogged", "true");
-    	}	
-
-		// Load pokes for the current user
-    	if (currentUser) {
-        	loadPokes();
-			startPokePolling(); // Start periodic polling
-    	}
+		// Log session start for existing logged-in user (page refresh)
+		if (currentUser && !sessionStorage.getItem("sessionLogged")) {
+		    addLog(
+		        "SESSION_START", 
+		        currentUser, 
+		        `User ${currentUser} (${currentUserRole}) started new session`, 
+		        currentUser, 
+		        "Page loaded/refreshed",
+		        { sessionStart: new Date().toISOString() }
+		    );
+		    sessionStorage.setItem("sessionLogged", "true");
+		}
+		
+		// Load pokes for the current user - ensure it runs
+		if (currentUser) {
+		    console.log("🔔 Loading pokes for user in initUI:", currentUser);
+		    setTimeout(function() {
+		        loadPokes();
+		    }, 500);
+		}
 		
         updateClock(); setToday(); initCanvas();
         document.getElementById("etSelect").innerHTML = etNames.map(n => `<option value="${n}">${n}</option>`).join('');
