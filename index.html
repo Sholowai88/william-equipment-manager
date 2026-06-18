@@ -751,12 +751,13 @@
         
         	// Define tables to backup
         	var tables = [
-            	{ name: 'db_logs', columns: 'log_id,timestamp,action,record_id,details,user_name,reason,user_role,ip_address,browser,device_type' },
-            	{ name: 'equip_status', columns: 'equipment_key,status' },
-            	{ name: 'equipment_data', columns: 'asset_number,asset_desc,manufacturer,parent_asset,asset_owner,serial_no,location,po_number,acceptance_date,calibration_date,current_detail' },
-            	{ name: 'history_records', columns: 'record_id,display_time,status,job_type,purpose,et,set_person,physicist,others,remarks,signature,record_status,edit_history,equipment_details' },
-            	{ name: 'users', columns: 'username,password,role' }
-        	];
+			    { name: 'db_logs', columns: 'log_id,timestamp,action,record_id,details,user_name,reason,user_role,ip_address,browser,device_type' },
+			    { name: 'equip_status', columns: 'equipment_key,status' },
+			    { name: 'equipment_data', columns: 'asset_number,asset_desc,manufacturer,parent_asset,asset_owner,serial_no,location,po_number,acceptance_date,calibration_date,current_detail' },
+			    { name: 'history_records', columns: 'record_id,display_time,status,job_type,purpose,et,set_person,physicist,others,remarks,signature,record_status,edit_history,equipment_details' },
+			    { name: 'users', columns: 'username,password,role' },
+			    { name: 'pokes', columns: 'id,record_id,purpose,from_user,to_user,to_role,timestamp,status,created_at' }
+			];
         
         	var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         
@@ -1374,42 +1375,59 @@
 	}
 
 	async function loadPokes() {
-    	try {
-        	console.log("📝 Loading pokes from database...");
-        	var { data, error } = await supabaseClient
-            	.from('pokes')
-            	.select('*')
-            	.eq('to_user', currentUser)
-            	.eq('status', 'pending')
-            	.order('created_at', { ascending: false });
-        
-        	if (error) {
-            	console.error("Error loading pokes:", error);
-            	return;
-        	}
-        
-        	if (data && data.length > 0) {
-            	console.log("✅ Loaded " + data.length + " pending pokes");
-            	pokeNotifications = data.map(function(row) {
-                	return {
-                    	id: row.id,
-                    	recordId: row.record_id,
-                    	purpose: row.purpose,
-                    	from: row.from_user,
-                    	to: row.to_user,
-                    	toRole: row.to_role,
-                    	timestamp: row.timestamp,
-                    	status: row.status
-                	};
-            	});
-        	} else {
-            	console.log("ℹ️ No pending pokes found");
-            	pokeNotifications = [];
-        	}
-        	updatePokeNotification();
-    	} catch (err) {
-        	console.error("Load pokes error:", err);
-    	}
+	    try {
+	        if (!currentUser) {
+	            console.log("⚠️ No current user, skipping poke load");
+	            return;
+	        }
+	        console.log("📝 Loading pokes for user:", currentUser);
+	        var { data, error } = await supabaseClient
+	            .from('pokes')
+	            .select('*')
+	            .eq('to_user', currentUser)
+	            .eq('status', 'pending')
+	            .order('created_at', { ascending: false });
+	        
+	        if (error) {
+	            console.error("Error loading pokes:", error);
+	            return;
+	        }
+	        
+	        if (data && data.length > 0) {
+	            console.log("✅ Loaded " + data.length + " pending pokes for " + currentUser);
+	            pokeNotifications = data.map(function(row) {
+	                return {
+	                    id: row.id,
+	                    recordId: row.record_id,
+	                    purpose: row.purpose,
+	                    from: row.from_user,
+	                    to: row.to_user,
+	                    toRole: row.to_role,
+	                    timestamp: row.timestamp,
+	                    status: row.status
+	                };
+	            });
+	        } else {
+	            console.log("ℹ️ No pending pokes found for " + currentUser);
+	            pokeNotifications = [];
+	        }
+	        updatePokeNotification();
+	    } catch (err) {
+	        console.error("Load pokes error:", err);
+	    }
+	}
+
+	// Periodic check for new pokes (every 30 seconds)
+	function startPokePolling() {
+	    if (window.pokePollingInterval) {
+	        clearInterval(window.pokePollingInterval);
+	    }
+	    window.pokePollingInterval = setInterval(function() {
+	        if (currentUser) {
+	            console.log("🔄 Polling for new pokes...");
+	            loadPokes();
+	        }
+	    }, 30000); // 30 seconds
 	}
 
 	async function sendPoke(record, users) {
@@ -1613,19 +1631,42 @@
 	    updatePokeNotification();
 	}
 
-	function updatePokeNotification() {
+		function updatePokeNotification() {
 	    var pendingPokes = pokeNotifications.filter(function(p) { return p.status === 'pending'; });
 	    var pokeDiv = document.getElementById("pokeNotification");
 	    var pokeCountSpan = document.getElementById("pokeCount");
 	    
+	    console.log("🔔 Updating poke notification. Pending pokes:", pendingPokes.length);
+	    
 	    if (pendingPokes.length > 0) {
-	        pokeDiv.style.display = "inline-block";
-	        pokeCountSpan.innerText = pendingPokes.length;
-	        pokeDiv.style.animation = "pulse-green 1s infinite";
-	        pokeDiv.style.backgroundColor = "rgba(255,255,255,0.25)";
+	        if (pokeDiv) {
+	            pokeDiv.style.display = "inline-block";
+	            pokeDiv.style.cursor = "pointer";
+	            pokeDiv.style.background = "rgba(255,255,255,0.25)";
+	            pokeDiv.style.borderRadius = "50px";
+	            pokeDiv.style.padding = "6px 14px";
+	            pokeDiv.style.animation = "pulse-green 1s infinite";
+	        }
+	        if (pokeCountSpan) {
+	            pokeCountSpan.innerText = pendingPokes.length;
+	            pokeCountSpan.style.fontWeight = "bold";
+	            pokeCountSpan.style.color = "#ff6b6b";
+	        }
+	        // Also update the sync status to show notification
+	        var syncStatus = document.getElementById("syncStatusText");
+	        if (syncStatus) {
+	            syncStatus.innerHTML = "🔔 " + pendingPokes.length + " poke(s)";
+	        }
 	    } else {
-	        pokeDiv.style.display = "none";
-	        pokeDiv.style.animation = "none";
+	        if (pokeDiv) {
+	            pokeDiv.style.display = "none";
+	            pokeDiv.style.animation = "none";
+	        }
+	        // Reset sync status
+	        var syncStatus = document.getElementById("syncStatusText");
+	        if (syncStatus && !syncStatus.innerHTML.includes("Live Sync")) {
+	            syncStatus.innerHTML = "Live Sync";
+	        }
 	    }
 	}
 	
@@ -2465,6 +2506,7 @@
 		// Load pokes for the current user
     	if (currentUser) {
         	loadPokes();
+			startPokePolling(); // Start periodic polling
     	}
 		
         updateClock(); setToday(); initCanvas();
