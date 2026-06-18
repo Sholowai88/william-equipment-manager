@@ -180,6 +180,7 @@
     		<option value="LOGIN_SUCCESS">✅ Login Success</option>
     		<option value="LOGIN_FAILED">❌ Login Failed</option>
     		<option value="LOGOUT">🚪 Logout</option>
+			<option value="SESSION_START">🔄 Session Start</option>
     		<option value="USER_CREATED">👤 User Created</option>
     		<option value="PASSWORD_CHANGED">🔑 Password Changed</option>
     		<option value="RECORD_CREATED">📝 Record Created</option>
@@ -189,6 +190,8 @@
 			<option value="BACKUP">💾 Backup</option>
     		<option value="RESTORE">📂 Restore</option>
     		<option value="SUPABASE_BACKUP">☁️ Supabase Backup</option>
+			<option value="POKE_SENT">🔔 Poke Sent</option>
+    		<option value="POKE_BACK">🔁 Poke Back</option>
 	</select>
 	<input type="date" id="dbLogStartDate" style="width:130px;">
 	<input type="date" id="dbLogEndDate" style="width:130px;">
@@ -1351,13 +1354,15 @@
     	var users = [];
     	if (record.et) {
         	record.et.split(", ").forEach(function(name) {
-            	if (name && name !== "N/A") users.push({ name: name, role: 'ET' });
+            	if (name && name !== "N/A" && name !== currentUser) {
+                	users.push({ name: name, role: 'ET' });
+            	}
         	});
     	}
-    	if (record.set && record.set !== "N/A") {
+    	if (record.set && record.set !== "N/A" && record.set !== currentUser) {
         	users.push({ name: record.set, role: 'SET' });
     	}
-    	if (record.physicist && record.physicist !== "N/A") {
+    	if (record.physicist && record.physicist !== "N/A" && record.physicist !== currentUser) {
         	users.push({ name: record.physicist, role: 'Physicist' });
     	}
     	return users;
@@ -1384,7 +1389,7 @@
             	</div>
             	<div style="display:flex; gap:12px; justify-content:flex-end;">
                 	<button id="confirmPokeBtn" class="btn btn-primary">Send Poke</button>
-                	<button id="cancelPokeBtn" class="btn">Cancel</button>
+               		<button id="cancelPokeBtn" class="btn">Cancel</button>
             	</div>
         	</div>
     	`;
@@ -1421,7 +1426,7 @@
         	});
     	};
     
-   		modal.querySelector("#cancelPokeBtn").onclick = function() {
+    	modal.querySelector("#cancelPokeBtn").onclick = function() {
         	modal.remove();
     	};
     
@@ -1441,30 +1446,41 @@
             	pokedUsers.push({ name: cb.dataset.name, role: cb.dataset.role });
         	});
         
-        	// Create poke notification
+        	// Check if sender is in the poked list - if yes, remove them
+        	var filteredUsers = pokedUsers.filter(function(user) {
+            	return user.name !== currentUser;
+        	});
+        
+        	if (filteredUsers.length === 0) {
+            	alert("⚠️ You cannot poke yourself! Please select other users to poke.");
+            	return;
+	        }
+        
+        	// Create poke notification - ONLY for users who are NOT the sender
         	var pokeMessage = {
             	id: Date.now(),
             	recordId: record.id,
             	purpose: record.purpose || 'N/A',
             	from: currentUser,
-            	users: pokedUsers,
+            	users: filteredUsers,
             	timestamp: getHKTimeISO(),
-            	status: 'pending'
+            	status: 'pending',
+            	record: record
         	};
         
         	pokeNotifications.push(pokeMessage);
-        	updatePokeNotification();
+	        updatePokeNotification();
         
-        	// Log the poke
+	        // Log the poke
         	addLog(
             	"POKE_SENT",
             	record.id,
-            	currentUser + " poked " + pokedUsers.map(function(u) { return u.name + ' (' + u.role + ')'; }).join(', ') + " for record: " + record.purpose,
+            	currentUser + " poked " + filteredUsers.map(function(u) { return u.name + ' (' + u.role + ')'; }).join(', ') + " for record: " + record.purpose,
             	currentUser,
-            	"Poke sent"
+		        "Poke sent"
         	);
         
-	        alert("✅ Poke sent to " + pokedUsers.length + " person(s)!");
+        	alert("✅ Poke sent to " + filteredUsers.length + " person(s)!");
         	modal.remove();
     	};
 	}
@@ -1477,10 +1493,12 @@
     	if (pendingPokes.length > 0) {
         	pokeDiv.style.display = "inline-block";
         	pokeCountSpan.innerText = pendingPokes.length;
-        	// Pulse animation
+        	// Blinking animation for active notifications
         	pokeDiv.style.animation = "pulse-green 1s infinite";
+        	pokeDiv.style.backgroundColor = "rgba(255,255,255,0.25)";
     	} else {
         	pokeDiv.style.display = "none";
+        	pokeDiv.style.animation = "none";
     	}
 	}
 
@@ -1498,7 +1516,7 @@
         	return `
             	<div style="background:#f8fafc; padding:12px; border-radius:12px; margin-bottom:10px; border-left:4px solid #166b5c;">
                 	<div><strong>From:</strong> ${p.from}</div>
-                	<div><strong>Record:</strong> ${p.purpose}</div>
+	                <div><strong>Record:</strong> ${p.purpose}</div>
                 	<div><strong>To:</strong> ${userList}</div>
                 	<div><strong>Time:</strong> ${formatTimestamp(p.timestamp)}</div>
                 	<div style="margin-top:8px; display:flex; gap:8px;">
@@ -1514,17 +1532,34 @@
         	<div class="modal-card" style="max-width:600px;">
             	<button class="close-modal">✖</button>
             	<h3>🔔 Poke Notifications (${pendingPokes.length})</h3>
+            	<p style="font-size:0.7rem; color:#666; margin-bottom:15px;">
+                	Click any button below to respond to the poke. 
+                	The notification will be dismissed when you respond.
+            	</p>
             	${pokeHtml}
-            	<div style="margin-top:15px; text-align:center;">
-                	<button class="btn btn-sm" onclick="document.querySelector('.modal-overlay').remove()">Close</button>
+            	<div style="margin-top:15px; text-align:center; border-top:1px solid #ddd; padding-top:15px;">
+                	<button class="btn btn-sm" id="closePokeModalBtn">Close</button>
+                	<span style="font-size:0.7rem; color:#999; margin-left:15px;">
+                    	⚠️ Closing without responding keeps the notification active
+                	</span>
             	</div>
         	</div>
     	`;
-    	document.body.appendChild(modal);
+	    document.body.appendChild(modal);
     
+    	// Close button - dismisses the modal but does NOT dismiss notifications
     	modal.querySelector(".close-modal").onclick = function() {
         	modal.remove();
+        	// Notification remains active - blinking continues
     	};
+    
+    	modal.querySelector("#closePokeModalBtn").onclick = function() {
+        	modal.remove();
+        	// Notification remains active - blinking continues
+    	};
+    
+    	// Make respondPoke globally accessible for the buttons
+    	window.respondPoke = respondPoke;
 	}
 
 	function respondPoke(index, action) {
@@ -1538,7 +1573,7 @@
         	poke.status = 'ignored';
         	alert("👋 You ignored the poke from " + poke.from);
     	} else if (action === 'poke_back') {
-	        // Poke back - create a new poke
+        	// Poke back - create a new poke
         	var pokeBackMessage = {
             	id: Date.now(),
             	recordId: poke.recordId,
@@ -1547,7 +1582,8 @@
             	users: [{ name: poke.from, role: 'Original Poke' }],
             	timestamp: getHKTimeISO(),
             	status: 'pending',
-            	isPokeBack: true
+            	isPokeBack: true,
+            	record: poke.record
         	};
         	pokeNotifications.push(pokeBackMessage);
         	poke.status = 'poked_back';
@@ -1562,11 +1598,10 @@
         	);
     	}
     
-    	// Remove the modal and refresh
+    	// Remove the modal after action
     	var modal = document.querySelector('.modal-overlay');
     	if (modal) modal.remove();
     	updatePokeNotification();
-    	showPokeDetails(); // Refresh the modal
 	}
 
 	// Make functions globally accessible
@@ -1947,15 +1982,21 @@
             
             		// Action Type with color coding
             		var actionColor = "#e9ecef";
-            		if (l.action === "LOGIN_SUCCESS") actionColor = "#d4edda";
-            		else if (l.action === "LOGIN_FAILED") actionColor = "#f8d7da";
-           		else if (l.action === "LOGOUT") actionColor = "#fff3cd";
-            		else if (l.action === "USER_CREATED") actionColor = "#d1ecf1";
-            		else if (l.action === "PASSWORD_CHANGED") actionColor = "#d4edda";
-            		else if (l.action === "RECORD_CREATED") actionColor = "#c8e6c9";
-            		else if (l.action === "RECORD_EDITED") actionColor = "#fff9c4";
-            		else if (l.action === "EQUIPMENT_ADDED") actionColor = "#b3e5fc";
-            		else if (l.action === "EQUIPMENT_EDITED") actionColor = "#e1bee7";
+					if (l.action === "LOGIN_SUCCESS") actionColor = "#d4edda";
+					else if (l.action === "LOGIN_FAILED") actionColor = "#f8d7da";
+					else if (l.action === "LOGOUT") actionColor = "#fff3cd";
+					else if (l.action === "SESSION_START") actionColor = "#c5cae9";
+					else if (l.action === "USER_CREATED") actionColor = "#d1ecf1";
+					else if (l.action === "PASSWORD_CHANGED") actionColor = "#d4edda";
+					else if (l.action === "RECORD_CREATED") actionColor = "#c8e6c9";
+					else if (l.action === "RECORD_EDITED") actionColor = "#fff9c4";
+					else if (l.action === "EQUIPMENT_ADDED") actionColor = "#b3e5fc";
+					else if (l.action === "EQUIPMENT_EDITED") actionColor = "#e1bee7";
+					else if (l.action === "BACKUP") actionColor = "#bbdefb";
+					else if (l.action === "RESTORE") actionColor = "#ffccbc";
+					else if (l.action === "SUPABASE_BACKUP") actionColor = "#b2dfdb";
+					else if (l.action === "POKE_SENT") actionColor = "#f8bbd0";
+					else if (l.action === "POKE_BACK") actionColor = "#ce93d8";
             
             		row.insertCell(1).innerHTML = '<span style="background:' + actionColor + '; padding:4px 12px; border-radius:20px; font-size:0.7rem; font-weight:bold;">' + (l.action || 'N/A') + '</span>';
             
