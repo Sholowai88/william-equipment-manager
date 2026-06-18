@@ -212,40 +212,42 @@
 	function formatTimestampHK(isoString) {
     	if (!isoString) return "Unknown";
     	try {
-        	// Parse the UTC timestamp
+        	// Parse the UTC timestamp from Supabase
         	var d = new Date(isoString);
         	if (isNaN(d.getTime())) return "Invalid Date";
         
-        	// Hong Kong is UTC+8 - add 8 hours
-        	var hkOffset = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
-        	var hkTime = new Date(d.getTime() + hkOffset);
+        	// Get UTC components directly from the date object
+        	var year = d.getUTCFullYear();
+        	var month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        	var day = String(d.getUTCDate()).padStart(2, '0');
+        	var hours = String(d.getUTCHours()).padStart(2, '0');
+        	var minutes = String(d.getUTCMinutes()).padStart(2, '0');
+        	var seconds = String(d.getUTCSeconds()).padStart(2, '0');
+        	var ampm = d.getUTCHours() >= 12 ? 'PM' : 'AM';
+        	var hours12 = d.getUTCHours() % 12 || 12;
         
-        	// Format using UTC methods to avoid timezone conversion issues
-        	var month = String(hkTime.getUTCMonth() + 1).padStart(2, '0');
-        	var day = String(hkTime.getUTCDate()).padStart(2, '0');
-        	var year = hkTime.getUTCFullYear();
-        	var hours = String(hkTime.getUTCHours()).padStart(2, '0');
-        	var minutes = String(hkTime.getUTCMinutes()).padStart(2, '0');
-        	var seconds = String(hkTime.getUTCSeconds()).padStart(2, '0');
-        	var ampm = hkTime.getUTCHours() >= 12 ? 'PM' : 'AM';
-        	var hours12 = hkTime.getUTCHours() % 12 || 12;
-        
+        	// Format using UTC components (they are already in UTC)
+        	// Supabase stores timestamps in UTC, so we just format them
         	return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds} ${ampm}`;
     	} catch(e) {
         	console.error("Error formatting timestamp:", e);
         	return isoString || "Unknown";
     	}
 	}
+	
 	function getHKTime() { 
     	// Get current time in Hong Kong (UTC+8)
     	var now = new Date();
-    	// Get UTC time and add 8 hours for Hong Kong
-    	var utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    	// Get UTC time in milliseconds
+    	var utcTime = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 
+                        	   now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
+    	// Add 8 hours for Hong Kong
     	var hkTime = new Date(utcTime + (8 * 60 * 60 * 1000));
     	return hkTime;
 	}
     function setToday() { 
-    	var hk = getHKTime(); 
+    	var hk = getHKTime();
+    	// Use getUTCMethods since we're working with UTC+8
     	var year = hk.getUTCFullYear();
     	var month = String(hk.getUTCMonth() + 1).padStart(2, '0');
     	var day = String(hk.getUTCDate()).padStart(2, '0');
@@ -254,7 +256,8 @@
     	document.getElementById("recordDatetime").value = year + "-" + month + "-" + day + "T" + hours + ":" + minutes;
 	}
 	function updateClock() { 
-    	var hk = getHKTime(); 
+    	var hk = getHKTime();
+    	// Use getUTCMethods since we're working with UTC+8
     	var hours = String(hk.getUTCHours()).padStart(2, '0');
     	var minutes = String(hk.getUTCMinutes()).padStart(2, '0');
     	var seconds = String(hk.getUTCSeconds()).padStart(2, '0');
@@ -305,7 +308,7 @@
         
         	// Get current timestamp
        		var now = getHKTime();
-        	// Store as UTC ISO string (Supabase will store this as UTC)
+        	// Store as UTC ISO string
 			var timestampMs = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
         
         	// Create unique numeric log ID
@@ -419,11 +422,10 @@
         
         	if (data && data.length > 0) {
             	console.log("✅ Loaded " + data.length + " logs from database");
-            	// Timestamps are stored in UTC, will be displayed using formatTimestampHK
             	dbLogs = data.map(function(row) { 
                 	return { 
                     	id: row.log_id, 
-                   		timestamp: row.timestamp,  // UTC from Supabase
+                    	timestamp: row.timestamp,  // UTC from Supabase - formatTimestampHK will handle display
                     	action: row.action, 
                     	recordId: row.record_id, 
                     	details: row.details, 
