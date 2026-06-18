@@ -750,7 +750,7 @@
     	}
     
     	try {
-        	alert("☁️ Starting Supabase backup...\n\nThis will export all 5 tables as CSV files.");
+        	alert("☁️ Starting Supabase backup...\n\nThis will export all 6 tables as CSV files.");
         
         	// Define tables to backup
         	var tables = [
@@ -1469,33 +1469,52 @@
 	}
 
 	async function sendPoke(record, users) {
-    	try {
-        	var pokePromises = users.map(function(user) {
-            	var pokeId = Date.now() + Math.floor(Math.random() * 1000);
-            	var pokeData = {
-                	id: pokeId,
-                	record_id: record.id,
-                	purpose: record.purpose || 'N/A',
-                	from_user: currentUser,
-                	to_user: user.name,
-                	to_role: user.role,
-                	timestamp: getHKTimeISO(),
-                	status: 'pending'
-            	};
-            
-            	// Insert into Supabase
-            	return supabaseClient.from('pokes').insert(pokeData);
-        	});
-        
-	        var results = await Promise.all(pokePromises);
-        	var failed = results.filter(function(r) { return r.error; });
-        
-        	if (failed.length > 0) {
-            	console.error("Some pokes failed:", failed);
-            	return false;
-        	}
-        
-	        // Reload pokes for the current user (they might have poked themselves accidentally)
+	    try {
+	        console.log("📤 Sending pokes to:", users.map(function(u) { return u.name; }).join(', '));
+	        
+	        var results = [];
+	        var failedPokes = [];
+	        
+	        for (var i = 0; i < users.length; i++) {
+	            var user = users[i];
+	            var pokeId = Date.now() + Math.floor(Math.random() * 1000) + i;
+	            var pokeData = {
+	                id: pokeId,
+	                record_id: record.id,
+	                purpose: record.purpose || 'N/A',
+	                from_user: currentUser,
+	                to_user: user.name,
+	                to_role: user.role,
+	                timestamp: getHKTimeISO(),
+	                status: 'pending'
+	            };
+	            
+	            console.log("📤 Sending poke to:", user.name, pokeData);
+	            
+	            try {
+	                var result = await supabaseClient.from('pokes').insert(pokeData);
+	                if (result.error) {
+	                    console.error("❌ Error sending poke to " + user.name + ":", result.error);
+	                    failedPokes.push({ user: user, error: result.error });
+	                } else {
+	                    console.log("✅ Poke sent to:", user.name);
+	                    results.push(result);
+	                }
+	            } catch (err) {
+	                console.error("❌ Exception sending poke to " + user.name + ":", err);
+	                failedPokes.push({ user: user, error: err });
+	            }
+	        }
+	        
+	        if (failedPokes.length > 0) {
+	            console.error("Some pokes failed:", failedPokes);
+	            // Show which users failed
+	            var failedNames = failedPokes.map(function(f) { return f.user.name; }).join(', ');
+	            alert("⚠️ Failed to send pokes to: " + failedNames + "\n\nPlease check if the pokes table has RLS policies enabled.");
+	            return false;
+	        }
+	        
+	        // Reload pokes for the current user
 	        await loadPokes();
 	        
 	        // Log the poke
@@ -1507,12 +1526,59 @@
 	            "Poke sent"
 	        );
 	        
+	        alert("✅ Poke sent to " + users.length + " person(s)!");
 	        return true;
+	        
 	    } catch (err) {
 	        console.error("Send poke error:", err);
+	        alert("❌ Failed to send pokes. Error: " + err.message);
 	        return false;
 	    }
 	}
+
+	async function testPokeConnection() {
+	    try {
+	        console.log("🔍 Testing poke table connection...");
+	        
+	        // Try to insert a test poke
+	        var testId = Date.now() + Math.floor(Math.random() * 1000);
+	        var testData = {
+	            id: testId,
+	            record_id: 999999,
+	            purpose: 'TEST',
+	            from_user: currentUser || 'test',
+	            to_user: currentUser || 'test',
+	            to_role: 'TEST',
+	            timestamp: getHKTimeISO(),
+	            status: 'pending'
+	        };
+	        
+	        var { data, error } = await supabaseClient.from('pokes').insert(testData);
+	        
+	        if (error) {
+	            console.error("❌ Test insert failed:", error);
+	            alert("❌ Cannot access pokes table. Error: " + error.message + "\n\nPlease run the SQL policies in Supabase.");
+	            return false;
+	        }
+	        
+	        console.log("✅ Test insert successful:", data);
+	        
+	        // Clean up test data
+	        await supabaseClient.from('pokes').delete().eq('id', testId);
+	        console.log("✅ Test data cleaned up");
+	        
+	        alert("✅ Poke table connection successful!");
+	        return true;
+	        
+	    } catch (err) {
+	        console.error("❌ Test failed:", err);
+	        alert("❌ Test failed: " + err.message);
+	        return false;
+	    }
+	}
+	
+	// Make it globally accessible
+	window.testPokeConnection = testPokeConnection;
 
 	function showPokeDialog(record) {
 	    var pokeableUsers = getPokeableUsers(record);
@@ -1592,14 +1658,14 @@
 	        });
 	        
 	        // Send pokes to Supabase
-	        var success = await sendPoke(record, selectedUsers);
-	        
-	        if (success) {
-	            alert("✅ Poke sent to " + selectedUsers.length + " person(s)!");
-	            modal.remove();
-	        } else {
-	            alert("❌ Failed to send some pokes. Please try again.");
-	        }
+			var success = await sendPoke(record, selectedUsers);
+			
+			if (success) {
+			    modal.remove();
+			} else {
+			    // Error message is already shown in sendPoke
+			    modal.remove();
+			}
 	    };
 	}
 
