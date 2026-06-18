@@ -208,6 +208,21 @@
 </div>
 
 <script>
+// Clean up any existing subscriptions when page loads
+window.addEventListener('beforeunload', function() {
+    if (window.pokeSubscription) {
+        try {
+            window.pokeSubscription.unsubscribe();
+        } catch(e) {
+            // Ignore
+        }
+        window.pokeSubscription = null;
+    }
+    if (window.pokePollingInterval) {
+        clearInterval(window.pokePollingInterval);
+        window.pokePollingInterval = null;
+    }
+});
 (function() {
     const supabaseUrl = 'https://qhuqlhzvpmhykkmmqtth.supabase.co';
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodXFsaHp2cG1oeWtrbW1xdHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTM0OTQsImV4cCI6MjA5Njc4OTQ5NH0.pTTY4irj4vx-us8W1DyYaEB6ug_wEjuwNdy0lJjh_-8';
@@ -1445,36 +1460,85 @@
 	    
 	    console.log("🔔 Setting up real-time poke subscription for:", currentUser);
 	    
-	    // Subscribe to changes in the pokes table
-	    var subscription = supabaseClient
-	        .channel('pokes_channel')
-	        .on('postgres_changes', {
-	            event: 'INSERT',
-	            schema: 'public',
-	            table: 'pokes',
-	            filter: 'to_user=eq.' + currentUser
-	        }, function(payload) {
-	            console.log("🔔 Real-time poke received:", payload);
-	            // Reload pokes when a new one is inserted
-	            loadPokes();
-	        })
-	        .subscribe();
+	    // Clean up existing subscription if any
+	    if (window.pokeSubscription) {
+	        try {
+	            window.pokeSubscription.unsubscribe();
+	        } catch(e) {
+	            console.warn("Error unsubscribing:", e);
+	        }
+	        window.pokeSubscription = null;
+	    }
+	    
+	    // Create channel and add listeners BEFORE subscribe
+	    var channel = supabaseClient
+	        .channel('pokes_channel_' + currentUser) // Unique channel per user
+	        .on(
+	            'postgres_changes',
+	            {
+	                event: 'INSERT',
+	                schema: 'public',
+	                table: 'pokes',
+	                filter: 'to_user=eq.' + currentUser
+	            },
+	            function(payload) {
+	                console.log("🔔 Real-time poke received:", payload);
+	                // Reload pokes when a new one is inserted
+	                loadPokes();
+	            }
+	        )
+	        .on(
+	            'postgres_changes',
+	            {
+	                event: 'UPDATE',
+	                schema: 'public',
+	                table: 'pokes',
+	                filter: 'to_user=eq.' + currentUser
+	            },
+	            function(payload) {
+	                console.log("🔔 Real-time poke updated:", payload);
+	                // Reload pokes when status changes
+	                loadPokes();
+	            }
+	        );
+	    
+	    // Now subscribe
+	    channel.subscribe(function(status) {
+	        console.log("🔔 Poke subscription status:", status);
+	        if (status === 'SUBSCRIBED') {
+	            console.log("✅ Successfully subscribed to poke updates for:", currentUser);
+	        }
+	    });
 	    
 	    // Store subscription for cleanup
-	    window.pokeSubscription = subscription;
+	    window.pokeSubscription = channel;
 	}
 	
-	// Periodic check for new pokes (every 30 seconds)
+	// Fallback polling for pokes (if real-time fails)
 	function startPokePolling() {
 	    if (window.pokePollingInterval) {
 	        clearInterval(window.pokePollingInterval);
+	        window.pokePollingInterval = null;
 	    }
+	    
+	    if (!currentUser) return;
+	    
+	    console.log("🔄 Starting poke polling every 30 seconds for:", currentUser);
 	    window.pokePollingInterval = setInterval(function() {
 	        if (currentUser) {
-	            console.log("🔄 Polling for new pokes...");
+	            console.log("🔄 Polling for pokes...");
 	            loadPokes();
 	        }
 	    }, 30000); // 30 seconds
+	}
+	
+	// Function to stop polling
+	function stopPokePolling() {
+	    if (window.pokePollingInterval) {
+	        clearInterval(window.pokePollingInterval);
+	        window.pokePollingInterval = null;
+	        console.log("🔄 Poke polling stopped");
+	    }
 	}
 
 	async function sendPoke(record, users) {
@@ -2600,8 +2664,9 @@
 					console.log("🔔 Loading pokes for user after login:", currentUser);
 					setTimeout(async function() {
 					    await loadPokes();
+					    // Set up real-time subscription after pokes are loaded
 					    setupPokeSubscription();
-					}, 1500);
+					}, 2000);
 				
             		return true;
         	} else {
@@ -2625,22 +2690,36 @@
     }
     
     async function logout() { 
-    	if (confirm("Are you sure you want to logout?")) { 
-        	try {
-            		await addLog(
-                		"LOGOUT", 
-                		currentUser || "Unknown", 
-                		`User ${currentUser} (${currentUserRole}) logged out`, 
-                		currentUser || "System", 
-                		"User initiated logout"
-            		);
-        	} catch(e) {
-            		console.warn("Logout log error:", e);
-        	}
-        	sessionStorage.clear(); 
-        	location.reload(); 
-   	} 
-    }
+	    if (confirm("Are you sure you want to logout?")) { 
+	        // Clean up poke subscription
+	        if (window.pokeSubscription) {
+	            try {
+	                window.pokeSubscription.unsubscribe();
+	                console.log("🔔 Poke subscription cleaned up");
+	            } catch(e) {
+	                console.warn("Error cleaning up subscription:", e);
+	            }
+	            window.pokeSubscription = null;
+	        }
+	        
+	        // Stop polling
+	        stopPokePolling();
+	        
+	        try {
+	            await addLog(
+	                "LOGOUT", 
+	                currentUser || "Unknown", 
+	                `User ${currentUser} (${currentUserRole}) logged out`, 
+	                currentUser || "System", 
+	                "User initiated logout"
+	            );
+	        } catch(e) {
+	            console.warn("Logout log error:", e);
+	        }
+	        sessionStorage.clear(); 
+	        location.reload(); 
+	    } 
+	}
     
     function initUI() {
 		// Log session start for existing logged-in user (page refresh)
@@ -2662,7 +2741,11 @@
 		    setTimeout(function() {
 		        loadPokes();
 		        // Set up real-time subscription
-		        setupPokeSubscription();
+		        setTimeout(function() {
+		            setupPokeSubscription();
+		            // Start polling as fallback
+		            startPokePolling();
+		        }, 500);
 		    }, 500);
 		}
 		
