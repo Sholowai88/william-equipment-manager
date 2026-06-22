@@ -1371,29 +1371,29 @@ window.addEventListener('beforeunload', function() {
     }
 
 	// Poke Functions with Supabase Integration
-
 	function getPokeableUsers(record) {
-    	var users = [];
-    	// Get ETs from the record
-    	if (record.et) {
-        	var etList = record.et.split(", ");
-        	etList.forEach(function(name) {
-            	if (name && name !== "N/A" && name.trim() !== currentUser) {
-                	users.push({ name: name.trim(), role: 'ET' });
-            	}
-        	});
-    	}
-    	// Get SET
-    	if (record.set && record.set !== "N/A" && record.set !== currentUser) {
-        	users.push({ name: record.set, role: 'SET' });
-    	}
-    	// Get Physicist
-    	if (record.physicist && record.physicist !== "N/A" && record.physicist !== currentUser) {
-        	users.push({ name: record.physicist, role: 'Physicist' });
-    	}
-    	return users;
+	    var users = [];
+	    // Get ETs from the record
+	    if (record.et) {
+	        var etList = record.et.split(", ");
+	        etList.forEach(function(name) {
+	            var trimmedName = name.trim();
+	            if (trimmedName && trimmedName !== "N/A" && trimmedName.toLowerCase() !== currentUser.toLowerCase()) {
+	                users.push({ name: trimmedName, role: 'ET' });
+	            }
+	        });
+	    }
+	    // Get SET
+	    if (record.set && record.set !== "N/A" && record.set.toLowerCase() !== currentUser.toLowerCase()) {
+	        users.push({ name: record.set, role: 'SET' });
+	    }
+	    // Get Physicist
+	    if (record.physicist && record.physicist !== "N/A" && record.physicist.toLowerCase() !== currentUser.toLowerCase()) {
+	        users.push({ name: record.physicist, role: 'Physicist' });
+	    }
+	    return users;
 	}
-
+	
 	async function loadPokes() {
 	    try {
 	        if (!currentUser) {
@@ -1403,7 +1403,7 @@ window.addEventListener('beforeunload', function() {
 	        console.log("📝 Loading pokes for user:", currentUser);
 	        console.log("🔍 Current pokeNotifications before load:", pokeNotifications.length);
 	        
-	        // Query for pokes where this user is the recipient
+	        // Query for pokes where this user is the recipient (case insensitive)
 	        var { data, error } = await supabaseClient
 	            .from('pokes')
 	            .select('*')
@@ -1419,6 +1419,7 @@ window.addEventListener('beforeunload', function() {
 	        
 	        if (data && data.length > 0) {
 	            console.log("✅ Loaded " + data.length + " pending pokes for " + currentUser);
+	            // Replace with fresh data
 	            pokeNotifications = data.map(function(row) {
 	                return {
 	                    id: row.id,
@@ -1438,7 +1439,38 @@ window.addEventListener('beforeunload', function() {
 	            });
 	        } else {
 	            console.log("ℹ️ No pending pokes found for " + currentUser);
-	            pokeNotifications = [];
+	            // Check if there are pokes with different case
+	            var { data: caseCheck, error: caseError } = await supabaseClient
+	                .from('pokes')
+	                .select('*')
+	                .eq('status', 'pending');
+	            
+	            if (!caseError && caseCheck && caseCheck.length > 0) {
+	                // Check if any pokes match the current user (case insensitive)
+	                var matchedPokes = caseCheck.filter(function(p) {
+	                    return p.to_user.toLowerCase() === currentUser.toLowerCase();
+	                });
+	                
+	                if (matchedPokes.length > 0) {
+	                    console.log("🔔 Found " + matchedPokes.length + " pokes with case mismatch!");
+	                    pokeNotifications = matchedPokes.map(function(row) {
+	                        return {
+	                            id: row.id,
+	                            recordId: row.record_id,
+	                            purpose: row.purpose,
+	                            from: row.from_user,
+	                            to: row.to_user,
+	                            toRole: row.to_role,
+	                            timestamp: row.timestamp,
+	                            status: row.status
+	                        };
+	                    });
+	                } else {
+	                    pokeNotifications = [];
+	                }
+	            } else {
+	                pokeNotifications = [];
+	            }
 	        }
 	        
 	        // Update notification if count changed
@@ -1450,6 +1482,49 @@ window.addEventListener('beforeunload', function() {
 	        console.error("Load pokes error:", err);
 	    }
 	}
+
+	// Debug function to check pokes in Supabase
+	async function debugPokes() {
+	    console.log("🔍 Debugging pokes...");
+	    console.log("Current user:", currentUser);
+	    
+	    try {
+	        // Get all pending pokes
+	        var { data, error } = await supabaseClient
+	            .from('pokes')
+	            .select('*')
+	            .eq('status', 'pending');
+	        
+	        if (error) {
+	            console.error("Error fetching pokes:", error);
+	            return;
+	        }
+	        
+	        console.log("📊 All pending pokes in database:", data.length);
+	        data.forEach(function(poke, index) {
+	            console.log("Poke " + (index + 1) + ":", {
+	                id: poke.id,
+	                from: poke.from_user,
+	                to: poke.to_user,
+	                purpose: poke.purpose,
+	                status: poke.status
+	            });
+	        });
+	        
+	        // Check if current user has any pokes
+	        var userPokes = data.filter(function(p) {
+	            return p.to_user.toLowerCase() === currentUser.toLowerCase();
+	        });
+	        console.log("🔔 Pokes for " + currentUser + ":", userPokes.length);
+	        
+	        return data;
+	    } catch (err) {
+	        console.error("Debug error:", err);
+	    }
+	}
+	
+	// Make it globally accessible
+	window.debugPokes = debugPokes;
 
 	// Set up real-time subscription for pokes
 	function setupPokeSubscription() {
@@ -1555,8 +1630,8 @@ window.addEventListener('beforeunload', function() {
 	                id: pokeId,
 	                record_id: record.id,
 	                purpose: record.purpose || 'N/A',
-	                from_user: currentUser,
-	                to_user: user.name,
+	                from_user: currentUser,  // Keep as is (case sensitive)
+	                to_user: user.name,      // Keep as is (case sensitive)
 	                to_role: user.role,
 	                timestamp: getHKTimeISO(),
 	                status: 'pending'
@@ -1581,7 +1656,6 @@ window.addEventListener('beforeunload', function() {
 	        
 	        if (failedPokes.length > 0) {
 	            console.error("Some pokes failed:", failedPokes);
-	            // Show which users failed
 	            var failedNames = failedPokes.map(function(f) { return f.user.name; }).join(', ');
 	            alert("⚠️ Failed to send pokes to: " + failedNames + "\n\nPlease check if the pokes table has RLS policies enabled.");
 	            return false;
@@ -1652,6 +1726,31 @@ window.addEventListener('beforeunload', function() {
 	
 	// Make it globally accessible
 	window.testPokeConnection = testPokeConnection;
+
+	// Manual function to check and display pokes
+	function checkPokesManually() {
+	    console.log("🔍 Manual poke check...");
+	    console.log("Current user:", currentUser);
+	    console.log("Current pokeNotifications:", pokeNotifications);
+	    
+	    // Show pending pokes in an alert
+	    var pendingPokes = pokeNotifications.filter(function(p) { return p.status === 'pending'; });
+	    if (pendingPokes.length > 0) {
+	        var message = "🔔 You have " + pendingPokes.length + " pending poke(s):\n\n";
+	        pendingPokes.forEach(function(p, i) {
+	            message += (i + 1) + ". From: " + p.from + " | Record: " + p.purpose + "\n";
+	        });
+	        alert(message);
+	    } else {
+	        alert("No pending pokes found for " + currentUser + ".\n\nCheck console for details.");
+	    }
+	    
+	    // Also run debug
+	    debugPokes();
+	}
+	
+	// Make it globally accessible
+	window.checkPokesManually = checkPokesManually;
 
 	function showPokeDialog(record) {
 	    var pokeableUsers = getPokeableUsers(record);
@@ -2806,6 +2905,10 @@ window.addEventListener('beforeunload', function() {
 		    // Try multiple times with delays to ensure DOM is ready
 		    setTimeout(function() {
 		        loadPokes();
+		        // Debug after loading
+		        setTimeout(function() {
+		            debugPokes();
+		        }, 1000);
 		        setTimeout(function() {
 		            setupPokeSubscription();
 		            startPokePolling();
@@ -2818,6 +2921,9 @@ window.addEventListener('beforeunload', function() {
 		                if (pendingPokes.length > 0) {
 		                    updatePokeNotification();
 		                    console.log("🔔 Force updated poke notification with", pendingPokes.length, "pokes");
+		                } else {
+		                    // Check if there are any pokes in database
+		                    debugPokes();
 		                }
 		            }, 5000);
 		        }, 500);
