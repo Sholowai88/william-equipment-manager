@@ -425,7 +425,11 @@ window.addEventListener('beforeunload', function() {
         
         	// Insert into Supabase
         	console.log("💾 Inserting log into Supabase with ID:", log.id);
-        	var { data, error } = await supabaseClient.from('db_logs').insert(insertData);
+        	var { data, error } = await supabaseClient
+		        .from('db_logs')
+		        .select('*')
+		        .order('timestamp', { ascending: false })
+		        .limit(500);
         
         	if (error) {
             		console.error("❌ Supabase insert error:", error);
@@ -470,7 +474,8 @@ window.addEventListener('beforeunload', function() {
     async function loadDbLogs() { 
     	if (currentUserRole !== 'admin') return; 
     	try {
-        	console.log("📝 Loading DB logs from database...");
+        	let logsLoaded = false;
+			console.log("📝 Loading DB logs from database...");
         	const { data, error } = await supabaseClient
             	.from('db_logs')
             	.select('*')
@@ -808,10 +813,9 @@ window.addEventListener('beforeunload', function() {
                 	// Try to get data - handle tables without created_at
                 	var query = supabaseClient.from(table.name).select('*');
                 
-                	// Only order by created_at if it exists (skip for equip_status)
-                	if (table.name !== 'equip_status') {
-                    	query = query.order('created_at', { ascending: false });
-                	}
+                	if (table.name !== 'equip_status' && table.name !== 'pokes') {
+					    query = query.order('created_at', { ascending: false });
+					}
                 
                 	var { data, error } = await query.limit(10000);
                 
@@ -2518,10 +2522,10 @@ window.addEventListener('beforeunload', function() {
 					row.insertCell(3).innerHTML = '<div style="max-width:300px; word-wrap:break-word; font-size:0.7rem;">' + detailsText + '</div>';		
             		
 					// Add user role to details if available
-            		if (l.userRole && l.userRole !== "Unknown") {
-              			detailsText += ' (Role: ' + l.userRole + ')';
-            		}
-            		row.insertCell(3).innerHTML = '<div style="max-width:300px; word-wrap:break-word; font-size:0.7rem;">' + detailsText + '</div>';
+            		// if (l.userRole && l.userRole !== "Unknown") {
+              			// detailsText += ' (Role: ' + l.userRole + ')';
+            		// }
+            		// row.insertCell(3).innerHTML = '<div style="max-width:300px; word-wrap:break-word; font-size:0.7rem;">' + detailsText + '</div>';
             
             		// User with role
             		var userRoleDisplay = l.userRole ? ' (' + l.userRole + ')' : '';
