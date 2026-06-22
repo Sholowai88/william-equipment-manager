@@ -134,10 +134,10 @@
     		<div class="time" id="liveTime">--:--:--</div>
     		<div class="date" id="liveDate">----/--/--</div>
 		</div>
-		<div id="pokeNotification" style="position:relative; cursor:pointer; background:rgba(255,255,255,0.15); padding:6px 14px; border-radius:50px; display:none;" onclick="showPokeDetails()">
-    		<span>🔔</span>
-    		<span id="pokeCount" style="font-weight:bold; color:#ff6b6b;">0</span>
-    		<span style="font-size:0.7rem;">pokes</span>
+		<div id="pokeNotification" style="position:relative; cursor:pointer; background:rgba(255,255,255,0.15); padding:6px 14px; border-radius:50px; display:none;" onclick="window.showPokeDetails && window.showPokeDetails();">
+		    <span>🔔</span>
+		    <span id="pokeCount" style="font-weight:bold; color:#ff6b6b;">0</span>
+		    <span style="font-size:0.7rem;">pokes</span>
 		</div>
 		<div class="action-group">
             <button id="refreshBtn" class="refresh-btn">🔄 Refresh</button>
@@ -1810,25 +1810,56 @@ window.addEventListener('beforeunload', function() {
 
 	function updatePokeNotification() {
 	    var pendingPokes = pokeNotifications.filter(function(p) { return p.status === 'pending'; });
+	    
+	    // Get elements using multiple methods for reliability
 	    var pokeDiv = document.getElementById("pokeNotification");
 	    var pokeCountSpan = document.getElementById("pokeCount");
+	    var syncStatus = document.getElementById("syncStatusText");
 	    
 	    console.log("🔔 Updating poke notification. Pending pokes:", pendingPokes.length, "Current user:", currentUser);
+	    console.log("🔔 pokeDiv element:", pokeDiv);
+	    console.log("🔔 pokeCountSpan element:", pokeCountSpan);
 	    
 	    if (pendingPokes.length > 0) {
-	        // Show the notification
+	        // Show the notification using multiple style approaches
 	        if (pokeDiv) {
+	            // Use multiple methods to ensure visibility
 	            pokeDiv.style.display = "inline-block";
+	            pokeDiv.style.visibility = "visible";
+	            pokeDiv.style.opacity = "1";
 	            pokeDiv.style.cursor = "pointer";
 	            pokeDiv.style.background = "rgba(255,255,255,0.25)";
 	            pokeDiv.style.borderRadius = "50px";
 	            pokeDiv.style.padding = "6px 14px";
 	            pokeDiv.style.animation = "pulse-green 1s infinite";
 	            pokeDiv.style.border = "2px solid #ff6b6b";
-	            // Make sure it's visible
-	            pokeDiv.style.visibility = "visible";
-	            pokeDiv.style.opacity = "1";
+	            pokeDiv.style.position = "relative";
+	            pokeDiv.style.zIndex = "100";
+	            // Set inner HTML directly to ensure content
+	            pokeDiv.innerHTML = '<span>🔔</span><span id="pokeCount" style="font-weight:bold; color:#ff6b6b; font-size:1rem;">' + pendingPokes.length + '</span><span style="font-size:0.7rem;"> pokes</span>';
+	            console.log("✅ Poke notification should now be visible!");
+	        } else {
+	            console.error("❌ pokeDiv element not found!");
+	            // Try to find it by other methods
+	            var allDivs = document.querySelectorAll('div');
+	            for (var i = 0; i < allDivs.length; i++) {
+	                if (allDivs[i].id === 'pokeNotification') {
+	                    console.log("Found pokeNotification by querySelector!");
+	                    pokeDiv = allDivs[i];
+	                    pokeDiv.style.display = "inline-block";
+	                    pokeDiv.style.visibility = "visible";
+	                    pokeDiv.style.opacity = "1";
+	                    pokeDiv.style.background = "rgba(255,255,255,0.25)";
+	                    pokeDiv.style.borderRadius = "50px";
+	                    pokeDiv.style.padding = "6px 14px";
+	                    pokeDiv.style.animation = "pulse-green 1s infinite";
+	                    pokeDiv.style.border = "2px solid #ff6b6b";
+	                    pokeDiv.innerHTML = '<span>🔔</span><span id="pokeCount" style="font-weight:bold; color:#ff6b6b; font-size:1rem;">' + pendingPokes.length + '</span><span style="font-size:0.7rem;"> pokes</span>';
+	                    break;
+	                }
+	            }
 	        }
+	        
 	        if (pokeCountSpan) {
 	            pokeCountSpan.innerText = pendingPokes.length;
 	            pokeCountSpan.style.fontWeight = "bold";
@@ -1836,12 +1867,18 @@ window.addEventListener('beforeunload', function() {
 	            pokeCountSpan.style.fontSize = "1rem";
 	            pokeCountSpan.style.display = "inline";
 	        }
+	        
 	        // Also update the sync status to show notification
-	        var syncStatus = document.getElementById("syncStatusText");
 	        if (syncStatus) {
 	            syncStatus.innerHTML = "🔔 " + pendingPokes.length + " poke(s)";
 	            syncStatus.style.color = "#ff6b6b";
 	        }
+	        
+	        // Log the pokes details for debugging
+	        pendingPokes.forEach(function(poke, index) {
+	            console.log("🔔 Poke " + (index + 1) + " - From:", poke.from, "| Record:", poke.purpose);
+	        });
+	        
 	        // Show a browser notification if supported
 	        if (pendingPokes.length > 0) {
 	            var firstPoke = pendingPokes[0];
@@ -1852,9 +1889,9 @@ window.addEventListener('beforeunload', function() {
 	                });
 	            }
 	        }
-	        // Also show a simple alert for testing (remove after fix)
-	        console.log("🔔🔔🔔 POKE NOTIFICATION SHOULD BE VISIBLE NOW! 🔔🔔🔔");
-	        console.log("Pokes:", pendingPokes.length, "from:", pendingPokes.map(function(p) { return p.from; }).join(', '));
+	        
+	        // Also try to show an alert for testing (comment out after testing)
+	        // alert("🔔 You have " + pendingPokes.length + " pending poke(s)!");
 	        
 	    } else {
 	        if (pokeDiv) {
@@ -1862,9 +1899,9 @@ window.addEventListener('beforeunload', function() {
 	            pokeDiv.style.animation = "none";
 	            pokeDiv.style.border = "none";
 	            pokeDiv.style.visibility = "hidden";
+	            pokeDiv.style.opacity = "0";
 	        }
 	        // Reset sync status
-	        var syncStatus = document.getElementById("syncStatusText");
 	        if (syncStatus) {
 	            syncStatus.innerHTML = "Live Sync";
 	            syncStatus.style.color = "";
@@ -1872,6 +1909,31 @@ window.addEventListener('beforeunload', function() {
 	    }
 	}
 
+	// Force show poke notification for testing
+	function forceShowPokeNotification() {
+	    console.log("🔔 Force showing poke notification...");
+	    var pendingPokes = pokeNotifications.filter(function(p) { return p.status === 'pending'; });
+	    if (pendingPokes.length === 0) {
+	        // Create a test notification
+	        pokeNotifications.push({
+	            id: Date.now(),
+	            recordId: 'TEST',
+	            purpose: 'Test Poke',
+	            from: 'System',
+	            to: currentUser,
+	            toRole: 'TEST',
+	            timestamp: getHKTimeISO(),
+	            status: 'pending'
+	        });
+	        console.log("✅ Created test poke notification");
+	    }
+	    updatePokeNotification();
+	    alert("🔔 Poke notification forced! Check the header.");
+	}
+
+	// Make it globally accessible
+	window.forceShowPokeNotification = forceShowPokeNotification;
+	
 	// Manual function to check pokes (for debugging)
 	function checkPokes() {
     	console.log("🔍 Manual poke check...");
@@ -1884,11 +1946,14 @@ window.addEventListener('beforeunload', function() {
 	window.checkPokes = checkPokes;
 	
 	function showPokeDetails() {
+	    console.log("🔔 showPokeDetails called");
 	    var pendingPokes = pokeNotifications.filter(function(p) { return p.status === 'pending'; });
+	    console.log("🔔 Pending pokes in showPokeDetails:", pendingPokes.length);
+	    
 	    if (pendingPokes.length === 0) {
 	        alert("No pending pokes.");
 	        return;
-	    }
+		    }
 	    
 	    var modal = document.createElement("div");
 	    modal.className = "modal-overlay";
@@ -2738,13 +2803,23 @@ window.addEventListener('beforeunload', function() {
 		// Load pokes for the current user
 		if (currentUser) {
 		    console.log("🔔 Loading pokes for user in initUI:", currentUser);
+		    // Try multiple times with delays to ensure DOM is ready
 		    setTimeout(function() {
 		        loadPokes();
-		        // Set up real-time subscription
 		        setTimeout(function() {
 		            setupPokeSubscription();
-		            // Start polling as fallback
 		            startPokePolling();
+		            // Force check after 5 seconds
+		            setTimeout(function() {
+		                console.log("🔔 Force checking pokes after 5 seconds...");
+		                loadPokes();
+		                // Force show notification if there are pending pokes
+		                var pendingPokes = pokeNotifications.filter(function(p) { return p.status === 'pending'; });
+		                if (pendingPokes.length > 0) {
+		                    updatePokeNotification();
+		                    console.log("🔔 Force updated poke notification with", pendingPokes.length, "pokes");
+		                }
+		            }, 5000);
 		        }, 500);
 		    }, 500);
 		}
