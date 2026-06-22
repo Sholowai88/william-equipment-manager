@@ -3043,188 +3043,394 @@ window.addEventListener('beforeunload', function() {
         });
     }
     
-    // Enhanced AI Assistant with Intelligence
-    let isDraggingAI = false, dragStartXAI, dragStartYAI;
-    const aiAssistantDiv = document.getElementById('aiAssistant');
-    const aiChatWin = document.getElementById('aiChatWindow');
-    const aiHeader = document.getElementById('aiChatHeader');
+    // ============================================================
+	// ENHANCED AI ASSISTANT - Intelligent Equipment Database Guide
+	// ============================================================
+	
+	let isDraggingAI = false, dragStartXAI, dragStartYAI;
+	const aiAssistantDiv = document.getElementById('aiAssistant');
+	const aiChatWin = document.getElementById('aiChatWindow');
+	const aiHeader = document.getElementById('aiChatHeader');
+	
+	// ============================================================
+	// AI KNOWLEDGE BASE - Comprehensive Database of Information
+	// ============================================================
 
-    // Intelligent response database
-    const aiKnowledgeBase = {
-        // Equipment management related
-        'in record': 'To perform an IN record: 1) Select equipment from Equipment DB page, 2) Go to In/Out Record page, 3) Select "IN" status, 4) Fill required fields (Job Type, Purpose, ET, SET, Physicist), 5) Sign and save. The equipment status will update to IN automatically.',
-        'out record': 'To perform an OUT record: 1) Select equipment from Equipment DB page, 2) Go to In/Out Record page, 3) Select "OUT" status, 4) Fill required fields (Job Type, Purpose, ET, SET, Physicist), 5) Sign and save. The equipment status will update to OUT automatically.',
-        'how to in': 'To check IN equipment: Select equipment → In/Out Record → Choose "IN" status → Complete form → Sign → Save. Equipment will be marked as returned.',
-        'how to out': 'To check OUT equipment: Select equipment → In/Out Record → Choose "OUT" status → Complete form → Sign → Save. Equipment will be marked as checked out.',
-        'add equipment': 'To add new equipment: Go to Equipment DB page → Click "Add New" button → Fill equipment details (Asset Number, Description, Manufacturer, Serial Number, Location) → Confirm. Asset Number cannot be changed after creation.',
-        'edit equipment': 'To edit equipment: Find equipment in Equipment DB → Click "Edit" button → Modify allowed fields (Asset Number is locked after creation) → Save changes. All changes are synced to cloud.',
-        'history': 'History Logs page shows all transactions. You can filter by Job Type, Status, Date, and sort records. Each record shows equipment details, personnel, and signature.',
-        'signature': 'Draw your signature on the canvas in In/Out Record page. Use mouse or touch. Clear button resets the signature. Signature is required for all transactions.',
-        'job type': 'Job types include: PM (Preventive Maintenance), CM (Corrective Maintenance), QA (Quality Assurance), AT (Acceptance Test), OTH (Others). Choose the appropriate type for your transaction.',
-        'et': 'ET refers to Engineering Technician. Available ETs: Heung, Andy, Vincent, William, Pal, Joe, Richard, Ray, N/A. Multiple ETs can be selected using Ctrl/Cmd+Click.',
-        'set': 'SET options: Reeve, Kelvin, Deputizing. Select the supervisor responsible for the work.',
-        'physicist': 'Physicist options: Xiao Li, Celina, Keith, Jacky, Martin, RT Phy., N/A. Select the physicist involved in the transaction.',
-        'backup': 'Backup function (Admin only): Creates JSON backup of entire database including equipment, status, history, and logs.',
-        'restore': 'Restore function (Admin only): Restores database from backup file. Use carefully as it overwrites current data.',
-        'refresh': 'Refresh button syncs data from cloud. Limited to once every 5 seconds to prevent database overload.',
-        'export': 'Export function creates CSV files of history logs or database logs (Admin only for DB logs).',
-    
-        // General assistance
-        'help': 'I can help you with: Equipment IN/OUT procedures, Adding/Editing equipment, Understanding job types and personnel roles, Database backup/restore (Admin), History logs and exports, Signature requirements. What would you like to know?',
-        'guideline': 'User Guidelines: 1) Always select equipment before IN/OUT transaction, 2) Signature is mandatory, 3) Asset Number cannot be changed after creation, 4) Refresh limited to 5 seconds, 5) Admin has backup/restore privileges.',
-        'troubleshooting': 'Common issues: 1) "Status conflict" - Equipment already has that status, 2) "Sync Error" - Check internet connection and refresh, 3) "Duplicate asset" - Asset number must be unique, 4) "Signature required" - Draw signature before saving.',
-    };
-
-    // Advanced AI response function
-    function getAIResponse(userMessage) {
-        var msg = userMessage.toLowerCase().trim();
-    
-        // Check knowledge base for matching keywords
-        for (var keyword in aiKnowledgeBase) {
-            if (msg.includes(keyword)) {
-                return aiKnowledgeBase[keyword];
-            }
-        }
-    
-        // Statistical analysis responses
-        var totalEquipment = equipmentData ? equipmentData.length : 0;
-        var totalRecords = historyRecords ? historyRecords.length : 0;
-        var inCount = Object.values(equipStatus).filter(s => s === 'IN').length;
-        var outCount = Object.values(equipStatus).filter(s => s === 'OUT').length;
-    
-        if (msg.includes('statistic') || msg.includes('stat') || msg.includes('summary')) {
-            return `📊 Database Statistics:\n\n• Total Equipment: ${totalEquipment}\n• Equipment IN: ${inCount}\n• Equipment OUT: ${outCount}\n• Total Transactions: ${totalRecords}\n• Active Users: ${window.users ? Object.keys(window.users).length : 'Loading...'}\n\nNeed more specific statistics?`;
-        }
-    
-        if (msg.includes('how many') || msg.includes('count')) {
-            return `📈 Current counts:\n- Equipment: ${totalEquipment} items\n- IN status: ${inCount} items\n- OUT status: ${outCount} items\n- History records: ${totalRecords} transactions`;
-        }
-    
-        // Workflow assistance
-        if (msg.includes('workflow') || msg.includes('process')) {
-            return `🔄 Standard Workflow:\n1. Browse equipment in Equipment DB\n2. Select equipment for transaction\n3. Go to In/Out Record page\n4. Fill transaction details (Date, Status, Job Type, Purpose)\n5. Select personnel (ET, SET, Physicist)\n6. Draw signature\n7. Preview and Save\n8. Record appears in History Logs`;
-        }
-    
-        // Role-specific responses
-        if (msg.includes('admin') && currentUserRole === 'admin') {
-            return `👑 Administrator Privileges:\n- Backup/Restore database\n- View DB Logs (all system actions)\n- Create new super-users\n- Edit any equipment\n- View equipment statistics\n- Export all logs\n\nCurrent role: ${currentUserRole}`;
-        }
-    
-        if (msg.includes('super-user') || (msg.includes('my role') && currentUserRole === 'super')) {
-            return `👤 Super-user Privileges:\n- Create IN/OUT records\n- Add new equipment\n- Edit equipment (except Asset Number)\n- View history logs\n- Export history to CSV\n- Change password\n- Cannot access DB Logs or Backup/Restore`;
-        }
-    
-        // Intelligent responses using ML-simulated patterns
-        if (msg.includes('trend') || msg.includes('pattern')) {
-            var recentOuts = historyRecords.filter(r => r.status === 'OUT').slice(0, 10);
-            var frequentEquipment = {};
-            historyRecords.forEach(r => {
-                if (r.equipmentDetails) {
-                    r.equipmentDetails.forEach(e => {
-                        var key = e.assetDesc;
-                        frequentEquipment[key] = (frequentEquipment[key] || 0) + 1;
-                    });
-                }
-            });
-            var sorted = Object.entries(frequentEquipment).sort((a,b) => b[1] - a[1]).slice(0, 3);
-            var topEquipment = sorted.map(s => `${s[0]} (${s[1]}x)`).join(', ');
-            return `📈 Usage Patterns Detected:\n\n• Most used equipment: ${topEquipment || 'No data yet'}\n• Recent OUT transactions: ${recentOuts.length} in last 10 records\n• Total transaction volume: ${totalRecords}\n\nTip: Regular maintenance reduces equipment OUT frequency.`;
-        }
-    
-        if (msg.includes('recommend') || msg.includes('suggest')) {
-            var highUsageEquipment = [];
-            var usageMap = {};
-            historyRecords.forEach(r => {
-                if (r.equipmentDetails) {
-                    r.equipmentDetails.forEach(e => {
-                        usageMap[e.assetDesc] = (usageMap[e.assetDesc] || 0) + 1;
-                    });
-                }
-            });
-            for (var eq in usageMap) {
-                if (usageMap[eq] > 5) highUsageEquipment.push(eq);
-            }
-            if (highUsageEquipment.length > 0) {
-                return `💡 Recommendation: The following equipment has high usage frequency (${highUsageEquipment.length} items). Consider scheduling preventive maintenance:\n${highUsageEquipment.slice(0, 5).join(', ')}`;
-            }
-            return `💡 Recommendation: Regular database refresh ensures data sync. Use filters to find equipment faster. For frequent transactions, prepare purpose templates in advance.`;
-        }
-    
-        // Default intelligent response
-        return `🤖 I'm your AI Engineering Assistant!\n\nI can help with:\n• Equipment IN/OUT procedures\n• Adding/editing equipment\n• Understanding job types (PM, CM, QA, AT)\n• Personnel roles (ET, SET, Physicist)\n• Database statistics and trends\n• Workflow optimization\n\nCurrent database status:\n📊 ${totalEquipment} equipment items, ${totalRecords} transactions\n\nWhat specific assistance do you need?`;
-    }
-
-    // AI Chat functionality
-    if (aiHeader) {
-        aiHeader.addEventListener('mousedown', (e) => { isDraggingAI = true; dragStartXAI = e.clientX - aiChatWin.offsetLeft; dragStartYAI = e.clientY - aiChatWin.offsetTop; aiChatWin.style.position = 'fixed'; });
-        document.addEventListener('mousemove', (e) => { if (isDraggingAI) { let newLeft = e.clientX - dragStartXAI; let newTop = e.clientY - dragStartYAI; newLeft = Math.max(10, Math.min(window.innerWidth - aiChatWin.offsetWidth - 10, newLeft)); newTop = Math.max(10, Math.min(window.innerHeight - aiChatWin.offsetHeight - 10, newTop)); aiChatWin.style.left = newLeft + 'px'; aiChatWin.style.top = newTop + 'px'; aiChatWin.style.right = 'auto'; aiChatWin.style.bottom = 'auto'; } });
-        document.addEventListener('mouseup', () => { isDraggingAI = false; });
-    }
-
-    if (aiAssistantDiv) {
-        aiAssistantDiv.onclick = () => { 
-            aiChatWin.style.display = 'flex'; 
-            aiChatWin.style.right = '30px'; 
-            aiChatWin.style.bottom = '110px'; 
-            aiChatWin.style.left = 'auto'; 
-            aiChatWin.style.top = 'auto';
-            // Add welcome message if conversation is empty
-            var messages = document.getElementById('aiMessages');
-            if (messages.children.length === 0) {
-                messages.innerHTML = `<div class="message bot"><div class="message-bubble">🤖 Hello! I'm your intelligent AI Engineering Assistant. I can help with equipment management, provide statistics, analyze usage patterns, and answer questions about the system. What would you like to know?</div></div>`;
-            }
-        };
-    }
-
-    const closeBtnChat = document.getElementById('closeAiChat');
-    if (closeBtnChat) closeBtnChat.onclick = () => { aiChatWin.style.display = 'none'; };
-
-    const sendBtnChat = document.getElementById('aiSendBtn');
-    const aiInput = document.getElementById('aiInput');
-
-    function sendAIMessage() {
-        const msg = aiInput.value.trim();
-        if (msg) {
-            // Add user message
-            document.getElementById('aiMessages').innerHTML += `<div class="message user"><div class="message-bubble">${escapeHtml(msg)}</div></div>`;
-            aiInput.value = '';
-        
-            // Show typing indicator
-            document.getElementById('aiMessages').innerHTML += `<div class="message bot" id="typingIndicator"><div class="message-bubble">🤔 Thinking...</div></div>`;
-            document.getElementById('aiMessages').scrollTop = document.getElementById('aiMessages').scrollHeight;
-        
-            // Simulate AI processing time
-            setTimeout(() => {
-                // Remove typing indicator
-                var indicator = document.getElementById('typingIndicator');
-                if (indicator) indicator.remove();
-            
-                // Get intelligent response
-                var response = getAIResponse(msg);
-                document.getElementById('aiMessages').innerHTML += `<div class="message bot"><div class="message-bubble">${response}</div></div>`;
-                document.getElementById('aiMessages').scrollTop = document.getElementById('aiMessages').scrollHeight;
-            }, 500);
-        }
-    }
-
-    // Helper function to escape HTML
-    function escapeHtml(text) {
-        var div = document.createElement('div');
-        div.appendChild(document.createTextNode(text));
-        return div.innerHTML;
-    }
-
-    if (sendBtnChat) {
-        sendBtnChat.onclick = sendAIMessage;
-    }
-
-    if (aiInput) {
-        aiInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendAIMessage();
-            }
-        });
-    }
+	const aiKnowledgeBase = {
+	    // ----- INTRODUCTION & OVERVIEW -----
+	    'introduction': 'Welcome to the NTWC MPU DR Workshop Equipment Database! 🏥\n\nThis system helps you manage medical equipment inventory, track IN/OUT transactions, and maintain quality assurance records.\n\n🔹 What you can do:\n• View and search equipment database\n• Check equipment IN/OUT status\n• Create transaction records\n• Track history logs\n• Manage user accounts (Admin)\n\nNeed help? Ask me anything about the system!',
+	    'what is this': 'This is the NTWC MPU DR Workshop Equipment Management System. It\'s a web-based database for tracking medical equipment used in radiology departments. You can manage equipment inventory, record IN/OUT transactions, and maintain quality assurance records.',
+	    'how to use': 'Here\'s how to get started:\n\n1️⃣ Login with your credentials\n2️⃣ Browse equipment in "Equipment DB" page\n3️⃣ Select equipment and create IN/OUT records\n4️⃣ View transaction history in "History Logs" page\n5️⃣ Admins can access "DB Logs" for audit trails\n\n💡 Tip: Use filters to find equipment quickly!',
+	    'getting started': 'Welcome! To get started with the Equipment Database:\n\n1. Login using your assigned username and password\n2. Explore the "Equipment DB" to view all equipment\n3. Select equipment to perform IN/OUT transactions\n4. Check "History Logs" for past records\n5. Use "Account" to manage your profile\n\nI\'m here to help at every step!',
+	
+	    // ----- EQUIPMENT MANAGEMENT -----
+	    'equipment': 'The Equipment Database stores all medical equipment information including:\n\n📦 Asset Number (unique identifier)\n📝 Description\n🏭 Manufacturer\n🔢 Serial Number\n📍 Location\n👤 Asset Owner\n📊 Current Status (IN/OUT)\n\nYou can search, filter, and manage all equipment from the "Equipment DB" page.',
+	    'view equipment': 'To view equipment:\n\n1️⃣ Go to "Equipment DB" tab\n2️⃣ Browse the list of equipment\n3️⃣ Use the search bar to find specific items\n4️⃣ Filter by Location or Parent Asset\n5️⃣ Click "Show" to view detailed information\n6️⃣ Click "Edit" to modify equipment details (Asset Number is locked after creation)',
+	    'search equipment': 'To search for equipment:\n\n🔍 Use the search bar in "Equipment DB" page\n🔍 Search by Asset Number, Description, Manufacturer, or Serial Number\n🔍 Use the Location filter to find equipment in specific areas\n🔍 Use the Parent Asset filter for related equipment\n🔍 Use the Status filter to show IN or OUT items',
+	    'filter equipment': 'Filtering helps you find equipment faster!\n\n📌 Location Filter: Find equipment at POH, TMH, or TSH\n📌 Parent Asset Filter: Show equipment under specific parent assets\n📌 Status Filter: Show only IN or OUT equipment\n📌 Search Bar: Quick search across multiple fields\n\nCombine filters for precise results!',
+	
+	    // ----- IN/OUT RECORDS -----
+	    'in record': '📥 To perform an IN record (Return):\n\n1️⃣ Select equipment from Equipment DB page\n2️⃣ Go to "In/Out Record" page\n3️⃣ Select "IN" status\n4️⃣ Fill required fields:\n   • Date & Time (HK) - use "Today" button\n   • Job Type (PM, CM, QA, AT, OTH)\n   • Purpose of transaction\n   • ET (Ctrl/Cmd+Click for multiple)\n   • SET (Supervisor)\n   • Physicist\n   • Others (optional)\n   • Remarks (optional)\n5️⃣ Draw your signature\n6️⃣ Click "Preview" to review\n7️⃣ Click "Save Record"\n\nThe equipment status will update to IN automatically! ✅',
+	    
+	    'out record': '📤 To perform an OUT record (Check-out):\n\n1️⃣ Select equipment from Equipment DB page\n2️⃣ Go to "In/Out Record" page\n3️⃣ Select "OUT" status\n4️⃣ Fill required fields:\n   • Date & Time (HK) - use "Today" button\n   • Job Type (PM, CM, QA, AT, OTH)\n   • Purpose of transaction\n   • ET (Ctrl/Cmd+Click for multiple)\n   • SET (Supervisor)\n   • Physicist\n   • Others (optional)\n   • Remarks (optional)\n5️⃣ Draw your signature\n6️⃣ Click "Preview" to review\n7️⃣ Click "Save Record"\n\nThe equipment status will update to OUT automatically! 🚪',
+	    
+	    'how to in': '📥 To check IN equipment:\n\nSelect equipment → In/Out Record → Choose "IN" → Complete form → Sign → Save\n\nEquipment will be marked as returned. The system will update the status automatically.',
+	    'how to out': '📤 To check OUT equipment:\n\nSelect equipment → In/Out Record → Choose "OUT" → Complete form → Sign → Save\n\nEquipment will be marked as checked out. The system will update the status automatically.',
+	    'job type': 'Job Types explained:\n\n🛠️ PM - Preventive Maintenance\n🛠️ CM - Corrective Maintenance\n🛠️ QA - Quality Assurance\n🛠️ AT - Acceptance Test\n🛠️ OTH - Others (specify in purpose)\n\nChoose the appropriate type for your transaction.',
+	    'purpose': 'The "Purpose" field describes the specific reason for the transaction.\n\n📌 Examples:\n• "26QA TMH PMS" - Quality Assurance test\n• "Annual calibration" - Calibration service\n• "Repair of X-ray unit" - Corrective maintenance\n• "Acceptance test for new equipment" - Acceptance testing\n\nBe specific to help with record tracking!',
+	    'status conflict': '⚠️ Status Conflict Error:\n\nThis occurs when you try to perform "IN" on equipment that is already IN, or "OUT" on equipment that is already OUT.\n\n🔹 Solution: Check the current status of the equipment first.\n🔹 If equipment is already IN, you cannot check it IN again.\n🔹 If equipment is already OUT, you cannot check it OUT again.\n\n💡 Tip: Use the Status filter to see which equipment is currently IN or OUT.',
+	    
+	    // ----- PERSONNEL -----
+	    'et': '⚡ ET - Engineering Technician\n\nAvailable ETs:\n• Heung, Andy, Vincent, William\n• Pal, Joe, Richard, Ray\n• N/A (if not applicable)\n\n💡 Tip: Use Ctrl/Cmd+Click to select multiple ETs!\n\nETs are responsible for performing the equipment maintenance or testing.',
+	    'set': '🔧 SET - Supervisor\n\nAvailable SET options:\n• Reeve\n• Kelvin\n• Deputizing\n\nChoose the supervisor responsible for overseeing the work.',
+	    'physicist': '🧪 Physicist\n\nAvailable Physicists:\n• Xiao Li\n• Celina\n• Keith\n• Jacky\n• Martin\n• RT Phy.\n• N/A\n\nSelect the physicist involved in the quality assurance or testing.',
+	    'others': '📝 Others Field\n\nUse this field for:\n• Deputizing name (when someone is deputizing)\n• Additional personnel not listed\n• Special notes about who performed the work\n\nExample: "Deputizing: John Smith"',
+	    
+	    // ----- SIGNATURE -----
+	    'signature': '✍️ Signature Requirements:\n\n• Signature is mandatory for all transactions\n• Draw your signature on the canvas using mouse or touch\n• Use the "Clear Signature" button to redraw\n• Signature is saved with the record\n• Click "Preview" to see your signature before saving\n\n💡 Tip: Use a stylus or your finger for better control!',
+	    'how to sign': 'To draw your signature:\n\n1️⃣ Use your mouse, finger, or stylus on the signature canvas\n2️⃣ Press and drag to draw\n3️⃣ Click "Clear Signature" to start over\n4️⃣ Your signature is saved when you click "Save Record"\n\n📱 Works on both desktop and mobile devices!',
+	    
+	    // ----- HISTORY LOGS -----
+	    'history': '📜 History Logs\n\nThe History Logs page shows all transaction records.\n\n🔹 What you can do:\n• View all IN/OUT transactions\n• Filter by Job Type, Status, or Record Status\n• Sort by Date (Ascending/Descending)\n• Export to CSV\n• Preview records\n• Edit records (with authorization)\n• Email records\n• Poke colleagues\n\nEach record shows equipment details, personnel, and signature.',
+	    'view history': 'To view transaction history:\n\n1️⃣ Go to "History Logs" page\n2️⃣ Use filters to narrow down results\n3️⃣ Click "Sort by Date" to order records\n4️⃣ Use "Export" to download CSV file\n5️⃣ Click "Preview" to see full record details\n6️⃣ Click "Edit" to modify records\n7️⃣ Click "Email" to send record via email\n8️⃣ Click "Poke" to notify colleagues\n\n📅 Use date range filters for specific periods!',
+	    'export history': '📎 Export History Logs:\n\n1️⃣ Go to "History Logs" page\n2️⃣ Select date range (Start Date and End Date)\n3️⃣ Click "Export" button\n4️⃣ CSV file will download automatically\n5️⃣ File name: history_logs_YYYYMMDD.csv\n\n💡 Tip: Use date filters to export specific periods!',
+	    
+	    // ----- DB LOGS (Admin) -----
+	    'db logs': '📊 DB Logs (Admin Only)\n\nDB Logs track all system activities:\n\n🔹 What\'s recorded:\n• Login Success/Failed attempts\n• Logout events\n• Session starts\n• User creation\n• Password changes\n• Record creation/editing\n• Equipment added/edited\n• Backup/Restore actions\n• Supabase Backup\n• Poke sent/back\n\n🔹 Only Administrators can view DB Logs',
+	    'admin logs': '👑 As an Administrator, you can:\n\n• View all DB Logs\n• Monitor user activities\n• Track system changes\n• Audit security events\n• Export logs to CSV\n• Filter by action type\n• Sort by date\n\n💡 Use DB Logs for security auditing and troubleshooting!',
+	    
+	    // ----- BACKUP & RESTORE -----
+	    'backup': '💾 Backup (Admin Only)\n\nCreates a JSON backup of the entire database.\n\n🔹 What\'s backed up:\n• Equipment data\n• Equipment status\n• History records\n• DB logs\n\n📁 File format: backup - ntwc_mpu_drws_equipment_database - YYYYMMDD.json\n\n💡 Regular backups help protect your data!',
+	    'restore': '📂 Restore (Admin Only)\n\nRestores the database from a backup file.\n\n⚠️ WARNING:\n• This will overwrite current data\n• Use with caution\n• Only restore from trusted backup files\n• Consider creating a backup before restoring\n\n💡 Always verify the backup file before restoring!',
+	    'supabase backup': '☁️ Supabase Backup (Admin Only)\n\nCreates a ZIP file containing CSV exports of all tables.\n\n📦 Tables exported:\n• db_logs.csv\n• equip_status.csv\n• equipment_data.csv\n• history_records.csv\n• users.csv\n• pokes.csv\n\n📁 File format: supabase_backup_YYYYMMDD.zip\n\n💡 Use this for complete database backups!',
+	    
+	    // ----- POKE SYSTEM -----
+	    'poke': '🔔 Poke System\n\nThe Poke system allows you to grab attention without typing a full message.\n\n🔹 How it works:\n1. Go to History Logs page\n2. Click "Poke" button on a record\n3. Select ET, SET, or Physicist to poke\n4. Recipients get a notification\n5. They can Acknowledge, Ignore, or Poke Back\n\n💡 Great for quick follow-ups and reminders!',
+	    'how to poke': 'To send a poke:\n\n1️⃣ Go to "History Logs" page\n2️⃣ Find the record you want to reference\n3️⃣ Click the "🔔 Poke" button\n4️⃣ Select who to poke (ET, SET, Physicist)\n5️⃣ Click "Send Poke"\n6️⃣ Recipients receive a notification\n7️⃣ They can respond or ignore\n\n💡 You cannot poke yourself!',
+	    'poke notification': '🔔 Poke Notifications:\n\nWhen you receive a poke:\n• 🔔 icon appears in the header\n• Shows number of pending pokes\n• Click to view details\n• Choose to: Acknowledge 👍, Ignore 👋, or Poke Back 🔔\n• Responding dismisses the notification\n• Closing without responding keeps it active',
+	    
+	    // ----- ACCOUNT MANAGEMENT -----
+	    'account': '👤 Account Management\n\nYou can manage your account from the "Account" button in the header.\n\n🔹 What you can do:\n• View your username and role\n• Change your password\n• Admins can create new super-users\n\n🔹 Password requirements:\n• Minimum 3 characters\n• Case sensitive\n• Confirm new password when changing',
+	    'change password': '🔑 To change your password:\n\n1️⃣ Click "Account" button in the header\n2️⃣ Enter your current password\n3️⃣ Enter your new password\n4️⃣ Confirm your new password\n5️⃣ Click "Change Password"\n\n✅ Password updated immediately!\n\n💡 Choose a strong password for security!',
+	    'create user': '👤 Create New User (Admin Only):\n\n1️⃣ Click "Account" button\n2️⃣ Enter new username\n3️⃣ Enter new password (minimum 3 characters)\n4️⃣ Click "Create User"\n\n🔹 New users are created as "super-user" role\n🔹 Only Administrators can create users\n🔹 Usernames must be unique',
+	    
+	    // ----- TROUBLESHOOTING -----
+	    'troubleshooting': '🔧 Common Issues & Solutions:\n\n1. "Status conflict" - Equipment already has that status\n   → Check current status before transaction\n\n2. "Sync Error" - Check internet connection and refresh\n   → Use the Refresh button\n\n3. "Duplicate asset" - Asset number must be unique\n   → Use a different asset number\n\n4. "Signature required" - Draw signature before saving\n   → Use mouse/touch to sign\n\n5. "No equipment selected" - Select equipment first\n   → Check the checkbox on equipment\n\nNeed more help? Ask me specific questions!',
+	    'error': 'Common errors and solutions:\n\n❌ "Status conflict": Equipment already has that status\n❌ "Sync Error": Refresh your page\n❌ "Duplicate asset": Use a unique asset number\n❌ "Signature required": Draw your signature\n❌ "No equipment selected": Select equipment first\n\n💡 Always check your inputs before saving!',
+	    'sync error': '🔄 "Sync Error" occurs when data can\'t sync with the cloud.\n\n🔹 Solutions:\n1. Check your internet connection\n2. Click the "Refresh" button\n3. Wait a few seconds and try again\n4. Reload the page\n5. Contact support if issue persists\n\n💡 The Refresh button has a 5-second cooldown to prevent overload.',
+	    'refresh': '🔄 Refresh Button\n\nThe Refresh button syncs data from the cloud.\n\n🔹 What it does:\n• Syncs equipment data\n• Syncs status records\n• Syncs history logs\n• Preserves DB logs (no data loss)\n\n⏳ Cooldown: 5 seconds between refreshes\n\n💡 Use only when needed to check for updates!',
+	    
+	    // ----- GENERAL HELP -----
+	    'help': '🤖 I\'m your AI Engineering Assistant!\n\nI can help you with:\n\n📋 Equipment Management\n• Viewing and searching equipment\n• Adding new equipment\n• Editing equipment details\n\n📤 IN/OUT Records\n• Performing IN transactions\n• Performing OUT transactions\n• Understanding job types\n\n👤 Personnel Management\n• ET, SET, Physicist roles\n• Account management\n\n📊 History & Logs\n• Viewing history records\n• Exporting data\n• DB Logs (Admin)\n\n🔔 Poke System\n• Sending pokes\n• Receiving notifications\n• Responding to pokes\n\nWhat would you like to know?',
+	    'guide': '📚 User Guide - Quick Reference\n\n1️⃣ Login → Use your credentials\n2️⃣ Equipment DB → View and manage equipment\n3️⃣ In/Out Record → Create transactions\n4️⃣ History Logs → View past records\n5️⃣ DB Logs → Admin audit trail\n6️⃣ Account → Manage profile\n7️⃣ Refresh → Sync data from cloud\n\n💡 I\'m here to help with any questions!',
+	    'shortcuts': '⌨️ Quick Tips:\n\n• Use "Today" button for current date/time\n• Ctrl/Cmd+Click to select multiple ETs\n• Use filters for faster searches\n• Click "Preview" before saving records\n• Use date range for exports\n• Regular backups protect your data\n\n💡 These shortcuts save time!',
+	    'welcome': '👋 Welcome to the NTWC MPU DR Workshop Equipment Database!\n\nI\'m your AI Assistant - here to help you navigate the system.\n\n🔹 New user? Start with "Getting Started"\n🔹 Need help? Ask about specific features\n🔹 Quick reference? Type "Guide"\n\n💡 What would you like to learn about?',
+	    'hello': 'Hello! 👋 I\'m your Engineering AI Assistant.\n\nI\'m here to help you with:\n• Equipment management\n• IN/OUT transactions\n• Account and user management\n• Database operations\n• Troubleshooting\n\nWhat can I help you with today?',
+	};
+	
+	// ============================================================
+	// ENHANCED AI RESPONSE FUNCTION
+	// ============================================================
+	
+	function getAIResponse(userMessage) {
+	    var msg = userMessage.toLowerCase().trim();
+	    
+	    // Check for greetings
+	    var greetings = ['hello', 'hi', 'hey', 'greetings', 'good morning', 'good afternoon', 'good evening'];
+	    for (var g = 0; g < greetings.length; g++) {
+	        if (msg.includes(greetings[g])) {
+	            return "Hello! 👋\n\nWelcome to the Equipment Management System.\n\nI can help you with:\n• Equipment management and searching\n• IN/OUT transactions\n• Account management\n• History logs and exports\n• Troubleshooting\n• And more!\n\nWhat would you like to know? (Type 'help' for options)";
+	        }
+	    }
+	    
+	    // Thank you responses
+	    if (msg.includes('thank') || msg.includes('thanks')) {
+	        return "You're welcome! 😊\n\nIs there anything else I can help you with?\n\n• Type 'help' for available topics\n• Ask me about specific features\n• I'm here 24/7 to assist you!";
+	    }
+	    
+	    // Goodbye responses
+	    if (msg.includes('bye') || msg.includes('goodbye') || msg.includes('see you')) {
+	        return "Goodbye! 👋\n\nIt was a pleasure helping you.\n\n📌 Remember:\n• Check the Refresh button for latest data\n• Regular backups save your data\n• I'm always here when you need help\n\nHave a great day!";
+	    }
+	    
+	    // Check knowledge base for matching keywords
+	    for (var keyword in aiKnowledgeBase) {
+	        if (msg.includes(keyword)) {
+	            return aiKnowledgeBase[keyword];
+	        }
+	    }
+	    
+	    // Statistical analysis responses
+	    var totalEquipment = equipmentData ? equipmentData.length : 0;
+	    var totalRecords = historyRecords ? historyRecords.length : 0;
+	    var inCount = Object.values(equipStatus).filter(s => s === 'IN').length;
+	    var outCount = Object.values(equipStatus).filter(s => s === 'OUT').length;
+	    
+	    // Check for statistics keywords
+	    if (msg.includes('statistic') || msg.includes('stat') || msg.includes('summary') || msg.includes('count')) {
+	        return "📊 Database Statistics:\n\n" +
+	               "• Total Equipment: " + totalEquipment + " items\n" +
+	               "• Equipment IN: " + inCount + " items\n" +
+	               "• Equipment OUT: " + outCount + " items\n" +
+	               "• Total Transactions: " + totalRecords + " records\n" +
+	               "• Active Users: " + (window.users ? Object.keys(window.users).length : 'Loading...') + "\n\n" +
+	               "Need more specific statistics? Ask about a particular type!";
+	    }
+	    
+	    // Check for equipment-specific questions
+	    if (msg.includes('how many equipment') || msg.includes('total equipment')) {
+	        return "📦 Total Equipment: " + totalEquipment + " items\n\n" +
+	               "• IN: " + inCount + " items\n" +
+	               "• OUT: " + outCount + " items\n\n" +
+	               "You can view all equipment in the Equipment DB page.";
+	    }
+	    
+	    // Workflow assistance
+	    if (msg.includes('workflow') || msg.includes('process')) {
+	        return "🔄 Standard Workflow:\n\n" +
+	               "1️⃣ Browse equipment in Equipment DB\n" +
+	               "2️⃣ Select equipment for transaction\n" +
+	               "3️⃣ Go to In/Out Record page\n" +
+	               "4️⃣ Fill transaction details:\n" +
+	               "   • Date & Time (use 'Today' button)\n" +
+	               "   • Status (IN/OUT)\n" +
+	               "   • Job Type (PM/CM/QA/AT/OTH)\n" +
+	               "   • Purpose\n" +
+	               "   • Personnel (ET, SET, Physicist)\n" +
+	               "5️⃣ Draw signature\n" +
+	               "6️⃣ Preview and Save\n" +
+	               "7️⃣ Record appears in History Logs\n\n" +
+	               "💡 Need details? Ask about any step!";
+	    }
+	    
+	    // Role-specific responses
+	    if (msg.includes('admin') && currentUserRole === 'admin') {
+	        return "👑 Administrator Privileges:\n\n" +
+	               "🔹 Backup/Restore database\n" +
+	               "🔹 View DB Logs (all system actions)\n" +
+	               "🔹 Create new super-users\n" +
+	               "🔹 Edit any equipment\n" +
+	               "🔹 View equipment statistics\n" +
+	               "🔹 Export all logs\n" +
+	               "🔹 Supabase Backup (ZIP export)\n\n" +
+	               "Current role: " + currentUserRole + "\n\n" +
+	               "Need help with any admin feature?";
+	    }
+	    
+	    if (msg.includes('super-user') || (msg.includes('my role') && currentUserRole === 'super')) {
+	        return "👤 Super-user Privileges:\n\n" +
+	               "🔹 Create IN/OUT records\n" +
+	               "🔹 Add new equipment\n" +
+	               "🔹 Edit equipment (except Asset Number)\n" +
+	               "🔹 View history logs\n" +
+	               "🔹 Export history to CSV\n" +
+	               "🔹 Change password\n" +
+	               "🔹 Use Poke system\n\n" +
+	               "❌ Cannot access DB Logs or Backup/Restore\n\n" +
+	               "Current role: " + currentUserRole;
+	    }
+	    
+	    // Intelligent responses using ML-simulated patterns
+	    if (msg.includes('trend') || msg.includes('pattern') || msg.includes('most used')) {
+	        var frequentEquipment = {};
+	        historyRecords.forEach(function(r) {
+	            if (r.equipmentDetails) {
+	                r.equipmentDetails.forEach(function(e) {
+	                    var key = e.assetDesc;
+	                    frequentEquipment[key] = (frequentEquipment[key] || 0) + 1;
+	                });
+	            }
+	        });
+	        var sorted = Object.entries(frequentEquipment).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 3);
+	        var topEquipment = sorted.map(function(s) { return s[0] + ' (' + s[1] + 'x)'; }).join(', ');
+	        var recentOuts = historyRecords.filter(function(r) { return r.status === 'OUT'; }).slice(0, 10);
+	        
+	        return "📈 Usage Patterns Detected:\n\n" +
+	               "• Most used equipment: " + (topEquipment || 'No data yet') + "\n" +
+	               "• Recent OUT transactions: " + recentOuts.length + " in last 10 records\n" +
+	               "• Total transaction volume: " + totalRecords + "\n\n" +
+	               "💡 Tip: Regular maintenance reduces equipment OUT frequency.";
+	    }
+	    
+	    if (msg.includes('recommend') || msg.includes('suggest') || msg.includes('tip')) {
+	        var usageMap = {};
+	        historyRecords.forEach(function(r) {
+	            if (r.equipmentDetails) {
+	                r.equipmentDetails.forEach(function(e) {
+	                    usageMap[e.assetDesc] = (usageMap[e.assetDesc] || 0) + 1;
+	                });
+	            }
+	        });
+	        var highUsageEquipment = [];
+	        for (var eq in usageMap) {
+	            if (usageMap[eq] > 5) highUsageEquipment.push(eq);
+	        }
+	        if (highUsageEquipment.length > 0) {
+	            return "💡 Recommendation:\n\n" +
+	                   "The following equipment has high usage frequency (" + highUsageEquipment.length + " items):\n" +
+	                   "• " + highUsageEquipment.slice(0, 5).join('\n• ') + "\n\n" +
+	                   "Consider scheduling preventive maintenance for these items.";
+	        }
+	        return "💡 Recommendations:\n\n" +
+	               "• Regular database refresh ensures data sync\n" +
+	               "• Use filters to find equipment faster\n" +
+	               "• Prepare purpose templates in advance\n" +
+	               "• Save records regularly\n" +
+	               "• Use the Poke system for quick communication\n\n" +
+	               "Any specific area you'd like tips for?";
+	    }
+	    
+	    // Additional help for beginners
+	    if (msg.includes('beginner') || msg.includes('new user') || msg.includes('first time')) {
+	        return "🌟 Welcome, New User!\n\nHere's your quick-start guide:\n\n" +
+	               "1️⃣ Login with your username and password\n" +
+	               "2️⃣ Explore the Equipment DB page\n" +
+	               "3️⃣ Select equipment and create IN/OUT records\n" +
+	               "4️⃣ View your transactions in History Logs\n" +
+	               "5️⃣ Change your password in Account settings\n\n" +
+	               "💡 I'm here to help! Ask me about any feature.\n\n" +
+	               "Try typing 'help' for a complete list of topics.";
+	    }
+	    
+	    // Default intelligent response with helpful information
+	    return "🤖 I'm your AI Engineering Assistant!\n\n" +
+	           "I can help you with:\n" +
+	           "• Equipment IN/OUT procedures\n" +
+	           "• Adding/editing equipment\n" +
+	           "• Job types (PM, CM, QA, AT, OTH)\n" +
+	           "• Personnel roles (ET, SET, Physicist)\n" +
+	           "• Database statistics and trends\n" +
+	           "• Workflow optimization\n" +
+	           "• Troubleshooting\n\n" +
+	           "Current database status:\n" +
+	           "📊 " + totalEquipment + " equipment items\n" +
+	           "📊 " + totalRecords + " transactions\n\n" +
+	           "💡 Try typing 'help' to see what I can do!\n" +
+	           "🔍 Or ask me a specific question about the system.";
+	}
+	
+	// ============================================================
+	// AI CHAT FUNCTIONALITY
+	// ============================================================
+	
+	if (aiHeader) {
+	    aiHeader.addEventListener('mousedown', function(e) {
+	        isDraggingAI = true;
+	        dragStartXAI = e.clientX - aiChatWin.offsetLeft;
+	        dragStartYAI = e.clientY - aiChatWin.offsetTop;
+	        aiChatWin.style.position = 'fixed';
+	    });
+	    document.addEventListener('mousemove', function(e) {
+	        if (isDraggingAI) {
+	            var newLeft = e.clientX - dragStartXAI;
+	            var newTop = e.clientY - dragStartYAI;
+	            newLeft = Math.max(10, Math.min(window.innerWidth - aiChatWin.offsetWidth - 10, newLeft));
+	            newTop = Math.max(10, Math.min(window.innerHeight - aiChatWin.offsetHeight - 10, newTop));
+	            aiChatWin.style.left = newLeft + 'px';
+	            aiChatWin.style.top = newTop + 'px';
+	            aiChatWin.style.right = 'auto';
+	            aiChatWin.style.bottom = 'auto';
+	        }
+	    });
+	    document.addEventListener('mouseup', function() {
+	        isDraggingAI = false;
+	    });
+	}
+	
+	if (aiAssistantDiv) {
+	    aiAssistantDiv.onclick = function() {
+	        aiChatWin.style.display = 'flex';
+	        aiChatWin.style.right = '30px';
+	        aiChatWin.style.bottom = '110px';
+	        aiChatWin.style.left = 'auto';
+	        aiChatWin.style.top = 'auto';
+	        var messages = document.getElementById('aiMessages');
+	        if (messages.children.length === 0) {
+	            messages.innerHTML = '<div class="message bot"><div class="message-bubble">🤖 Hello! I\'m your intelligent AI Engineering Assistant.\n\nI can help with:\n• Equipment management\n• IN/OUT procedures\n• Account management\n• Troubleshooting\n• Database statistics\n\n💡 Type <strong>help</strong> to see all available topics!\n\nWhat would you like to know?</div></div>';
+	        }
+	    };
+	}
+	
+	const closeBtnChat = document.getElementById('closeAiChat');
+	if (closeBtnChat) {
+	    closeBtnChat.onclick = function() {
+	        aiChatWin.style.display = 'none';
+	    };
+	}
+	
+	const sendBtnChat = document.getElementById('aiSendBtn');
+	const aiInput = document.getElementById('aiInput');
+	
+	function sendAIMessage() {
+	    const msg = aiInput.value.trim();
+	    if (msg) {
+	        // Add user message
+	        var messagesDiv = document.getElementById('aiMessages');
+	        messagesDiv.innerHTML += '<div class="message user"><div class="message-bubble">' + escapeHtml(msg) + '</div></div>';
+	        aiInput.value = '';
+	        
+	        // Show typing indicator
+	        messagesDiv.innerHTML += '<div class="message bot" id="typingIndicator"><div class="message-bubble">🤔 Thinking...</div></div>';
+	        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+	        
+	        // Simulate AI processing time
+	        setTimeout(function() {
+	            // Remove typing indicator
+	            var indicator = document.getElementById('typingIndicator');
+	            if (indicator) indicator.remove();
+	            
+	            // Get intelligent response
+	            var response = getAIResponse(msg);
+	            // Format response with line breaks
+	            var formattedResponse = response.replace(/\n/g, '<br>');
+	            messagesDiv.innerHTML += '<div class="message bot"><div class="message-bubble">' + formattedResponse + '</div></div>';
+	            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+	        }, 500);
+	    }
+	}
+	
+	// Helper function to escape HTML
+	function escapeHtml(text) {
+	    var div = document.createElement('div');
+	    div.appendChild(document.createTextNode(text));
+	    return div.innerHTML;
+	}
+	
+	if (sendBtnChat) {
+	    sendBtnChat.onclick = sendAIMessage;
+	}
+	
+	if (aiInput) {
+	    aiInput.addEventListener('keypress', function(e) {
+	        if (e.key === 'Enter') {
+	            sendAIMessage();
+	        }
+	    });
+	}
+	
+	// Add quick action buttons to the chat header
+	function addQuickActions() {
+	    var header = document.querySelector('.ai-chat-header');
+	    if (header) {
+	        var actionsDiv = document.createElement('div');
+	        actionsDiv.style.cssText = 'display:flex; gap:4px; margin-top:4px; flex-wrap:wrap;';
+	        actionsDiv.innerHTML = `
+	            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:2px 8px; font-size:10px; border-radius:12px;" onclick="document.getElementById('aiInput').value='help';sendAIMessage();">Help</button>
+	            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:2px 8px; font-size:10px; border-radius:12px;" onclick="document.getElementById('aiInput').value='introduction';sendAIMessage();">Intro</button>
+	            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:2px 8px; font-size:10px; border-radius:12px;" onclick="document.getElementById('aiInput').value='how to in';sendAIMessage();">IN</button>
+	            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:2px 8px; font-size:10px; border-radius:12px;" onclick="document.getElementById('aiInput').value='how to out';sendAIMessage();">OUT</button>
+	            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:2px 8px; font-size:10px; border-radius:12px;" onclick="document.getElementById('aiInput').value='statistics';sendAIMessage();">Stats</button>
+	            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:2px 8px; font-size:10px; border-radius:12px;" onclick="document.getElementById('aiInput').value='troubleshooting';sendAIMessage();">Fix</button>
+	        `;
+	        header.appendChild(actionsDiv);
+	    }
+	}
+	
+	// Call after chat is initialized
+	setTimeout(addQuickActions, 100);
+	
+	// Make functions globally accessible for quick action buttons
+	window.sendAIMessage = sendAIMessage;
     
     const savedUser = sessionStorage.getItem("loggedUser");
     if (savedUser) { login(savedUser, ""); } else { document.getElementById("loginPage").style.display = "flex"; document.getElementById("appContainer").classList.remove("visible"); document.getElementById("aiAssistant").style.display = "none"; }
