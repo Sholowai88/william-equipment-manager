@@ -1916,9 +1916,9 @@ window.addEventListener('beforeunload', function() {
 	    var pokeCountSpan = document.getElementById("pokeCount");
 	    var syncStatus = document.getElementById("syncStatusText");
 	    
-	    console.log("🔔 Updating poke notification. Pending pokes:", pendingPokes.length, "Current user:", currentUser);
-	    console.log("🔔 pokeDiv element:", pokeDiv);
-	    console.log("🔔 pokeCountSpan element:", pokeCountSpan);
+	    // console.log("🔔 Updating poke notification. Pending pokes:", pendingPokes.length, "Current user:", currentUser);
+	    // console.log("🔔 pokeDiv element:", pokeDiv);
+	    // console.log("🔔 pokeCountSpan element:", pokeCountSpan);
 	    
 	    if (pendingPokes.length > 0) {
 	        // Show the notification - use !important to override inline styles
@@ -1937,7 +1937,7 @@ window.addEventListener('beforeunload', function() {
 	            pokeDiv.style.zIndex = "100";
 	            // Set inner HTML directly to ensure content
 	            pokeDiv.innerHTML = '<span>🔔</span><span id="pokeCount" style="font-weight:bold; color:#ff6b6b; font-size:1rem;">' + pendingPokes.length + '</span><span style="font-size:0.7rem;"> pokes</span>';
-	            console.log("✅ Poke notification should now be visible!");
+	            // console.log("✅ Poke notification should now be visible!");
 	        } else {
 	            console.error("❌ pokeDiv element not found!");
 	        }
@@ -1958,7 +1958,7 @@ window.addEventListener('beforeunload', function() {
 	        
 	        // Log the pokes details for debugging
 	        pendingPokes.forEach(function(poke, index) {
-	            console.log("🔔 Poke " + (index + 1) + " - From:", poke.from, "| Record:", poke.purpose);
+	            // console.log("🔔 Poke " + (index + 1) + " - From:", poke.from, "| Record:", poke.purpose);
 	        });
 	        
 	        // Show a browser notification if supported
