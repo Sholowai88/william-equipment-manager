@@ -25,8 +25,10 @@
         .login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #0a2e3f, #1a5c6e); color: white; border: none; border-radius: 60px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-top: 20px; }
         .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); background: linear-gradient(135deg, #1a5c6e, #0a2e3f); }
         .error-msg { color: #dc3545; font-size: 0.85rem; margin-top: 15px; background: #ffe0db; padding: 10px; border-radius: 30px; }
-		.pokeNotification { transition: all 0.3s ease; display: none; }
-		.pokeNotification.active { display: inline-block !important; animation: pulse-green 1s infinite; }
+
+		/* Poke notification override - ensure it can be shown */
+		#pokeNotification { display: none !important; }
+		#pokeNotification.visible { display: inline-block !important; visibility: visible !important; opacity: 1 !important; }
 		
         .ai-assistant { position: fixed; bottom: 30px; right: 30px; cursor: pointer; z-index: 1000; transition: all 0.2s ease; }
         .ai-avatar { width: 70px; height: 70px; background: linear-gradient(135deg, #166b5c, #0a2e3f); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.2); transition: all 0.3s; border: 3px solid white; animation: pulse 2s infinite; }
@@ -134,7 +136,7 @@
     		<div class="time" id="liveTime">--:--:--</div>
     		<div class="date" id="liveDate">----/--/--</div>
 		</div>
-		<div id="pokeNotification" style="position:relative; cursor:pointer; background:rgba(255,255,255,0.15); padding:6px 14px; border-radius:50px; display:none;" onclick="window.showPokeDetails && window.showPokeDetails();">
+		<div id="pokeNotification" style="position:relative; cursor:pointer; background:rgba(255,255,255,0.15); padding:6px 14px; border-radius:50px;" onclick="window.showPokeDetails && window.showPokeDetails();">
 		    <span>🔔</span>
 		    <span id="pokeCount" style="font-weight:bold; color:#ff6b6b;">0</span>
 		    <span style="font-size:0.7rem;">pokes</span>
@@ -1910,7 +1912,6 @@ window.addEventListener('beforeunload', function() {
 	function updatePokeNotification() {
 	    var pendingPokes = pokeNotifications.filter(function(p) { return p.status === 'pending'; });
 	    
-	    // Get elements using multiple methods for reliability
 	    var pokeDiv = document.getElementById("pokeNotification");
 	    var pokeCountSpan = document.getElementById("pokeCount");
 	    var syncStatus = document.getElementById("syncStatusText");
@@ -1920,12 +1921,12 @@ window.addEventListener('beforeunload', function() {
 	    console.log("🔔 pokeCountSpan element:", pokeCountSpan);
 	    
 	    if (pendingPokes.length > 0) {
-	        // Show the notification using multiple style approaches
+	        // Show the notification - use !important to override inline styles
 	        if (pokeDiv) {
-	            // Use multiple methods to ensure visibility
-	            pokeDiv.style.display = "inline-block";
-	            pokeDiv.style.visibility = "visible";
-	            pokeDiv.style.opacity = "1";
+	            // Remove any existing classes and set display with !important
+	            pokeDiv.style.setProperty('display', 'inline-block', 'important');
+	            pokeDiv.style.setProperty('visibility', 'visible', 'important');
+	            pokeDiv.style.setProperty('opacity', '1', 'important');
 	            pokeDiv.style.cursor = "pointer";
 	            pokeDiv.style.background = "rgba(255,255,255,0.25)";
 	            pokeDiv.style.borderRadius = "50px";
@@ -1939,24 +1940,6 @@ window.addEventListener('beforeunload', function() {
 	            console.log("✅ Poke notification should now be visible!");
 	        } else {
 	            console.error("❌ pokeDiv element not found!");
-	            // Try to find it by other methods
-	            var allDivs = document.querySelectorAll('div');
-	            for (var i = 0; i < allDivs.length; i++) {
-	                if (allDivs[i].id === 'pokeNotification') {
-	                    console.log("Found pokeNotification by querySelector!");
-	                    pokeDiv = allDivs[i];
-	                    pokeDiv.style.display = "inline-block";
-	                    pokeDiv.style.visibility = "visible";
-	                    pokeDiv.style.opacity = "1";
-	                    pokeDiv.style.background = "rgba(255,255,255,0.25)";
-	                    pokeDiv.style.borderRadius = "50px";
-	                    pokeDiv.style.padding = "6px 14px";
-	                    pokeDiv.style.animation = "pulse-green 1s infinite";
-	                    pokeDiv.style.border = "2px solid #ff6b6b";
-	                    pokeDiv.innerHTML = '<span>🔔</span><span id="pokeCount" style="font-weight:bold; color:#ff6b6b; font-size:1rem;">' + pendingPokes.length + '</span><span style="font-size:0.7rem;"> pokes</span>';
-	                    break;
-	                }
-	            }
 	        }
 	        
 	        if (pokeCountSpan) {
@@ -1989,16 +1972,13 @@ window.addEventListener('beforeunload', function() {
 	            }
 	        }
 	        
-	        // Also try to show an alert for testing (comment out after testing)
-	        // alert("🔔 You have " + pendingPokes.length + " pending poke(s)!");
-	        
 	    } else {
 	        if (pokeDiv) {
-	            pokeDiv.style.display = "none";
+	            pokeDiv.style.setProperty('display', 'none', 'important');
+	            pokeDiv.style.setProperty('visibility', 'hidden', 'important');
+	            pokeDiv.style.setProperty('opacity', '0', 'important');
 	            pokeDiv.style.animation = "none";
 	            pokeDiv.style.border = "none";
-	            pokeDiv.style.visibility = "hidden";
-	            pokeDiv.style.opacity = "0";
 	        }
 	        // Reset sync status
 	        if (syncStatus) {
@@ -2027,6 +2007,13 @@ window.addEventListener('beforeunload', function() {
 	        console.log("✅ Created test poke notification");
 	    }
 	    updatePokeNotification();
+	    
+	    // Also add a visible class for CSS
+	    var pokeDiv = document.getElementById("pokeNotification");
+	    if (pokeDiv) {
+	        pokeDiv.classList.add('visible');
+	    }
+	    
 	    alert("🔔 Poke notification forced! Check the header.");
 	}
 
