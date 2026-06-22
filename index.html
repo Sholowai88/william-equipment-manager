@@ -30,26 +30,320 @@
 		#pokeNotification { display: none !important; }
 		#pokeNotification.visible { display: inline-block !important; visibility: visible !important; opacity: 1 !important; }
 		
-        .ai-assistant { position: fixed; bottom: 30px; right: 30px; cursor: pointer; z-index: 1000; transition: all 0.2s ease; }
-        .ai-avatar { width: 70px; height: 70px; background: linear-gradient(135deg, #166b5c, #0a2e3f); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.2); transition: all 0.3s; border: 3px solid white; animation: pulse 2s infinite; }
-        .ai-avatar:hover { transform: scale(1.1); }
-        .ai-avatar span { font-size: 36px; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.2)); }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(22,107,92,0.4); } 70% { box-shadow: 0 0 0 15px rgba(22,107,92,0); } 100% { box-shadow: 0 0 0 0 rgba(22,107,92,0); } }
-        .ai-chat-window { position: fixed; bottom: 110px; right: 30px; width: 350px; height: 500px; background: white; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; z-index: 1001; border: 1px solid #e2e8f0; }
-        .ai-chat-header { background: linear-gradient(135deg, #0a2e3f, #166b5c); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: move; }
-        .ai-chat-header h4 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px; }
-        .ai-chat-header button { background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 16px; }
-        .ai-messages { flex: 1; padding: 15px; overflow-y: auto; background: #f8fafc; }
-        .message { margin-bottom: 12px; display: flex; flex-direction: column; }
-        .message.bot { align-items: flex-start; }
-        .message.user { align-items: flex-end; }
-        .message-bubble { max-width: 85%; padding: 10px 14px; border-radius: 20px; font-size: 0.85rem; line-height: 1.4; }
-        .message.bot .message-bubble { background: #eef2f6; color: #1a2a3a; border-bottom-left-radius: 4px; }
-        .message.user .message-bubble { background: #166b5c; color: white; border-bottom-right-radius: 4px; }
-        .ai-input-area { display: flex; padding: 12px; border-top: 1px solid #e2e8f0; background: white; gap: 8px; }
-        .ai-input-area input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 40px; outline: none; font-size: 0.8rem; }
-        .ai-input-area button { background: #166b5c; border: none; color: white; padding: 8px 16px; border-radius: 40px; cursor: pointer; }
-        
+        /* ============================================================
+		   AI ASSISTANT - PROFESSIONAL CHAT DESIGN
+		   ============================================================ */
+		.ai-assistant { 
+		    position: fixed; 
+		    bottom: 30px; 
+		    right: 30px; 
+		    cursor: pointer; 
+		    z-index: 1000; 
+		    transition: all 0.3s ease; 
+		}
+		.ai-avatar { 
+		    width: 70px; 
+		    height: 70px; 
+		    background: linear-gradient(135deg, #0a2e3f, #1a5c6e); 
+		    border-radius: 50%; 
+		    display: flex; 
+		    align-items: center; 
+		    justify-content: center; 
+		    box-shadow: 0 8px 30px rgba(0,0,0,0.3); 
+		    transition: all 0.3s; 
+		    border: 3px solid white; 
+		    animation: pulse-ai 2s infinite; 
+		}
+		.ai-avatar:hover { 
+		    transform: scale(1.1) rotate(-5deg); 
+		    box-shadow: 0 12px 40px rgba(26,92,110,0.4); 
+		}
+		.ai-avatar span { 
+		    font-size: 36px; 
+		    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.2)); 
+		}
+		@keyframes pulse-ai { 
+		    0% { box-shadow: 0 0 0 0 rgba(26,92,110,0.4); } 
+		    70% { box-shadow: 0 0 0 20px rgba(26,92,110,0); } 
+		    100% { box-shadow: 0 0 0 0 rgba(26,92,110,0); } 
+		}
+		
+		.ai-chat-window { 
+		    position: fixed; 
+		    bottom: 110px; 
+		    right: 30px; 
+		    width: 400px; 
+		    height: 600px; 
+		    background: white; 
+		    border-radius: 20px; 
+		    box-shadow: 0 20px 60px rgba(0,0,0,0.25); 
+		    display: none; 
+		    flex-direction: column; 
+		    overflow: hidden; 
+		    z-index: 1001; 
+		    border: 1px solid rgba(255,255,255,0.1);
+		    transition: all 0.3s ease;
+		}
+		
+		.ai-chat-header { 
+		    background: linear-gradient(135deg, #0a2e3f, #1a5c6e); 
+		    color: white; 
+		    padding: 16px 20px; 
+		    display: flex; 
+		    flex-direction: column;
+		    justify-content: space-between; 
+		    align-items: stretch; 
+		    cursor: move; 
+		    border-bottom: 3px solid rgba(255,255,255,0.1);
+		    flex-shrink: 0;
+		}
+		.ai-chat-header-top {
+		    display: flex;
+		    justify-content: space-between;
+		    align-items: center;
+		}
+		.ai-chat-header h4 { 
+		    margin: 0; 
+		    font-size: 16px; 
+		    display: flex; 
+		    align-items: center; 
+		    gap: 10px; 
+		    font-weight: 600;
+		    letter-spacing: 0.3px;
+		}
+		.ai-chat-header h4 span {
+		    background: rgba(255,255,255,0.15);
+		    padding: 2px 10px;
+		    border-radius: 20px;
+		    font-size: 10px;
+		    font-weight: 400;
+		    letter-spacing: 0.5px;
+		}
+		.ai-chat-header button { 
+		    background: rgba(255,255,255,0.2); 
+		    border: none; 
+		    color: white; 
+		    border-radius: 50%; 
+		    width: 32px; 
+		    height: 32px; 
+		    cursor: pointer; 
+		    font-size: 18px; 
+		    transition: all 0.3s;
+		    display: flex;
+		    align-items: center;
+		    justify-content: center;
+		}
+		.ai-chat-header button:hover { 
+		    background: rgba(255,255,255,0.35); 
+		    transform: rotate(90deg);
+		}
+		
+		.ai-quick-actions {
+		    display: flex;
+		    gap: 6px;
+		    margin-top: 10px;
+		    flex-wrap: wrap;
+		    padding-top: 10px;
+		    border-top: 1px solid rgba(255,255,255,0.1);
+		}
+		.ai-quick-actions button {
+		    background: rgba(255,255,255,0.15);
+		    color: white;
+		    border: none;
+		    padding: 4px 14px;
+		    border-radius: 20px;
+		    font-size: 11px;
+		    cursor: pointer;
+		    transition: all 0.3s;
+		    font-weight: 500;
+		    letter-spacing: 0.3px;
+		}
+		.ai-quick-actions button:hover {
+		    background: rgba(255,255,255,0.3);
+		    transform: translateY(-1px);
+		    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+		}
+		.ai-quick-actions button:active {
+		    transform: scale(0.95);
+		}
+		
+		.ai-messages { 
+		    flex: 1; 
+		    padding: 16px 18px; 
+		    overflow-y: auto; 
+		    background: #f0f4f8;
+		    display: flex;
+		    flex-direction: column;
+		    gap: 8px;
+		}
+		.ai-messages::-webkit-scrollbar {
+		    width: 5px;
+		}
+		.ai-messages::-webkit-scrollbar-track {
+		    background: #e8edf2;
+		    border-radius: 10px;
+		}
+		.ai-messages::-webkit-scrollbar-thumb {
+		    background: #1a5c6e;
+		    border-radius: 10px;
+		}
+		
+		.message { 
+		    margin-bottom: 4px; 
+		    display: flex; 
+		    flex-direction: column; 
+		    animation: fadeInUp 0.3s ease;
+		}
+		@keyframes fadeInUp {
+		    from { opacity: 0; transform: translateY(10px); }
+		    to { opacity: 1; transform: translateY(0); }
+		}
+		.message.bot { 
+		    align-items: flex-start; 
+		}
+		.message.user { 
+		    align-items: flex-end; 
+		}
+		
+		.message-bubble { 
+		    max-width: 85%; 
+		    padding: 12px 16px; 
+		    border-radius: 16px; 
+		    font-size: 0.85rem; 
+		    line-height: 1.6; 
+		    word-wrap: break-word;
+		    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+		}
+		.message.bot .message-bubble { 
+		    background: white; 
+		    color: #1a2a3a; 
+		    border-bottom-left-radius: 4px; 
+		    border: 1px solid #e8edf2;
+		}
+		.message.bot .message-bubble strong {
+		    color: #1a5c6e;
+		}
+		.message.bot .message-bubble br {
+		    display: block;
+		    content: "";
+		    margin: 4px 0;
+		}
+		.message.user .message-bubble { 
+		    background: linear-gradient(135deg, #1a5c6e, #0a2e3f); 
+		    color: white; 
+		    border-bottom-right-radius: 4px; 
+		    box-shadow: 0 2px 12px rgba(26,92,110,0.25);
+		}
+		
+		.ai-typing {
+		    display: flex;
+		    align-items: center;
+		    gap: 8px;
+		    padding: 8px 0;
+		}
+		.ai-typing span {
+		    display: inline-block;
+		    width: 8px;
+		    height: 8px;
+		    background: #1a5c6e;
+		    border-radius: 50%;
+		    animation: typing 1.2s infinite ease-in-out;
+		}
+		.ai-typing span:nth-child(2) { animation-delay: 0.2s; }
+		.ai-typing span:nth-child(3) { animation-delay: 0.4s; }
+		@keyframes typing {
+		    0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+		    30% { transform: translateY(-8px); opacity: 1; }
+		}
+		
+		.ai-input-area { 
+		    display: flex; 
+		    padding: 12px 16px; 
+		    border-top: 1px solid #e8edf2; 
+		    background: white; 
+		    gap: 10px; 
+		    flex-shrink: 0;
+		    align-items: center;
+		}
+		.ai-input-area input { 
+		    flex: 1; 
+		    padding: 10px 16px; 
+		    border: 2px solid #e8edf2; 
+		    border-radius: 25px; 
+		    outline: none; 
+		    font-size: 0.85rem; 
+		    transition: all 0.3s;
+		    background: #f8fafc;
+		}
+		.ai-input-area input:focus { 
+		    border-color: #1a5c6e; 
+		    box-shadow: 0 0 0 4px rgba(26,92,110,0.1);
+		    background: white;
+		}
+		.ai-input-area input::placeholder {
+		    color: #a0b0c0;
+		    font-size: 0.8rem;
+		}
+		.ai-input-area button { 
+		    background: linear-gradient(135deg, #1a5c6e, #0a2e3f); 
+		    border: none; 
+		    color: white; 
+		    padding: 10px 22px; 
+		    border-radius: 25px; 
+		    cursor: pointer; 
+		    font-weight: 600;
+		    font-size: 0.85rem;
+		    transition: all 0.3s;
+		    white-space: nowrap;
+		    letter-spacing: 0.3px;
+		}
+		.ai-input-area button:hover { 
+		    transform: translateY(-2px); 
+		    box-shadow: 0 4px 16px rgba(26,92,110,0.3);
+		}
+		.ai-input-area button:active {
+		    transform: scale(0.95);
+		}
+		
+		/* Mobile responsiveness */
+		@media (max-width: 768px) {
+		    .ai-chat-window {
+		        width: 92vw;
+		        height: 80vh;
+		        right: 4vw;
+		        bottom: 100px;
+		        border-radius: 16px;
+		    }
+		    .ai-chat-header {
+		        padding: 14px 16px;
+		    }
+		    .ai-chat-header h4 {
+		        font-size: 14px;
+		    }
+		    .ai-quick-actions button {
+		        font-size: 10px;
+		        padding: 3px 10px;
+		    }
+		    .ai-messages {
+		        padding: 12px 14px;
+		    }
+		    .message-bubble {
+		        font-size: 0.8rem;
+		        padding: 10px 14px;
+		    }
+		    .ai-input-area {
+		        padding: 10px 12px;
+		    }
+		    .ai-input-area input {
+		        font-size: 0.8rem;
+		        padding: 8px 14px;
+		    }
+		    .ai-input-area button {
+		        font-size: 0.8rem;
+		        padding: 8px 16px;
+		    }
+		}
+		
         .header { background: linear-gradient(135deg, #0a2e3f, #166b5c); padding: 18px 24px; color: white; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
         .title-section h1 { font-size: 1.4rem; font-weight: 700; }
         .title-section .subtitle { font-size: 0.7rem; opacity: 0.85; margin-top: 4px; }
@@ -124,9 +418,44 @@
 
 <div id="aiAssistant" class="ai-assistant"><div class="ai-avatar"><span>🤖👷</span></div></div>
 <div id="aiChatWindow" class="ai-chat-window">
-    <div class="ai-chat-header" id="aiChatHeader"><h4>🤖 Engineer AI Assistant</h4><button id="closeAiChat">×</button></div>
-    <div class="ai-messages" id="aiMessages"><div class="message bot"><div class="message-bubble">Hello! I'm your engineering assistant. I can help you with:<br>• How to perform IN/OUT records<br>• Account management guidelines<br>• Equipment database usage<br>Ask me anything!</div></div></div>
-    <div class="ai-input-area"><input type="text" id="aiInput" placeholder="Ask me about IN/OUT records or account management..." autocomplete="off"><button id="aiSendBtn">Send</button></div>
+    <div class="ai-chat-header" id="aiChatHeader">
+        <div class="ai-chat-header-top">
+            <h4>
+                🤖 AI Engineering Assistant
+                <span>v2.0</span>
+            </h4>
+            <button id="closeAiChat" title="Close chat">✕</button>
+        </div>
+        <div class="ai-quick-actions">
+            <button onclick="document.getElementById('aiInput').value='help';sendAIMessage();">💡 Help</button>
+            <button onclick="document.getElementById('aiInput').value='how to in';sendAIMessage();">📥 IN</button>
+            <button onclick="document.getElementById('aiInput').value='how to out';sendAIMessage();">📤 OUT</button>
+            <button onclick="document.getElementById('aiInput').value='statistics';sendAIMessage();">📊 Stats</button>
+            <button onclick="document.getElementById('aiInput').value='troubleshooting';sendAIMessage();">🔧 Fix</button>
+            <button onclick="document.getElementById('aiInput').value='introduction';sendAIMessage();">ℹ️ Intro</button>
+        </div>
+    </div>
+    <div class="ai-messages" id="aiMessages">
+        <div class="message bot">
+            <div class="message-bubble">
+                <strong>🤖 Hello! I'm your AI Engineering Assistant.</strong><br><br>
+                I can help you with:<br>
+                • Equipment management and IN/OUT procedures<br>
+                • Account management and user roles<br>
+                • Troubleshooting common issues<br>
+                • Database statistics and trends<br><br>
+                <strong>💡 Quick Tips:</strong><br>
+                • Click the buttons above for common topics<br>
+                • Type <strong>help</strong> to see all available topics<br>
+                • Ask me anything about the system!<br><br>
+                What would you like to know?
+            </div>
+        </div>
+    </div>
+    <div class="ai-input-area">
+        <input type="text" id="aiInput" placeholder="Ask me anything about the equipment database..." autocomplete="off">
+        <button id="aiSendBtn">Send</button>
+    </div>
 </div>
 
 <div id="appContainer" class="app-container">
@@ -3427,7 +3756,7 @@ window.addEventListener('beforeunload', function() {
 	}
 	
 	// Call after chat is initialized
-	setTimeout(addQuickActions, 100);
+	// setTimeout(addQuickActions, 100);
 	
 	// Make functions globally accessible for quick action buttons
 	window.sendAIMessage = sendAIMessage;
