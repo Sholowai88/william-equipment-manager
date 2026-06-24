@@ -343,8 +343,6 @@
 		        padding: 8px 16px;
 		    }
 		}
-
-		let compareState = null; // Store comparison state for returning
 		
         .header { background: linear-gradient(135deg, #0a2e3f, #166b5c); padding: 18px 24px; color: white; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
         .title-section h1 { font-size: 1.4rem; font-weight: 700; }
@@ -581,6 +579,7 @@ window.addEventListener('beforeunload', function() {
 
 	let pokeData = [];
 	let pokeNotifications = [];
+	let compareState = null;
     
     function getKey(eq) { return eq.assetNumber && eq.assetNumber.trim() ? eq.assetNumber : (eq.serialNo || eq.assetDesc); }
 
@@ -4702,6 +4701,8 @@ window.addEventListener('beforeunload', function() {
 	window.closeCompareModal = closeCompareModal;
 	window.openEditWithReturn = openEditWithReturn;
 	window.openShowWithReturn = openShowWithReturn;
+	window.editEquipmentDialog = editEquipmentDialog;
+	window.showEquipmentDetail = showEquipmentDetail;
     
     const savedUser = sessionStorage.getItem("loggedUser");
     if (savedUser) { login(savedUser, ""); } else { document.getElementById("loginPage").style.display = "flex"; document.getElementById("appContainer").classList.remove("visible"); document.getElementById("aiAssistant").style.display = "none"; }
