@@ -343,6 +343,8 @@
 		        padding: 8px 16px;
 		    }
 		}
+
+		let compareState = null; // Store comparison state for returning
 		
         .header { background: linear-gradient(135deg, #0a2e3f, #166b5c); padding: 18px 24px; color: white; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
         .title-section h1 { font-size: 1.4rem; font-weight: 700; }
@@ -1273,7 +1275,19 @@ window.addEventListener('beforeunload', function() {
     }
 
 	// Compare Button - View Multiple Equipment Details
-	function showCompareDialog() {
+	function showCompareDialog(returnToCompare) {
+	    // If this is a return call, use stored state
+	    if (returnToCompare && compareState) {
+	        var selectedEquips = compareState.selectedEquips;
+	        var modal = compareState.modal;
+	        // Just re-display the modal
+	        if (modal) {
+	            document.body.appendChild(modal);
+	            modal.style.display = 'flex';
+	            return;
+	        }
+	    }
+	    
 	    var selectedEquips = equipmentData.filter(function(eq) {
 	        return selectedAssetsSet.has(getKey(eq));
 	    });
@@ -1287,6 +1301,12 @@ window.addEventListener('beforeunload', function() {
 	        alert("⚠️ Please select at most 10 equipment for comparison.\n\nCurrently selected: " + selectedEquips.length);
 	        return;
 	    }
+	    
+	    // Store selected equipment for comparison
+	    compareState = {
+	        selectedEquips: selectedEquips,
+	        modal: null
+	    };
 	    
 	    var modal = document.createElement("div");
 	    modal.className = "modal-overlay";
@@ -1349,7 +1369,7 @@ window.addEventListener('beforeunload', function() {
 	            <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
 	                <button id="compareHistoryBtn" class="btn btn-primary" style="background:#3498db;">📜 Compare History</button>
 	                <button id="compareEditAllBtn" class="btn btn-primary" style="background:#e67e22;">✏️ Edit All</button>
-	                <button class="btn" onclick="this.closest('.modal-overlay').remove();">Close</button>
+	                <button class="btn" onclick="closeCompareModal();">Close</button>
 	            </div>
 	            <div id="compareHistoryContainer" style="display:none; margin-top:15px; border-top:2px solid #ddd; padding-top:15px;">
 	                <h4>📜 Transaction History Comparison</h4>
@@ -1372,6 +1392,9 @@ window.addEventListener('beforeunload', function() {
 	    `;
 	    document.body.appendChild(modal);
 	    
+	    // Store modal reference in compareState
+	    compareState.modal = modal;
+	    
 	    // --- FIX: Attach event listeners to Edit and Show buttons ---
 	    selectedEquips.forEach(function(eq, index) {
 	        var editBtnId = 'editBtn_' + index;
@@ -1382,25 +1405,33 @@ window.addEventListener('beforeunload', function() {
 	        
 	        if (editBtn) {
 	            editBtn.onclick = function() {
-	                // Close the compare modal first
-	                modal.remove();
-	                // Open edit dialog for the equipment
-	                editEquipmentDialog(eq);
+	                // Hide the compare modal (don't remove it)
+	                modal.style.display = 'none';
+	                // Open edit dialog for the equipment with callback to return
+	                openEditWithReturn(eq, function() {
+	                    // Return to compare modal
+	                    modal.style.display = 'flex';
+	                });
 	            };
 	        }
 	        
 	        if (showBtn) {
 	            showBtn.onclick = function() {
-	                // Close the compare modal first
-	                modal.remove();
-	                // Show equipment details
-	                showEquipmentDetail(eq);
+	                // Hide the compare modal (don't remove it)
+	                modal.style.display = 'none';
+	                // Show equipment details with callback to return
+	                openShowWithReturn(eq, function() {
+	                    // Return to compare modal
+	                    modal.style.display = 'flex';
+	                });
 	            };
 	        }
 	    });
 	    
-	    // Close modal
-	    modal.querySelector(".close-modal").onclick = function() { modal.remove(); };
+	    // Close modal - fully remove
+	    modal.querySelector(".close-modal").onclick = function() { 
+	        closeCompareModal();
+	    };
 	    
 	    // Compare History
 	    modal.querySelector("#compareHistoryBtn").onclick = function() {
@@ -1503,8 +1534,8 @@ window.addEventListener('beforeunload', function() {
 	            renderEquipment();
 	            alert("✅ Bulk update completed for " + updatedCount + " equipment!\n\n" + updatedEquipment.join('\n'));
 	            
-	            // Close and reopen compare dialog
-	            modal.remove();
+	            // Refresh the compare dialog
+	            closeCompareModal();
 	            showCompareDialog();
 	        } else {
 	            alert("ℹ️ No changes were made - the values are the same.");
@@ -1516,8 +1547,179 @@ window.addEventListener('beforeunload', function() {
 	    };
 	}
 	
+	// Helper function to close compare modal
+	function closeCompareModal() {
+	    var modal = document.getElementById('compareModal');
+	    if (modal) {
+	        modal.remove();
+	    }
+	    compareState = null;
+	}
+	
+	// Helper function to open Edit with return callback
+	function openEditWithReturn(eq, callback) {
+	    // Create a modified editEquipmentDialog that returns to comparison
+	    var originalEdit = editEquipmentDialog;
+	    
+	    // Override the modal close behavior
+	    var modal = document.createElement("div");
+	    modal.className = "modal-overlay";
+	    modal.innerHTML = `<div class="modal-card" style="max-width:800px;"><button class="close-modal">✖</button><h3>✏️ Edit Equipment</h3>
+	        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
+	            <div><label>Asset Number (Cannot be edited)</label><input id="eAssetNum" value="${eq.assetNumber||''}" readonly style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc; background:#f0f0f0;"></div>
+	            <div><label>Asset Description *</label><input id="eAssetDesc" value="${eq.assetDesc||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Manufacturer</label><input id="eMfg" value="${eq.manufacturer||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Serial Number</label><input id="eSerial" value="${eq.serialNo||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Location</label><input id="eLocation" value="${eq.location||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Parent Asset</label><input id="eParent" value="${eq.parentAsset||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Asset Owner</label><input id="eOwner" value="${eq.assetOwner||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>PO Number</label><input id="ePo" value="${eq.poNumber||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Acceptance Date</label><input type="date" id="eAccept" value="${eq.acceptanceDate?.split(' ')[0]||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Calibration Date</label><input type="date" id="eCal" value="${eq.calibrationDate?.split(' ')[0]||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div style="grid-column:span 2;"><label>Current Detail</label><textarea id="eDetail" rows="3" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">${eq.currentDetail||''}</textarea></div>
+	        </div>
+	        <div style="display:flex; gap:12px; justify-content:flex-end;"><button id="saveEquipEdit" class="btn btn-primary">Save Changes</button><button id="cancelEquipEdit" class="btn">Cancel</button></div></div>`;
+	    document.body.appendChild(modal);
+	    
+	    modal.querySelector(".close-modal").onclick = function() {
+	        modal.remove();
+	        if (callback) callback();
+	    };
+	    
+	    modal.querySelector("#cancelEquipEdit").onclick = function() {
+	        modal.remove();
+	        if (callback) callback();
+	    };
+	    
+	    modal.querySelector("#saveEquipEdit").onclick = async function() {
+	        var oldKey = getKey(eq);
+	        var newAssetNumber = modal.querySelector("#eAssetNum").value;
+	        
+	        // Asset number cannot be changed - it's readonly
+	        if (newAssetNumber !== eq.assetNumber) {
+	            alert("⚠️ Asset Number cannot be changed. Please contact administrator if correction is needed.");
+	            return;
+	        }
+	        
+	        if (!modal.querySelector("#eAssetDesc").value.trim()) {
+	            alert("Asset Description is required!");
+	            return;
+	        }
+	        
+	        // Store original values
+	        var oldAssetNumber = eq.assetNumber;
+	        
+	        eq.assetNumber = newAssetNumber; 
+	        eq.assetDesc = modal.querySelector("#eAssetDesc").value; 
+	        eq.manufacturer = modal.querySelector("#eMfg").value;
+	        eq.serialNo = modal.querySelector("#eSerial").value; 
+	        eq.location = modal.querySelector("#eLocation").value; 
+	        eq.parentAsset = modal.querySelector("#eParent").value;
+	        eq.assetOwner = modal.querySelector("#eOwner").value; 
+	        eq.poNumber = modal.querySelector("#ePo").value; 
+	        eq.acceptanceDate = modal.querySelector("#eAccept").value;
+	        eq.calibrationDate = modal.querySelector("#eCal").value; 
+	        eq.currentDetail = modal.querySelector("#eDetail").value;
+	        
+	        var newKey = getKey(eq);
+	        
+	        try {
+	            var eqDataObj = {
+	                asset_number: eq.assetNumber || "",
+	                asset_desc: eq.assetDesc,
+	                manufacturer: eq.manufacturer || "",
+	                parent_asset: eq.parentAsset || "",
+	                asset_owner: eq.assetOwner || "",
+	                serial_no: eq.serialNo || "",
+	                location: eq.location || "",
+	                po_number: eq.poNumber || "",
+	                acceptance_date: eq.acceptanceDate || "",
+	                calibration_date: eq.calibrationDate || "",
+	                current_detail: eq.currentDetail || ""
+	            };
+	            
+	            var existingQuery = await supabaseClient
+	                .from('equipment_data')
+	                .select('id')
+	                .eq('asset_number', oldAssetNumber || '')
+	                .eq('serial_no', eq.serialNo || '')
+	                .maybeSingle();
+	            
+	            if (existingQuery.data) {
+	                await supabaseClient
+	                    .from('equipment_data')
+	                    .update(eqDataObj)
+	                    .eq('id', existingQuery.data.id);
+	            } else {
+	                await supabaseClient
+	                    .from('equipment_data')
+	                    .insert(eqDataObj);
+	            }
+	            
+	            if (oldAssetNumber !== newAssetNumber && oldAssetNumber) {
+	                var oldStatus = equipStatus[oldAssetNumber];
+	                if (oldStatus) {
+	                    await supabaseClient
+	                        .from('equip_status')
+	                        .delete()
+	                        .eq('equipment_key', oldAssetNumber);
+	                    
+	                    var statusCheck = await supabaseClient
+	                        .from('equip_status')
+	                        .select('id')
+	                        .eq('equipment_key', newKey)
+	                        .maybeSingle();
+	                    
+	                    if (statusCheck.data) {
+	                        await supabaseClient
+	                            .from('equip_status')
+	                            .update({ status: oldStatus })
+	                            .eq('equipment_key', newKey);
+	                    } else {
+	                        await supabaseClient
+	                            .from('equip_status')
+	                            .insert({ equipment_key: newKey, status: oldStatus });
+	                    }
+	                    
+	                    delete equipStatus[oldAssetNumber];
+	                    equipStatus[newKey] = oldStatus;
+	                }
+	            } else {
+	                await quickSyncStatus(newKey, equipStatus[newKey] || "IN");
+	            }
+	            
+	            renderEquipment();
+	            await addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited", currentUser, "Edited from Equipment Comparison");
+	            alert("✅ Equipment updated successfully and synced to cloud!");
+	            
+	        } catch (err) {
+	            console.error("Edit error:", err);
+	            alert("❌ Failed to update equipment. Error: " + err.message);
+	        }
+	        
+	        modal.remove();
+	        if (callback) callback();
+	    };
+	}
+	
+	// Helper function to open Show with return callback
+	function openShowWithReturn(eq, callback) {
+	    var modal = document.createElement("div");
+	    modal.className = "modal-overlay";
+	    modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>🔧 Equipment Details</h3><div class="details-grid">${Object.entries(eq).map(([k, v]) => `<div class="detail-item"><strong>${k.replace(/([A-Z])/g, ' $1').trim()}:</strong><span>${v || '-'}</span></div>`).join('')}</div></div>`;
+	    document.body.appendChild(modal);
+	    
+	    modal.querySelector(".close-modal").onclick = function() {
+	        modal.remove();
+	        if (callback) callback();
+	    };
+	}
+	
 	// Make functions globally accessible
 	window.showCompareDialog = showCompareDialog;
+	window.closeCompareModal = closeCompareModal;
+	window.openEditWithReturn = openEditWithReturn;
+	window.openShowWithReturn = openShowWithReturn;
 	window.editEquipmentDialog = editEquipmentDialog;
 	window.showEquipmentDetail = showEquipmentDetail;
 
@@ -4494,6 +4696,12 @@ window.addEventListener('beforeunload', function() {
 	
 	// Make functions globally accessible for quick action buttons
 	window.sendAIMessage = sendAIMessage;
+
+	// Make compare functions globally accessible
+	window.showCompareDialog = showCompareDialog;
+	window.closeCompareModal = closeCompareModal;
+	window.openEditWithReturn = openEditWithReturn;
+	window.openShowWithReturn = openShowWithReturn;
     
     const savedUser = sessionStorage.getItem("loggedUser");
     if (savedUser) { login(savedUser, ""); } else { document.getElementById("loginPage").style.display = "flex"; document.getElementById("appContainer").classList.remove("visible"); document.getElementById("aiAssistant").style.display = "none"; }
