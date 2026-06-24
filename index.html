@@ -1290,6 +1290,7 @@ window.addEventListener('beforeunload', function() {
 	    
 	    var modal = document.createElement("div");
 	    modal.className = "modal-overlay";
+	    modal.id = "compareModal";
 	    
 	    // Build comparison table
 	    var headers = ['Asset #', 'Description', 'Manufacturer', 'Serial #', 'Location', 'Parent Asset', 'Asset Owner', 'Status', 'Last Transaction'];
@@ -1300,6 +1301,9 @@ window.addEventListener('beforeunload', function() {
 	    });
 	    tableHtml += '<th style="border:1px solid #ddd; padding:8px; background:#f1f5f9; position:sticky; top:0;">Actions</th></tr></thead><tbody>';
 	    
+	    // Store equipment references for the modal
+	    var equipmentRefs = [];
+	    
 	    selectedEquips.forEach(function(eq, index) {
 	        var key = getKey(eq);
 	        var status = equipStatus[key] || "IN";
@@ -1308,6 +1312,13 @@ window.addEventListener('beforeunload', function() {
 	            return r.equipmentDetails && r.equipmentDetails.some(function(d) { return d.key === key; });
 	        });
 	        var lastTransDisplay = lastTrans.length > 0 ? formatTimestamp(lastTrans[0].displayTime) : 'Never';
+	        
+	        // Store reference
+	        equipmentRefs.push(eq);
+	        
+	        // Create unique IDs for buttons
+	        var editBtnId = 'editBtn_' + index;
+	        var showBtnId = 'showBtn_' + index;
 	        
 	        tableHtml += '<tr>';
 	        tableHtml += '<td style="border:1px solid #ddd; padding:8px; text-align:center;">' + (index + 1) + '</td>';
@@ -1321,8 +1332,8 @@ window.addEventListener('beforeunload', function() {
 	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;"><span class="status-badge ' + (status === 'IN' ? 'status-in' : 'status-out') + '">' + status + '</span></td>';
 	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + lastTransDisplay + '</td>';
 	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">';
-	        tableHtml += '<button class="btn btn-sm" onclick="editEquipmentDialog(equipmentData.find(function(e) { return getKey(e) === \'' + key + '\'; }))">✏️ Edit</button>';
-	        tableHtml += ' <button class="btn btn-sm" onclick="showEquipmentDetail(equipmentData.find(function(e) { return getKey(e) === \'' + key + '\'; }))">📋 Show</button>';
+	        tableHtml += '<button id="' + editBtnId + '" class="btn btn-sm" style="margin-bottom:2px;">✏️ Edit</button> ';
+	        tableHtml += '<button id="' + showBtnId + '" class="btn btn-sm">📋 Show</button>';
 	        tableHtml += '</td></tr>';
 	    });
 	    
@@ -1360,6 +1371,33 @@ window.addEventListener('beforeunload', function() {
 	        </div>
 	    `;
 	    document.body.appendChild(modal);
+	    
+	    // --- FIX: Attach event listeners to Edit and Show buttons ---
+	    selectedEquips.forEach(function(eq, index) {
+	        var editBtnId = 'editBtn_' + index;
+	        var showBtnId = 'showBtn_' + index;
+	        
+	        var editBtn = modal.querySelector('#' + editBtnId);
+	        var showBtn = modal.querySelector('#' + showBtnId);
+	        
+	        if (editBtn) {
+	            editBtn.onclick = function() {
+	                // Close the compare modal first
+	                modal.remove();
+	                // Open edit dialog for the equipment
+	                editEquipmentDialog(eq);
+	            };
+	        }
+	        
+	        if (showBtn) {
+	            showBtn.onclick = function() {
+	                // Close the compare modal first
+	                modal.remove();
+	                // Show equipment details
+	                showEquipmentDetail(eq);
+	            };
+	        }
+	    });
 	    
 	    // Close modal
 	    modal.querySelector(".close-modal").onclick = function() { modal.remove(); };
@@ -1408,7 +1446,7 @@ window.addEventListener('beforeunload', function() {
 	        container.style.display = 'block';
 	    };
 	    
-	    // Apply Bulk Edit
+	    // Apply Bulk Edit with DB Logs
 	    modal.querySelector("#applyBulkEditBtn").onclick = function() {
 	        var location = modal.querySelector("#bulkLocation").value;
 	        var parent = modal.querySelector("#bulkParent").value;
@@ -1422,21 +1460,55 @@ window.addEventListener('beforeunload', function() {
 	        
 	        if (!confirm("Apply changes to all " + selectedEquips.length + " selected equipment?")) return;
 	        
+	        var updatedCount = 0;
+	        var updatedEquipment = [];
+	        
 	        selectedEquips.forEach(function(eq) {
-	            if (location) eq.location = location;
-	            if (parent) eq.parentAsset = parent;
-	            if (owner) eq.assetOwner = owner;
-	            if (detail) eq.currentDetail = detail;
-	            quickSyncEquipment(eq);
-	            quickSyncStatus(getKey(eq), equipStatus[getKey(eq)] || "IN");
+	            var changes = [];
+	            if (location && eq.location !== location) {
+	                eq.location = location;
+	                changes.push('Location: ' + location);
+	            }
+	            if (parent && eq.parentAsset !== parent) {
+	                eq.parentAsset = parent;
+	                changes.push('Parent Asset: ' + parent);
+	            }
+	            if (owner && eq.assetOwner !== owner) {
+	                eq.assetOwner = owner;
+	                changes.push('Asset Owner: ' + owner);
+	            }
+	            if (detail && eq.currentDetail !== detail) {
+	                eq.currentDetail = detail;
+	                changes.push('Current Detail: ' + detail);
+	            }
+	            
+	            if (changes.length > 0) {
+	                quickSyncEquipment(eq);
+	                quickSyncStatus(getKey(eq), equipStatus[getKey(eq)] || "IN");
+	                updatedCount++;
+	                updatedEquipment.push(eq.assetDesc + ' (' + changes.join(', ') + ')');
+	            }
 	        });
 	        
-	        addLog("EQUIPMENT_EDITED", "BULK", "Bulk edited " + selectedEquips.length + " equipment", currentUser, "");
-	        renderEquipment();
-	        alert("✅ Bulk update completed for " + selectedEquips.length + " equipment!");
-	        modal.remove();
-	        // Reopen compare dialog with updated data
-	        showCompareDialog();
+	        if (updatedCount > 0) {
+	            // Log the bulk edit
+	            addLog(
+	                "EQUIPMENT_EDITED",
+	                "BULK",
+	                "Bulk edited " + updatedCount + " equipment: " + updatedEquipment.join('; '),
+	                currentUser,
+	                "Bulk edit from Equipment Comparison"
+	            );
+	            
+	            renderEquipment();
+	            alert("✅ Bulk update completed for " + updatedCount + " equipment!\n\n" + updatedEquipment.join('\n'));
+	            
+	            // Close and reopen compare dialog
+	            modal.remove();
+	            showCompareDialog();
+	        } else {
+	            alert("ℹ️ No changes were made - the values are the same.");
+	        }
 	    };
 	    
 	    modal.querySelector("#cancelBulkEditBtn").onclick = function() {
