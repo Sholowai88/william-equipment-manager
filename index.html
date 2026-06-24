@@ -3257,8 +3257,35 @@ window.addEventListener('beforeunload', function() {
            renderEquipment(); 
            };
         document.getElementById("clearSelEquipBtn").onclick = () => { selectedAssetsSet.clear(); renderEquipment(); };
-        document.getElementById("selectAllEquipBtn").onclick = () => { equipmentData.forEach(e => selectedAssetsSet.add(getKey(e))); renderEquipment(); };
-        document.getElementById("addNewEquipBtn").onclick = addNewEquipment;
+        
+		document.getElementById("selectAllEquipBtn").onclick = () => { 
+		    // Get current search and filter values
+		    var search = document.getElementById("equipSearch").value.toLowerCase();
+		    var loc = document.getElementById("filterLocation").value;
+		    var parent = document.getElementById("filterParentAsset").value;
+		    var statFilter = document.getElementById("filterStatus").value;
+		    
+		    // Apply the same filters as renderEquipment()
+		    var filtered = equipmentData.filter(function(eq) {
+		        var matchSearch = eq.assetNumber?.toLowerCase().includes(search) || 
+		                         eq.assetDesc?.toLowerCase().includes(search) || 
+		                         eq.manufacturer?.toLowerCase().includes(search) || 
+		                         eq.serialNo?.toLowerCase().includes(search);
+		        var matchLoc = loc ? eq.location === loc : true;
+		        var matchParent = parent ? eq.parentAsset === parent : true;
+		        var matchStatus = statFilter ? equipStatus[getKey(eq)] === statFilter : true;
+		        return matchSearch && matchLoc && matchParent && matchStatus;
+		    });
+		    
+		    // Select only the filtered equipment
+		    filtered.forEach(function(eq) {
+		        selectedAssetsSet.add(getKey(eq));
+		    });
+		    
+		    renderEquipment();
+		};
+		
+		document.getElementById("addNewEquipBtn").onclick = addNewEquipment;
         document.getElementById("todayBtn").onclick = setToday;
         document.getElementById("saveRecordBtn").onclick = saveRecord;
         document.getElementById("clearFormBtnRecord").onclick = () => { document.getElementById("jobType").value = ""; document.getElementById("purposeInput").value = ""; document.getElementById("othersNames").value = ""; document.getElementById("remarksField").value = ""; Array.from(document.getElementById("etSelect").options).forEach(o => o.selected = false); document.getElementById("setSelect").selectedIndex = 0; document.getElementById("phySelect").selectedIndex = 0; clearCanvas(); setToday(); };
