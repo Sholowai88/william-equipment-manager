@@ -483,8 +483,20 @@
     <div class="tabs"><button class="tab active" data-page="home">📋 Equipment DB</button><button class="tab" data-page="record">✍️ In/Out Record</button><button class="tab" data-page="history">📜 History Logs</button><button id="dblogsTab" class="tab" data-page="dblogs">📊 DB Logs</button></div>
 
     <div id="homePage" class="page active">
-        <div class="filter-bar"><input type="text" id="equipSearch" placeholder="🔍 Search"><select id="filterLocation"></select><select id="filterParentAsset"></select><select id="filterStatus"><option value="">All Status</option><option value="IN">IN</option><option value="OUT">OUT</option></select><button id="clearSearchBtn" class="btn">Clear Filter</button><span id="selectedCountBadge" style="background:#e2e8f0; padding:4px 12px; border-radius:40px;">0 selected</span><button id="clearSelEquipBtn" class="btn btn-sm">Clear</button><button id="selectAllEquipBtn" class="btn btn-sm">Select All</button><button id="addNewEquipBtn" class="btn btn-primary btn-sm">➕ Add New</button></div>
-        <div class="table-wrapper"><table id="equipTable"><thead><tr><th style="width:30px">Select</th><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th><th>Location</th><th>Parent</th><th>Status</th><th>Actions</th></tr></thead><tbody id="equipTableBody"></tbody></table></div>
+		<div class="filter-bar">
+		    <input type="text" id="equipSearch" placeholder="🔍 Search">
+		    <select id="filterLocation"></select>
+		    <select id="filterParentAsset"></select>
+		    <select id="filterStatus"><option value="">All Status</option><option value="IN">IN</option><option value="OUT">OUT</option></select>
+		    <button id="clearSearchBtn" class="btn">Clear Filter</button>
+		    <span id="selectedCountBadge" style="background:#e2e8f0; padding:4px 12px; border-radius:40px;">0 selected</span>
+		    <button id="clearSelEquipBtn" class="btn btn-sm">Clear</button>
+		    <button id="selectAllEquipBtn" class="btn btn-sm">Select All</button>
+		    <button id="addNewEquipBtn" class="btn btn-primary btn-sm">➕ Add New</button>
+		    <button id="compareBtn" class="btn btn-primary btn-sm" style="background:#e67e22;">📊 Compare</button>
+		    <button id="compareStatBtn" class="btn btn-primary btn-sm admin-only" style="background:#8e44ad; display:none;">📈 Compare Stat</button>
+		</div>
+		<div class="table-wrapper"><table id="equipTable"><thead><tr><th style="width:30px">Select</th><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th><th>Location</th><th>Parent</th><th>Status</th><th>Actions</th></tr></thead><tbody id="equipTableBody"></tbody></table></div>
     </div>
 
     <div id="recordPage" class="page">
@@ -1259,6 +1271,472 @@ window.addEventListener('beforeunload', function() {
         });
         attachCheckboxEvents(); updateSelectedDisplay(); renderSelectedList();
     }
+
+	// Compare Button - View Multiple Equipment Details
+	function showCompareDialog() {
+	    var selectedEquips = equipmentData.filter(function(eq) {
+	        return selectedAssetsSet.has(getKey(eq));
+	    });
+	    
+	    if (selectedEquips.length < 2) {
+	        alert("⚠️ Please select at least 2 equipment to compare.\n\nCurrently selected: " + selectedEquips.length);
+	        return;
+	    }
+	    
+	    if (selectedEquips.length > 10) {
+	        alert("⚠️ Please select at most 10 equipment for comparison.\n\nCurrently selected: " + selectedEquips.length);
+	        return;
+	    }
+	    
+	    var modal = document.createElement("div");
+	    modal.className = "modal-overlay";
+	    
+	    // Build comparison table
+	    var headers = ['Asset #', 'Description', 'Manufacturer', 'Serial #', 'Location', 'Parent Asset', 'Asset Owner', 'Status', 'Last Transaction'];
+	    var tableHtml = '<table style="min-width:100%; font-size:0.7rem; border-collapse:collapse; width:100%;">';
+	    tableHtml += '<thead><tr><th style="border:1px solid #ddd; padding:8px; background:#f1f5f9; position:sticky; top:0;">#</th>';
+	    headers.forEach(function(h) {
+	        tableHtml += '<th style="border:1px solid #ddd; padding:8px; background:#f1f5f9; position:sticky; top:0;">' + h + '</th>';
+	    });
+	    tableHtml += '<th style="border:1px solid #ddd; padding:8px; background:#f1f5f9; position:sticky; top:0;">Actions</th></tr></thead><tbody>';
+	    
+	    selectedEquips.forEach(function(eq, index) {
+	        var key = getKey(eq);
+	        var status = equipStatus[key] || "IN";
+	        // Find last transaction
+	        var lastTrans = historyRecords.filter(function(r) {
+	            return r.equipmentDetails && r.equipmentDetails.some(function(d) { return d.key === key; });
+	        });
+	        var lastTransDisplay = lastTrans.length > 0 ? formatTimestamp(lastTrans[0].displayTime) : 'Never';
+	        
+	        tableHtml += '<tr>';
+	        tableHtml += '<td style="border:1px solid #ddd; padding:8px; text-align:center;">' + (index + 1) + '</td>';
+	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + (eq.assetNumber || '-') + '</td>';
+	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + (eq.assetDesc || '-') + '</td>';
+	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + (eq.manufacturer || '-') + '</td>';
+	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + (eq.serialNo || '-') + '</td>';
+	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + (eq.location || '-') + '</td>';
+	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + (eq.parentAsset || '-') + '</td>';
+	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + (eq.assetOwner || '-') + '</td>';
+	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;"><span class="status-badge ' + (status === 'IN' ? 'status-in' : 'status-out') + '">' + status + '</span></td>';
+	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + lastTransDisplay + '</td>';
+	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">';
+	        tableHtml += '<button class="btn btn-sm" onclick="editEquipmentDialog(equipmentData.find(function(e) { return getKey(e) === \'' + key + '\'; }))">✏️ Edit</button>';
+	        tableHtml += ' <button class="btn btn-sm" onclick="showEquipmentDetail(equipmentData.find(function(e) { return getKey(e) === \'' + key + '\'; }))">📋 Show</button>';
+	        tableHtml += '</td></tr>';
+	    });
+	    
+	    tableHtml += '</tbody></table>';
+	    
+	    modal.innerHTML = `
+	        <div class="modal-card" style="max-width:95%; max-height:90vh;">
+	            <button class="close-modal">✖</button>
+	            <h3>📊 Equipment Comparison (${selectedEquips.length} items)</h3>
+	            <div style="overflow-x:auto; max-height:70vh; overflow-y:auto;">
+	                ${tableHtml}
+	            </div>
+	            <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+	                <button id="compareHistoryBtn" class="btn btn-primary" style="background:#3498db;">📜 Compare History</button>
+	                <button id="compareEditAllBtn" class="btn btn-primary" style="background:#e67e22;">✏️ Edit All</button>
+	                <button class="btn" onclick="this.closest('.modal-overlay').remove();">Close</button>
+	            </div>
+	            <div id="compareHistoryContainer" style="display:none; margin-top:15px; border-top:2px solid #ddd; padding-top:15px;">
+	                <h4>📜 Transaction History Comparison</h4>
+	                <div style="overflow-x:auto; max-height:300px; overflow-y:auto;" id="compareHistoryContent"></div>
+	            </div>
+	            <div id="compareEditContainer" style="display:none; margin-top:15px; border-top:2px solid #ddd; padding-top:15px;">
+	                <h4>✏️ Bulk Edit</h4>
+	                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+	                    <div><label>Location</label><input id="bulkLocation" style="width:100%; padding:6px; border-radius:8px; border:1px solid #ccc;"></div>
+	                    <div><label>Parent Asset</label><input id="bulkParent" style="width:100%; padding:6px; border-radius:8px; border:1px solid #ccc;"></div>
+	                    <div><label>Asset Owner</label><input id="bulkOwner" style="width:100%; padding:6px; border-radius:8px; border:1px solid #ccc;"></div>
+	                    <div><label>Current Detail</label><input id="bulkDetail" style="width:100%; padding:6px; border-radius:8px; border:1px solid #ccc;"></div>
+	                </div>
+	                <div style="margin-top:10px; display:flex; gap:10px; justify-content:center;">
+	                    <button id="applyBulkEditBtn" class="btn btn-primary">Apply to All Selected</button>
+	                    <button id="cancelBulkEditBtn" class="btn">Cancel</button>
+	                </div>
+	            </div>
+	        </div>
+	    `;
+	    document.body.appendChild(modal);
+	    
+	    // Close modal
+	    modal.querySelector(".close-modal").onclick = function() { modal.remove(); };
+	    
+	    // Compare History
+	    modal.querySelector("#compareHistoryBtn").onclick = function() {
+	        var container = modal.querySelector("#compareHistoryContainer");
+	        var content = modal.querySelector("#compareHistoryContent");
+	        if (container.style.display === 'block') {
+	            container.style.display = 'none';
+	            return;
+	        }
+	        container.style.display = 'block';
+	        
+	        // Build history comparison
+	        var historyHtml = '';
+	        selectedEquips.forEach(function(eq, idx) {
+	            var key = getKey(eq);
+	            var records = historyRecords.filter(function(r) {
+	                return r.equipmentDetails && r.equipmentDetails.some(function(d) { return d.key === key; });
+	            }).slice(0, 10);
+	            
+	            historyHtml += '<div style="margin-bottom:15px; border:1px solid #ddd; border-radius:8px; padding:10px; background:#f8fafc;">';
+	            historyHtml += '<strong>' + (idx + 1) + '. ' + (eq.assetDesc || 'N/A') + '</strong> (' + records.length + ' transactions)';
+	            if (records.length > 0) {
+	                historyHtml += '<ul style="margin:5px 0; padding-left:20px; font-size:0.7rem;">';
+	                records.forEach(function(r) {
+	                    historyHtml += '<li>' + formatTimestamp(r.displayTime) + ' | ' + r.status + ' | ' + r.jobType + ' | ' + (r.purpose || 'N/A') + '</li>';
+	                });
+	                historyHtml += '</ul>';
+	            } else {
+	                historyHtml += '<div style="color:#999; font-size:0.7rem;">No transactions found</div>';
+	            }
+	            historyHtml += '</div>';
+	        });
+	        content.innerHTML = historyHtml;
+	    };
+	    
+	    // Compare Edit All
+	    modal.querySelector("#compareEditAllBtn").onclick = function() {
+	        var container = modal.querySelector("#compareEditContainer");
+	        if (container.style.display === 'block') {
+	            container.style.display = 'none';
+	            return;
+	        }
+	        container.style.display = 'block';
+	    };
+	    
+	    // Apply Bulk Edit
+	    modal.querySelector("#applyBulkEditBtn").onclick = function() {
+	        var location = modal.querySelector("#bulkLocation").value;
+	        var parent = modal.querySelector("#bulkParent").value;
+	        var owner = modal.querySelector("#bulkOwner").value;
+	        var detail = modal.querySelector("#bulkDetail").value;
+	        
+	        if (!location && !parent && !owner && !detail) {
+	            alert("Please fill at least one field to update.");
+	            return;
+	        }
+	        
+	        if (!confirm("Apply changes to all " + selectedEquips.length + " selected equipment?")) return;
+	        
+	        selectedEquips.forEach(function(eq) {
+	            if (location) eq.location = location;
+	            if (parent) eq.parentAsset = parent;
+	            if (owner) eq.assetOwner = owner;
+	            if (detail) eq.currentDetail = detail;
+	            quickSyncEquipment(eq);
+	            quickSyncStatus(getKey(eq), equipStatus[getKey(eq)] || "IN");
+	        });
+	        
+	        addLog("EQUIPMENT_EDITED", "BULK", "Bulk edited " + selectedEquips.length + " equipment", currentUser, "");
+	        renderEquipment();
+	        alert("✅ Bulk update completed for " + selectedEquips.length + " equipment!");
+	        modal.remove();
+	        // Reopen compare dialog with updated data
+	        showCompareDialog();
+	    };
+	    
+	    modal.querySelector("#cancelBulkEditBtn").onclick = function() {
+	        modal.querySelector("#compareEditContainer").style.display = 'none';
+	    };
+	}
+	
+	// Make functions globally accessible
+	window.showCompareDialog = showCompareDialog;
+	window.editEquipmentDialog = editEquipmentDialog;
+	window.showEquipmentDetail = showEquipmentDetail;
+
+	// Compare Stat Button - Compare Equipment Usage Statistics Between Multiple Equipment (Admin Only)
+	function showCompareStatsDialog() {
+	    if (currentUserRole !== "admin") {
+	        alert("⚠️ Only Administrators can access Compare Stat feature.");
+	        return;
+	    }
+	    
+	    var selectedEquips = equipmentData.filter(function(eq) {
+	        return selectedAssetsSet.has(getKey(eq));
+	    });
+	    
+	    if (selectedEquips.length < 2) {
+	        alert("⚠️ Please select at least 2 equipment to compare statistics.\n\nCurrently selected: " + selectedEquips.length);
+	        return;
+	    }
+	    
+	    if (selectedEquips.length > 5) {
+	        alert("⚠️ Please select at most 5 equipment for statistics comparison.\n\nCurrently selected: " + selectedEquips.length);
+	        return;
+	    }
+	    
+	    var modal = document.createElement("div");
+	    modal.className = "modal-overlay";
+	    modal.innerHTML = `
+	        <div class="modal-card" style="max-width:95%; max-height:90vh;">
+	            <button class="close-modal">✖</button>
+	            <h3>📈 Equipment Usage Statistics Comparison (${selectedEquips.length} items)</h3>
+	            <div style="background:#f0f4f8; padding:15px; border-radius:12px; margin-bottom:15px;">
+	                <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center;">
+	                    <div>
+	                        <label style="font-size:0.7rem; font-weight:600;">📅 Start Date</label>
+	                        <input type="date" id="compareStatsStartDate" style="padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.75rem;">
+	                    </div>
+	                    <div>
+	                        <label style="font-size:0.7rem; font-weight:600;">📅 End Date</label>
+	                        <input type="date" id="compareStatsEndDate" style="padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.75rem;">
+	                    </div>
+	                    <button id="applyCompareStatsDateBtn" class="btn btn-primary" style="margin-top:8px;">Apply Date Range</button>
+	                    <button id="resetCompareStatsDateBtn" class="btn" style="margin-top:8px;">Reset</button>
+	                </div>
+	                <div style="margin-top:8px; font-size:0.7rem; color:#666;">
+	                    <span id="compareStatsDateRangeDisplay">Showing all records</span>
+	                </div>
+	            </div>
+	            <div id="compareStatsContainer" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+	                <div class="stat-card"><h4>Total Transactions</h4><canvas id="totalTransChart" width="280" height="180"></canvas><div id="totalTransList" style="margin-top:10px; font-size:0.7rem;"></div></div>
+	                <div class="stat-card"><h4>IN vs OUT Distribution</h4><canvas id="inOutChart" width="280" height="180"></canvas><div id="inOutList" style="margin-top:10px; font-size:0.7rem;"></div></div>
+	                <div class="stat-card"><h4>Job Type Distribution</h4><canvas id="compareJobChart" width="280" height="180"></canvas><div id="compareJobList" style="margin-top:10px; font-size:0.7rem;"></div></div>
+	                <div class="stat-card"><h4>ET Usage Comparison</h4><canvas id="compareETChart" width="280" height="180"></canvas><div id="compareETList" style="margin-top:10px; font-size:0.7rem;"></div></div>
+	            </div>
+	            <div style="margin-top:15px; text-align:center; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+	                <button class="btn" onclick="this.closest('.modal-overlay').remove();">Close</button>
+	            </div>
+	        </div>
+	    `;
+	    document.body.appendChild(modal);
+	    
+	    var startDateInput = modal.querySelector("#compareStatsStartDate");
+	    var endDateInput = modal.querySelector("#compareStatsEndDate");
+	    var dateRangeDisplay = modal.querySelector("#compareStatsDateRangeDisplay");
+	    
+	    // Function to render comparison stats
+	    function renderCompareStats() {
+	        var startDate = startDateInput.value;
+	        var endDate = endDateInput.value;
+	        
+	        // Update date range display
+	        if (startDate || endDate) {
+	            var displayText = "Showing records from ";
+	            if (startDate) displayText += startDate;
+	            if (startDate && endDate) displayText += " to ";
+	            if (endDate) displayText += endDate;
+	            dateRangeDisplay.textContent = displayText;
+	        } else {
+	            dateRangeDisplay.textContent = "Showing all records";
+	        }
+	        
+	        // Collect statistics for each equipment
+	        var statsData = selectedEquips.map(function(eq, idx) {
+	            var key = getKey(eq);
+	            var records = historyRecords.filter(function(r) {
+	                if (!r.equipmentDetails || !r.equipmentDetails.some(function(d) { return d.key === key; })) {
+	                    return false;
+	                }
+	                var recordDate = new Date(r.displayTime);
+	                if (startDate) {
+	                    var start = new Date(startDate);
+	                    start.setHours(0, 0, 0, 0);
+	                    if (recordDate < start) return false;
+	                }
+	                if (endDate) {
+	                    var end = new Date(endDate);
+	                    end.setHours(23, 59, 59, 999);
+	                    if (recordDate > end) return false;
+	                }
+	                return true;
+	            });
+	            
+	            var jobTypes = {};
+	            var etUsage = {};
+	            var inCount = 0, outCount = 0;
+	            records.forEach(function(r) {
+	                jobTypes[r.jobType] = (jobTypes[r.jobType] || 0) + 1;
+	                if (r.et) {
+	                    r.et.split(", ").forEach(function(et) {
+	                        etUsage[et] = (etUsage[et] || 0) + 1;
+	                    });
+	                }
+	                if (r.status === 'IN') inCount++;
+	                else if (r.status === 'OUT') outCount++;
+	            });
+	            
+	            return {
+	                name: eq.assetDesc || eq.assetNumber || 'Equipment ' + (idx + 1),
+	                key: key,
+	                total: records.length,
+	                inCount: inCount,
+	                outCount: outCount,
+	                jobTypes: jobTypes,
+	                etUsage: etUsage
+	            };
+	        });
+	        
+	        // Total Transactions Chart (Bar)
+	        var totalLabels = statsData.map(function(d) { return d.name; });
+	        var totalValues = statsData.map(function(d) { return d.total; });
+	        
+	        setTimeout(function() {
+	            try {
+	                if (window.compareTotalChart) { window.compareTotalChart.destroy(); }
+	                window.compareTotalChart = new Chart(document.getElementById("totalTransChart"), {
+	                    type: 'bar',
+	                    data: {
+	                        labels: totalLabels,
+	                        datasets: [{ label: 'Total Transactions', data: totalValues, backgroundColor: '#166b5c' }]
+	                    },
+	                    options: {
+	                        responsive: true,
+	                        maintainAspectRatio: true,
+	                        plugins: { legend: { display: false } }
+	                    }
+	                });
+	            } catch(e) { console.log("Chart error:", e); }
+	        }, 100);
+	        
+	        // IN vs OUT Chart (Grouped Bar)
+	        setTimeout(function() {
+	            try {
+	                if (window.compareInOutChart) { window.compareInOutChart.destroy(); }
+	                window.compareInOutChart = new Chart(document.getElementById("inOutChart"), {
+	                    type: 'bar',
+	                    data: {
+	                        labels: totalLabels,
+	                        datasets: [
+	                            { label: 'IN', data: statsData.map(function(d) { return d.inCount; }), backgroundColor: '#00a86b' },
+	                            { label: 'OUT', data: statsData.map(function(d) { return d.outCount; }), backgroundColor: '#dc3545' }
+	                        ]
+	                    },
+	                    options: {
+	                        responsive: true,
+	                        maintainAspectRatio: true,
+	                        plugins: { legend: { display: true, position: 'bottom' } }
+	                    }
+	                });
+	            } catch(e) { console.log("Chart error:", e); }
+	        }, 150);
+	        
+	        // Job Type Distribution (Stacked Bar)
+	        var allJobTypes = new Set();
+	        statsData.forEach(function(d) {
+	            Object.keys(d.jobTypes).forEach(function(j) { allJobTypes.add(j); });
+	        });
+	        var jobTypeList = Array.from(allJobTypes);
+	        var colors = ['#166b5c', '#e67e22', '#3498db', '#9b59b6', '#1abc9c', '#e74c3c'];
+	        
+	        setTimeout(function() {
+	            try {
+	                if (window.compareJobChartInstance) { window.compareJobChartInstance.destroy(); }
+	                var datasets = jobTypeList.map(function(job, idx) {
+	                    return {
+	                        label: job,
+	                        data: statsData.map(function(d) { return d.jobTypes[job] || 0; }),
+	                        backgroundColor: colors[idx % colors.length]
+	                    };
+	                });
+	                window.compareJobChartInstance = new Chart(document.getElementById("compareJobChart"), {
+	                    type: 'bar',
+	                    data: {
+	                        labels: totalLabels,
+	                        datasets: datasets
+	                    },
+	                    options: {
+	                        responsive: true,
+	                        maintainAspectRatio: true,
+	                        plugins: { legend: { display: true, position: 'bottom' } },
+	                        scales: { x: { stacked: true }, y: { stacked: true } }
+	                    }
+	                });
+	            } catch(e) { console.log("Chart error:", e); }
+	        }, 200);
+	        
+	        // ET Usage Comparison (Grouped Bar - Top 5 ETs)
+	        var allETs = new Set();
+	        statsData.forEach(function(d) {
+	            Object.keys(d.etUsage).forEach(function(et) { allETs.add(et); });
+	        });
+	        var etList = Array.from(allETs).slice(0, 8);
+	        var etColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#2c3e50'];
+	        
+	        setTimeout(function() {
+	            try {
+	                if (window.compareETChartInstance) { window.compareETChartInstance.destroy(); }
+	                var etDatasets = etList.map(function(et, idx) {
+	                    return {
+	                        label: et,
+	                        data: statsData.map(function(d) { return d.etUsage[et] || 0; }),
+	                        backgroundColor: etColors[idx % etColors.length]
+	                    };
+	                });
+	                window.compareETChartInstance = new Chart(document.getElementById("compareETChart"), {
+	                    type: 'bar',
+	                    data: {
+	                        labels: totalLabels,
+	                        datasets: etDatasets
+	                    },
+	                    options: {
+	                        responsive: true,
+	                        maintainAspectRatio: true,
+	                        plugins: { legend: { display: true, position: 'bottom' } },
+	                        scales: { x: { stacked: true }, y: { stacked: true } }
+	                    }
+	                });
+	            } catch(e) { console.log("Chart error:", e); }
+	        }, 250);
+	        
+	        // Update lists
+	        var totalList = modal.querySelector("#totalTransList");
+	        var inOutList = modal.querySelector("#inOutList");
+	        var jobList = modal.querySelector("#compareJobList");
+	        var etListDiv = modal.querySelector("#compareETList");
+	        
+	        totalList.innerHTML = statsData.map(function(d) {
+	            return '<strong>' + d.name + '</strong>: ' + d.total + ' transactions';
+	        }).join('<br>');
+	        
+	        inOutList.innerHTML = statsData.map(function(d) {
+	            return '<strong>' + d.name + '</strong>: IN ' + d.inCount + ' | OUT ' + d.outCount;
+	        }).join('<br>');
+	        
+	        jobList.innerHTML = statsData.map(function(d) {
+	            var jobs = Object.entries(d.jobTypes).map(function(a) { return a[0] + ':' + a[1]; }).join(', ');
+	            return '<strong>' + d.name + '</strong>: ' + (jobs || 'None');
+	        }).join('<br>');
+	        
+	        etListDiv.innerHTML = statsData.map(function(d) {
+	            var ets = Object.entries(d.etUsage).map(function(a) { return a[0] + ':' + a[1]; }).slice(0, 5).join(', ');
+	            return '<strong>' + d.name + '</strong>: ' + (ets || 'None');
+	        }).join('<br>');
+	    }
+	    
+	    // Apply date filter
+	    modal.querySelector("#applyCompareStatsDateBtn").onclick = function() {
+	        renderCompareStats();
+	    };
+	    
+	    // Reset date filter
+	    modal.querySelector("#resetCompareStatsDateBtn").onclick = function() {
+	        startDateInput.value = "";
+	        endDateInput.value = "";
+	        renderCompareStats();
+	    };
+	    
+	    // Close modal
+	    modal.querySelector(".close-modal").onclick = function() {
+	        // Clean up chart instances
+	        if (window.compareTotalChart) { window.compareTotalChart.destroy(); }
+	        if (window.compareInOutChart) { window.compareInOutChart.destroy(); }
+	        if (window.compareJobChartInstance) { window.compareJobChartInstance.destroy(); }
+	        if (window.compareETChartInstance) { window.compareETChartInstance.destroy(); }
+	        modal.remove();
+	    };
+	    
+	    // Initial render
+	    renderCompareStats();
+	}
+	
+	// Make functions globally accessible
+	window.showCompareStatsDialog = showCompareStatsDialog;
     
     function attachCheckboxEvents() { document.querySelectorAll('.checkbox-select').forEach(cb => { cb.onchange = () => { let k = cb.dataset.key; if (cb.checked) selectedAssetsSet.add(k); else selectedAssetsSet.delete(k); updateSelectedDisplay(); renderSelectedList(); }; }); }
     function updateSelectedDisplay() { document.getElementById("selectedCountBadge").innerText = `${selectedAssetsSet.size} selected`; }
@@ -1504,27 +1982,182 @@ window.addEventListener('beforeunload', function() {
     }
     
     function showEquipmentStats(eq) {
-        let usageRecords = historyRecords.filter(r => r.equipmentDetails?.some(d => d.key === getKey(eq)));
-        let etUsage = {}, setUsage = {}, phyUsage = {}, jobTypeUsage = {};
-        usageRecords.forEach(r => { if (r.et) { r.et.split(", ").forEach(et => { etUsage[et] = (etUsage[et] || 0) + 1; }); } setUsage[r.set] = (setUsage[r.set] || 0) + 1; phyUsage[r.physicist] = (phyUsage[r.physicist] || 0) + 1; jobTypeUsage[r.jobType] = (jobTypeUsage[r.jobType] || 0) + 1; });
-        let modal = document.createElement("div"); modal.className = "modal-overlay";
-        modal.innerHTML = `<div class="modal-card" style="max-width:700px;"><button class="close-modal">✖</button><h3>📊 Equipment Usage Statistics: ${eq.assetDesc}</h3>
-            <div class="stat-grid"><div class="stat-card"><h4>ET Usage</h4><canvas id="etChart" width="280" height="180"></canvas><div style="margin-top:10px;">${Object.entries(etUsage).map(([k, v]) => `${k}: ${v}`).join(', ') || 'None'}</div></div>
-            <div class="stat-card"><h4>SET Usage</h4><canvas id="setChart" width="280" height="180"></canvas><div style="margin-top:10px;">${Object.entries(setUsage).map(([k, v]) => `${k}: ${v}`).join(', ') || 'None'}</div></div></div>
-            <div class="stat-grid"><div class="stat-card"><h4>Physicist Usage</h4><canvas id="phyChart" width="280" height="180"></canvas><div style="margin-top:10px;">${Object.entries(phyUsage).map(([k, v]) => `${k}: ${v}`).join(', ') || 'None'}</div></div>
-            <div class="stat-card"><h4>Job Type Usage</h4><canvas id="jobChart" width="280" height="180"></canvas><div style="margin-top:10px;">${Object.entries(jobTypeUsage).map(([k, v]) => `${k}: ${v}`).join(', ') || 'None'}</div></div></div>
-            <div style="margin-top:15px; text-align:center; font-weight:bold;">Total Transactions: ${usageRecords.length}</div></div>`;
-        document.body.appendChild(modal);
-        modal.querySelector(".close-modal").onclick = () => modal.remove();
-        setTimeout(() => {
-            try {
-                new Chart(document.getElementById("etChart"), { type: 'bar', data: { labels: Object.keys(etUsage), datasets: [{ label: 'Count', data: Object.values(etUsage), backgroundColor: '#166b5c' }] }, options: { responsive: true, maintainAspectRatio: true } });
-                new Chart(document.getElementById("setChart"), { type: 'bar', data: { labels: Object.keys(setUsage), datasets: [{ label: 'Count', data: Object.values(setUsage), backgroundColor: '#e67e22' }] }, options: { responsive: true, maintainAspectRatio: true } });
-                new Chart(document.getElementById("phyChart"), { type: 'bar', data: { labels: Object.keys(phyUsage), datasets: [{ label: 'Count', data: Object.values(phyUsage), backgroundColor: '#3498db' }] }, options: { responsive: true, maintainAspectRatio: true } });
-                new Chart(document.getElementById("jobChart"), { type: 'pie', data: { labels: Object.keys(jobTypeUsage), datasets: [{ data: Object.values(jobTypeUsage), backgroundColor: ['#166b5c', '#e67e22', '#3498db', '#9b59b6', '#1abc9c'] }] }, options: { responsive: true, maintainAspectRatio: true } });
-            } catch(e) { console.log("Chart error:", e); }
-        }, 100);
-    }
+	    // Create modal with date range filter
+	    var modal = document.createElement("div");
+	    modal.className = "modal-overlay";
+	    modal.innerHTML = `
+	        <div class="modal-card" style="max-width:800px;">
+	            <button class="close-modal">✖</button>
+	            <h3>📊 Equipment Usage Statistics: ${eq.assetDesc}</h3>
+	            <div style="background:#f0f4f8; padding:15px; border-radius:12px; margin-bottom:15px;">
+	                <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center;">
+	                    <div>
+	                        <label style="font-size:0.7rem; font-weight:600;">📅 Start Date</label>
+	                        <input type="date" id="statsStartDate" style="padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.75rem;">
+	                    </div>
+	                    <div>
+	                        <label style="font-size:0.7rem; font-weight:600;">📅 End Date</label>
+	                        <input type="date" id="statsEndDate" style="padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.75rem;">
+	                    </div>
+	                    <button id="applyStatsDateBtn" class="btn btn-primary" style="margin-top:8px;">Apply Date Range</button>
+	                    <button id="resetStatsDateBtn" class="btn" style="margin-top:8px;">Reset</button>
+	                </div>
+	                <div style="margin-top:8px; font-size:0.7rem; color:#666;">
+	                    <span id="statsDateRangeDisplay">Showing all records</span>
+	                </div>
+	            </div>
+	            <div class="stat-grid">
+	                <div class="stat-card"><h4>ET Usage</h4><canvas id="etChart" width="280" height="180"></canvas><div id="etUsageList" style="margin-top:10px; font-size:0.7rem;"></div></div>
+	                <div class="stat-card"><h4>SET Usage</h4><canvas id="setChart" width="280" height="180"></canvas><div id="setUsageList" style="margin-top:10px; font-size:0.7rem;"></div></div>
+	            </div>
+	            <div class="stat-grid">
+	                <div class="stat-card"><h4>Physicist Usage</h4><canvas id="phyChart" width="280" height="180"></canvas><div id="phyUsageList" style="margin-top:10px; font-size:0.7rem;"></div></div>
+	                <div class="stat-card"><h4>Job Type Usage</h4><canvas id="jobChart" width="280" height="180"></canvas><div id="jobUsageList" style="margin-top:10px; font-size:0.7rem;"></div></div>
+	            </div>
+	            <div style="margin-top:15px; text-align:center; font-weight:bold;">
+	                Total Transactions: <span id="statsTotalRecords">0</span>
+	            </div>
+	        </div>
+	    `;
+	    document.body.appendChild(modal);
+	    
+	    var startDateInput = modal.querySelector("#statsStartDate");
+	    var endDateInput = modal.querySelector("#statsEndDate");
+	    var dateRangeDisplay = modal.querySelector("#statsDateRangeDisplay");
+	    
+	    // Function to render stats with date filter
+	    function renderStatsWithDateFilter() {
+	        var startDate = startDateInput.value;
+	        var endDate = endDateInput.value;
+	        
+	        // Filter records by date range
+	        var filteredRecords = historyRecords.filter(function(r) {
+	            if (!r.equipmentDetails || !r.equipmentDetails.some(function(d) { return d.key === getKey(eq); })) {
+	                return false;
+	            }
+	            var recordDate = new Date(r.displayTime);
+	            if (startDate) {
+	                var start = new Date(startDate);
+	                start.setHours(0, 0, 0, 0);
+	                if (recordDate < start) return false;
+	            }
+	            if (endDate) {
+	                var end = new Date(endDate);
+	                end.setHours(23, 59, 59, 999);
+	                if (recordDate > end) return false;
+	            }
+	            return true;
+	        });
+	        
+	        // Update date range display
+	        if (startDate || endDate) {
+	            var displayText = "Showing records from ";
+	            if (startDate) displayText += startDate;
+	            if (startDate && endDate) displayText += " to ";
+	            if (endDate) displayText += endDate;
+	            dateRangeDisplay.textContent = displayText;
+	        } else {
+	            dateRangeDisplay.textContent = "Showing all records";
+	        }
+	        
+	        // Calculate usage statistics for filtered records
+	        var etUsage = {}, setUsage = {}, phyUsage = {}, jobTypeUsage = {};
+	        filteredRecords.forEach(function(r) {
+	            if (r.et) {
+	                r.et.split(", ").forEach(function(et) {
+	                    etUsage[et] = (etUsage[et] || 0) + 1;
+	                });
+	            }
+	            setUsage[r.set] = (setUsage[r.set] || 0) + 1;
+	            phyUsage[r.physicist] = (phyUsage[r.physicist] || 0) + 1;
+	            jobTypeUsage[r.jobType] = (jobTypeUsage[r.jobType] || 0) + 1;
+	        });
+	        
+	        // Update total count
+	        modal.querySelector("#statsTotalRecords").textContent = filteredRecords.length;
+	        
+	        // Update usage lists
+	        var etList = modal.querySelector("#etUsageList");
+	        var setList = modal.querySelector("#setUsageList");
+	        var phyList = modal.querySelector("#phyUsageList");
+	        var jobList = modal.querySelector("#jobUsageList");
+	        
+	        etList.innerHTML = Object.entries(etUsage).map(function(a) { return a[0] + ': ' + a[1]; }).join(', ') || 'None';
+	        setList.innerHTML = Object.entries(setUsage).map(function(a) { return a[0] + ': ' + a[1]; }).join(', ') || 'None';
+	        phyList.innerHTML = Object.entries(phyUsage).map(function(a) { return a[0] + ': ' + a[1]; }).join(', ') || 'None';
+	        jobList.innerHTML = Object.entries(jobTypeUsage).map(function(a) { return a[0] + ': ' + a[1]; }).join(', ') || 'None';
+	        
+	        // Update charts
+	        setTimeout(function() {
+	            try {
+	                // Destroy existing charts if they exist
+	                if (window.etChartInstance) { window.etChartInstance.destroy(); }
+	                if (window.setChartInstance) { window.setChartInstance.destroy(); }
+	                if (window.phyChartInstance) { window.phyChartInstance.destroy(); }
+	                if (window.jobChartInstance) { window.jobChartInstance.destroy(); }
+	                
+	                // Create new charts
+	                window.etChartInstance = new Chart(document.getElementById("etChart"), {
+	                    type: 'bar',
+	                    data: {
+	                        labels: Object.keys(etUsage),
+	                        datasets: [{ label: 'Count', data: Object.values(etUsage), backgroundColor: '#166b5c' }]
+	                    },
+	                    options: { responsive: true, maintainAspectRatio: true }
+	                });
+	                window.setChartInstance = new Chart(document.getElementById("setChart"), {
+	                    type: 'bar',
+	                    data: {
+	                        labels: Object.keys(setUsage),
+	                        datasets: [{ label: 'Count', data: Object.values(setUsage), backgroundColor: '#e67e22' }]
+	                    },
+	                    options: { responsive: true, maintainAspectRatio: true }
+	                });
+	                window.phyChartInstance = new Chart(document.getElementById("phyChart"), {
+	                    type: 'bar',
+	                    data: {
+	                        labels: Object.keys(phyUsage),
+	                        datasets: [{ label: 'Count', data: Object.values(phyUsage), backgroundColor: '#3498db' }]
+	                    },
+	                    options: { responsive: true, maintainAspectRatio: true }
+	                });
+	                window.jobChartInstance = new Chart(document.getElementById("jobChart"), {
+	                    type: 'pie',
+	                    data: {
+	                        labels: Object.keys(jobTypeUsage),
+	                        datasets: [{ data: Object.values(jobTypeUsage), backgroundColor: ['#166b5c', '#e67e22', '#3498db', '#9b59b6', '#1abc9c'] }]
+	                    },
+	                    options: { responsive: true, maintainAspectRatio: true }
+	                });
+	            } catch(e) { console.log("Chart error:", e); }
+	        }, 100);
+	    }
+	    
+	    // Apply date filter
+	    modal.querySelector("#applyStatsDateBtn").onclick = function() {
+	        renderStatsWithDateFilter();
+	    };
+	    
+	    // Reset date filter
+	    modal.querySelector("#resetStatsDateBtn").onclick = function() {
+	        startDateInput.value = "";
+	        endDateInput.value = "";
+	        renderStatsWithDateFilter();
+	    };
+	    
+	    // Close modal
+	    modal.querySelector(".close-modal").onclick = function() {
+	        // Clean up chart instances
+	        if (window.etChartInstance) { window.etChartInstance.destroy(); }
+	        if (window.setChartInstance) { window.setChartInstance.destroy(); }
+	        if (window.phyChartInstance) { window.phyChartInstance.destroy(); }
+	        if (window.jobChartInstance) { window.jobChartInstance.destroy(); }
+	        modal.remove();
+	    };
+	    
+	    // Initial render
+	    renderStatsWithDateFilter();
+	}
     
     const canvas = document.getElementById("signatureCanvas"), ctx = canvas.getContext("2d"); let drawing = false;
     function initCanvas() { canvas.width = 400; canvas.height = 100; ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = "#166b5c"; ctx.lineWidth = 2; }
@@ -3112,19 +3745,19 @@ window.addEventListener('beforeunload', function() {
             
             		// Control visibility of admin-only elements
             		if (currentUserRole === "super") {
-    					var dlogsTab = document.getElementById("dblogsTab");
-    					if (dlogsTab) dlogsTab.style.display = "none";
-    					var adminButtons = document.querySelectorAll('.admin-only');
-    					adminButtons.forEach(function(btn) {
-        					btn.style.display = "none";
-    					});
+					    var dlogsTab = document.getElementById("dblogsTab");
+					    if (dlogsTab) dlogsTab.style.display = "none";
+					    var adminButtons = document.querySelectorAll('.admin-only');
+					    adminButtons.forEach(function(btn) {
+					        btn.style.display = "none";
+					    });
 					} else {
-    					var dlogsTab = document.getElementById("dblogsTab");
-    					if (dlogsTab) dlogsTab.style.display = "block";
-    					var adminButtons = document.querySelectorAll('.admin-only');
-    					adminButtons.forEach(function(btn) {
-        					btn.style.display = "inline-block";
-    					});
+					    var dlogsTab = document.getElementById("dblogsTab");
+					    if (dlogsTab) dlogsTab.style.display = "block";
+					    var adminButtons = document.querySelectorAll('.admin-only');
+					    adminButtons.forEach(function(btn) {
+					        btn.style.display = "inline-block";
+					    });
 					}
             
             		// Log successful login
@@ -3248,6 +3881,8 @@ window.addEventListener('beforeunload', function() {
 		
         updateClock(); setToday(); initCanvas();
         document.getElementById("etSelect").innerHTML = etNames.map(n => `<option value="${n}">${n}</option>`).join('');
+		document.getElementById("compareBtn").onclick = showCompareDialog;
+		document.getElementById("compareStatBtn").onclick = showCompareStatsDialog;
         document.getElementById("clearSearchBtn").onclick = () => { 
            document.getElementById("equipSearch").value = ""; 
            // Also reset filter dropdowns to default values
