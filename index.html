@@ -1,4 +1,4 @@
-		<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -791,15 +791,15 @@ window.addEventListener('beforeunload', function() {
             		console.log("✅ Log inserted successfully:", action, "by", logUser);
         	}
         
-        	// Refresh display if admin
-        	if (currentUserRole === 'admin' && typeof renderDbLogs === 'function') {
-            	var dblogsPage = document.getElementById("dblogsPage");
-            	if (dblogsPage && dblogsPage.classList.contains("active")) {
-                	setTimeout(function() {
-                	    renderDbLogs();
-                	}, 500);
-            	}
-        	}
+        	// Refresh display if admin or senior_super
+			if ((currentUserRole === 'admin' || currentUserRole === 'senior_super') && typeof renderDbLogs === 'function') {
+			    var dblogsPage = document.getElementById("dblogsPage");
+			    if (dblogsPage && dblogsPage.classList.contains("active")) {
+			        setTimeout(function() {
+			            renderDbLogs();
+			        }, 500);
+			    }
+			}
         
     	} catch (err) {
         	console.error("❌ Failed to insert log:", err);
@@ -810,7 +810,7 @@ window.addEventListener('beforeunload', function() {
     async function loadStatus() { const { data } = await supabaseClient.from('equip_status').select('*'); if (data) { equipStatus = {}; data.forEach(row => { equipStatus[row.equipment_key] = row.status; }); } }
     async function loadHistory() { const { data } = await supabaseClient.from('history_records').select('*').order('created_at', { ascending: false }); if (data) { historyRecords = data.map(row => ({ id: row.record_id, displayTime: row.display_time, status: row.status, jobType: row.job_type, purpose: row.purpose, et: row.et, set: row.set_person, physicist: row.physicist, others: row.others, remarks: row.remarks, signature: row.signature, recordStatus: row.record_status, editHistory: row.edit_history || [], equipmentDetails: row.equipment_details || [] })); } }
     async function loadDbLogs() { 
-    	if (currentUserRole !== 'admin') return; 
+    	if (currentUserRole !== 'admin' && currentUserRole !== 'senior_super') return;  
     	try {
         	console.log("📝 Loading DB logs from database...");
         	const { data, error } = await supabaseClient
@@ -3349,73 +3349,92 @@ window.addEventListener('beforeunload', function() {
     }
 
     async function emailRecordPreview(rec) {
-    	try {
-        	// Generate PDF preview HTML content
-        	let equipHtml = rec.equipmentDetails?.map(e => `
-            	<tr>
-                	<td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td>
-                	<td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td>
-                	<td style="border:1px solid #ddd; padding:8px;">${e.manufacturer || '-'}</td>
-                	<td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td>
-            	</tr>
-        	`).join('') || '<tr><td colspan="4">No details</td></tr>';
-        
-        	// Create filename for PDF
-        	var purposeSafe = (rec.purpose || 'record').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
-       		var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
- 	        var pdfFilename = `record_preview_${purposeSafe}_${dateStr}`;
-        
-        	// Get current user name for signature
+	    try {
+	        // Generate PDF preview HTML content
+	        let equipHtml = rec.equipmentDetails?.map(e => `
+	            <tr>
+	                <td style="border:1px solid #ddd; padding:8px;">${e.assetNumber || '-'}</td>
+	                <td style="border:1px solid #ddd; padding:8px;">${e.assetDesc}</td>
+	                <td style="border:1px solid #ddd; padding:8px;">${e.manufacturer || '-'}</td>
+	                <td style="border:1px solid #ddd; padding:8px;">${e.serialNo || '-'}</td>
+	            </tr>
+	        `).join('') || '<tr><td colspan="4">No details</td></tr>';
+	        
+	        // Create filename for PDF
+	        var purposeSafe = (rec.purpose || 'record').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+	        var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+	        var pdfFilename = `record_preview_${purposeSafe}_${dateStr}`;
+	        
+	        // Get current user name for signature
 	        var signatureName = currentUser || "System User";
-        	if (currentUserRole === 'admin') signatureName = currentUser + " (Admin)";
-        	else if (currentUserRole === 'super') signatureName = currentUser + " (Super-user)";
-
-        	// Create email subject
-        	var emailSubject = `Equipment Transaction Record - (${rec.jobType || 'N/A'} - ${rec.status || 'N/A'}) ${rec.purpose || ''}`;
-
-        	// Create email body with URL
-        	var emailBody = `
+	        if (currentUserRole === 'admin') signatureName = currentUser + " (Admin)";
+	        else if (currentUserRole === 'super') signatureName = currentUser + " (Super-user)";
+	        else if (currentUserRole === 'senior_super') signatureName = currentUser + " (Senior Super-user)";
+	
+	        // Create email subject
+	        var emailSubject = `Equipment Transaction Record - (${rec.jobType || 'N/A'} - ${rec.status || 'N/A'}) ${rec.purpose || ''}`;
+	
+	        // CC recipients list
+	        var ccRecipients = [
+	            'km.heung@ha.org.hk',
+	            'pc.leung@ha.org.hk',
+	            'lcc422@ha.org.hk',
+	            'cnw591@ha.org.hk',
+	            'lcy632@ha.org.hk',
+	            'joewan@ha.org.hk',
+	            'richard.fung@ha.org.hk',
+	            'ray.lau@ha.org.hk',
+	            'xl430@ha.org.hk',
+	            'lkw823@ha.org.hk',
+	            'keith.kwan@ha.org.hk',
+	            'jacky.leung@ha.org.hk',
+	            'ckh101a@ha.org.hk'
+	        ];
+	        var ccString = ccRecipients.join(',');
+	
+	        // Create email body with HTML styling (using Gadugi font, size 11)
+	        var emailBody = `
 	Dear Reeve,
-
+	
 	Please find attached the equipment transaction record details below:
-
+	
 	===========================================
 	TRANSACTION RECORD DETAILS
 	===========================================
-
+	
 	Date/Time: ${formatTimestamp(rec.displayTime)}
 	Status: ${rec.status}
 	Job Type: ${rec.jobType || 'N/A'}
 	Purpose: ${rec.purpose || 'N/A'}
-
+	
 	Personnel:
 	- ET: ${rec.et || 'N/A'}
 	- SET: ${rec.set || 'N/A'}
 	- Physicist: ${rec.physicist || 'N/A'}
 	- Others: ${rec.others || 'N/A'}
-
+	
 	Remarks: ${rec.remarks || 'N/A'}
 	Record Status: ${rec.recordStatus || 'N/A'}
-
+	
 	===========================================
 	EQUIPMENT LIST
 	===========================================
-
+	
 	${rec.equipmentDetails?.map(e => `• ${e.assetDesc} | ${e.manufacturer || '-'} | SN: ${e.serialNo || '-'}`).join('\n') || 'No equipment details'}
-
+	
 	===========================================
-
+	
 	Best regards,
 	${signatureName}
-
+	
 	---
-	This record was generated from the NTWC MPU DRWS Equipment Database.
+	This transaction record was generated from NTWC MPU DRWS Equipment Database.
 	URL: ${window.location.href}
 	`;
-
-        	// Create mailto link
-        	var mailtoLink = `mailto:wck131@ha.org.hk?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-        
+	
+	        // Create mailto link with CC
+	        var mailtoLink = `mailto:wck131@ha.org.hk?cc=${encodeURIComponent(ccString)}&subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+			
         	// Enhanced cross-browser email opening function
         	function openEmailClient() {
             	// Method 1: Try using window.open (works on most browsers)
@@ -3485,76 +3504,81 @@ window.addEventListener('beforeunload', function() {
             	window.location.href = mailtoLink;
         	}
         
-        	// Open print window for PDF generation
-        	var printWindow = window.open('', '_blank');
-        	if (printWindow) {
-            	printWindow.document.write(`
-                	<html>
-                	<head>
-                    	<title>${pdfFilename}</title>
-                    	<style>
-                        	body{font-family:'Segoe UI',sans-serif; padding:30px; margin:0; text-align:left;}
-                        	.header{background:linear-gradient(135deg,#0a2e3f,#166b5c); color:white; padding:20px; border-radius:16px; text-align:left;}
-                        	.grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:20px; border-radius:16px; margin:15px 0; text-align:left;}
-                        	.badge{display:inline-block; padding:4px 12px; border-radius:50px;}
-                        	.in{background:#00a86b; color:white;}
-                        	.out{background:#dc3545; color:white;}
-                        	table{border-collapse:collapse; width:100%; text-align:left;}
-                        	th,td{border:1px solid #ddd; padding:8px; text-align:left; vertical-align:top;}
-                        	@media print {
-                            	body{margin:0; padding:20px;}
-                            	.no-print{display:none;}
-                        	}
-                        	.details-section{margin-bottom:20px; text-align:left;}
-                        	h3, h4{text-align:left; margin-top:20px; margin-bottom:10px;}
-                    	</style>
-                	</head>
-                	<body>
-                    	<div class="no-print" style="text-align:center; margin-bottom:20px;">
-                        	<button onclick="window.print();" style="padding:10px 20px; background:#166b5c; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px;">📄 Save as PDF</button>
-                        	<p style="margin-top:10px; font-size:13px;">Click above to save as PDF, then attach to your email.</p>
-                        	<p style="font-size:12px; color:#666;">Email client should open automatically. If not, please check popup blockers.</p>
-                    	</div>
-                    	<div class="header">
-                        	<h3>Equipment Transaction Record</h3>
-                        	<p>${formatTimestamp(rec.displayTime)}</p>
-                    	</div>
-                    	<div class="grid">
-                        	<div><strong>Status:</strong><br><span class="badge ${rec.status==='IN'?'in':'out'}">${rec.status}</span></div>
-                        	<div><strong>Job Type:</strong><br>${rec.jobType||'-'}</div>
-                        	<div><strong>Purpose:</strong><br>${rec.purpose||'-'}</div>
-                        	<div><strong>ET/SET/Phy:</strong><br>${rec.et}/${rec.set}/${rec.physicist}</div>
-                        	<div><strong>Remarks:</strong><br>${rec.remarks||'-'}</div>
-                        	<div><strong>Record Status:</strong><br>${rec.recordStatus}</div>
-                    	</div>
-                    	<h4>Equipment List</h4>
-                    	<table border="1" cellpadding="8" style="border-collapse:collapse; width:100%;">
-                        	<thead>
-                            	<tr><th style="text-align:left;">Asset #</th><th style="text-align:left;">Description</th><th style="text-align:left;">Manufacturer</th><th style="text-align:left;">Serial #</th></tr>
-                        	</thead>
-                        	<tbody>${equipHtml}</tbody>
-                    	</table>
-                    	${rec.editHistory?.length ? `
-                    	<div style="background:#fef9e6; padding:15px; border-radius:12px; margin-top:20px; text-align:left;">
-                        	<h4>Edit History</h4>
-                        	${rec.editHistory.map(h => `<div>${h.timestamp} | ${h.user}: ${h.reason}</div>`).join('')}
-                    	</div>` : ''}
-                    	<div style="margin-top:20px; text-align:left;">
-                        	<strong>Signature:</strong><br>
-                        	<img src="${rec.signature}" style="max-width:200px; border:1px solid #ddd; border-radius:8px;">
-                    	</div>
-                    	<div style="margin-top:30px; text-align:center; font-size:0.8rem; color:#666; border-top:1px solid #ddd; padding-top:20px;">
-                        	<p>Generated from: ${window.location.href}</p>
-                    	</div>
-                    	<div class="no-print" style="margin-top:30px; text-align:center; color:#666;">
-                        	<hr>
-                        	<p>📧 Email client has been opened. Please save this page as PDF using the button above and attach to your email.</p>
-                        <p style="font-size:11px; color:#999;">If email didn't open, please check your default email client settings.</p>
-                    	</div>
-                	</body>
-                	</html>
-            	`);
-            	printWindow.document.close();
+        	// Open print window for PDF generation with styled content
+			var printWindow = window.open('', '_blank');
+			if (printWindow) {
+			    printWindow.document.write(`
+			        <html>
+			        <head>
+			            <title>${pdfFilename}</title>
+			            <style>
+			                body{font-family:'Gadugi', 'Segoe UI', sans-serif; padding:30px; margin:0; text-align:left; font-size:11pt;}
+			                .header{background:linear-gradient(135deg,#0a2e3f,#166b5c); color:white; padding:20px; border-radius:16px; text-align:left; font-family:'Gadugi', 'Segoe UI', sans-serif;}
+			                .header h3{font-family:'Gadugi', 'Segoe UI', sans-serif;}
+			                .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:20px; border-radius:16px; margin:15px 0; text-align:left;}
+			                .grid strong{color:#1a2a3a;}
+			                .badge{display:inline-block; padding:4px 12px; border-radius:50px;}
+			                .in{background:#00a86b; color:white;}
+			                .out{background:#dc3545; color:white;}
+			                table{border-collapse:collapse; width:100%; text-align:left; font-family:'Gadugi', 'Segoe UI', sans-serif; font-size:11pt;}
+			                th,td{border:1px solid #ddd; padding:8px; text-align:left; vertical-align:top;}
+			                .deep-blue{color:#003366;}
+			                .deep-green{color:#006400;}
+			                .black-text{color:#000000;}
+			                @media print {
+			                    body{margin:0; padding:20px; font-family:'Gadugi', 'Segoe UI', sans-serif; font-size:11pt;}
+			                    .no-print{display:none;}
+			                }
+			                .details-section{margin-bottom:20px; text-align:left;}
+			                h3, h4{text-align:left; margin-top:20px; margin-bottom:10px; font-family:'Gadugi', 'Segoe UI', sans-serif;}
+			            </style>
+			        </head>
+			        <body>
+			            <div class="no-print" style="text-align:center; margin-bottom:20px;">
+			                <button onclick="window.print();" style="padding:10px 20px; background:#166b5c; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-family:'Gadugi', 'Segoe UI', sans-serif;">📄 Save as PDF</button>
+			                <p style="margin-top:10px; font-size:13px; font-family:'Gadugi', 'Segoe UI', sans-serif;">Click above to save as PDF, then attach to your email.</p>
+			                <p style="font-size:12px; color:#666; font-family:'Gadugi', 'Segoe UI', sans-serif;">Email client should open automatically. If not, please check popup blockers.</p>
+			            </div>
+			            <div class="header">
+			                <h3>Equipment Transaction Record</h3>
+			                <p>${formatTimestamp(rec.displayTime)}</p>
+			            </div>
+			            <div class="grid">
+			                <div><strong>Status:</strong><br><span class="badge ${rec.status==='IN'?'in':'out'}">${rec.status}</span></div>
+			                <div><strong>Job Type:</strong><br>${rec.jobType||'-'}</div>
+			                <div><strong>Purpose:</strong><br>${rec.purpose||'-'}</div>
+			                <div><strong>ET/SET/Phy:</strong><br>${rec.et}/${rec.set}/${rec.physicist}</div>
+			                <div><strong>Remarks:</strong><br>${rec.remarks||'-'}</div>
+			                <div><strong>Record Status:</strong><br>${rec.recordStatus}</div>
+			            </div>
+			            <h4 class="deep-blue">📋 Equipment List</h4>
+			            <table border="1" cellpadding="8" style="border-collapse:collapse; width:100%;">
+			                <thead>
+			                    <tr><th style="text-align:left;">Asset #</th><th style="text-align:left;">Description</th><th style="text-align:left;">Manufacturer</th><th style="text-align:left;">Serial #</th></tr>
+			                </thead>
+			                <tbody class="deep-green">${equipHtml}</tbody>
+			            </table>
+			            ${rec.editHistory?.length ? `
+			            <div style="background:#fef9e6; padding:15px; border-radius:12px; margin-top:20px; text-align:left;">
+			                <h4>Edit History</h4>
+			                ${rec.editHistory.map(h => `<div>${h.timestamp} | ${h.user}: ${h.reason}</div>`).join('')}
+			            </div>` : ''}
+			            <div style="margin-top:20px; text-align:left;">
+			                <strong>Signature:</strong><br>
+			                <img src="${rec.signature}" style="max-width:200px; border:1px solid #ddd; border-radius:8px;">
+			            </div>
+			            <div style="margin-top:30px; text-align:center; font-size:0.8rem; color:#666; border-top:1px solid #ddd; padding-top:20px;">
+			                <p>Generated from: ${window.location.href}</p>
+			            </div>
+			            <div class="no-print" style="margin-top:30px; text-align:center; color:#666;">
+			                <hr>
+			                <p>📧 Email client has been opened. Please save this page as PDF using the button above and attach to your email.</p>
+			                <p style="font-size:11px; color:#999;">If email didn't open, please check your default email client settings.</p>
+			            </div>
+			        </body>
+			        </html>
+			    `);
+			    printWindow.document.close();
             
             	// Auto print after a delay
             	setTimeout(function() {
@@ -3650,24 +3674,32 @@ window.addEventListener('beforeunload', function() {
     }
     
     function renderDbLogs() {
-    	if (currentUserRole !== "admin") {
-        	console.log("⚠️ Only admin can view DB Logs");
-        	return;
-    	}
-    
-    	try {
-        	console.log("🔄 Rendering DB Logs...");
-        	var search = document.getElementById("dbLogSearch").value.toLowerCase();
-        	var actionFilter = document.getElementById("dbLogActionFilter").value;
-        
-        	var filtered = dbLogs.filter(function(l) {
-            		if (!l) return false;
-            		var matchSearch = (l.action && l.action.toLowerCase().includes(search)) || 
-                           		(l.details && l.details.toLowerCase().includes(search)) || 
-                           		(l.user && l.user.toLowerCase().includes(search));
-            		var matchAction = actionFilter ? l.action === actionFilter : true;
-            		return matchSearch && matchAction;
-        	});
+	    if (currentUserRole !== "admin" && currentUserRole !== "senior_super") {
+	        console.log("⚠️ Only Admin and Senior Super-user can view DB Logs");
+	        return;
+	    }
+	    
+	    try {
+	        console.log("🔄 Rendering DB Logs...");
+	        var search = document.getElementById("dbLogSearch").value.toLowerCase();
+	        var actionFilter = document.getElementById("dbLogActionFilter").value;
+	        
+	        var filtered = dbLogs.filter(function(l) {
+	            if (!l) return false;
+	            
+	            // Senior Super-user can only see EQUIPMENT_ADDED and EQUIPMENT_EDITED
+	            if (currentUserRole === "senior_super") {
+	                if (l.action !== "EQUIPMENT_ADDED" && l.action !== "EQUIPMENT_EDITED") {
+	                    return false;
+	                }
+	            }
+	            
+	            var matchSearch = (l.action && l.action.toLowerCase().includes(search)) || 
+	                           (l.details && l.details.toLowerCase().includes(search)) || 
+	                           (l.user && l.user.toLowerCase().includes(search));
+	            var matchAction = actionFilter ? l.action === actionFilter : true;
+	            return matchSearch && matchAction;
+	        });
         
         	if (dbLogsSortOrder === 'asc') {
             		filtered.sort(function(a, b) { 
@@ -3945,41 +3977,56 @@ window.addEventListener('beforeunload', function() {
         if (currentUserRole === "admin") { const { data } = await supabaseClient.from('users').select('*'); usersList = data || []; }
         modal.innerHTML = `<div class="modal-card" style="max-width:500px;"><button class="close-modal">✖</button><h3>👤 Account Management</h3>
             <div style="text-align:center; margin-bottom:20px;"><div style="background:#166b5c; width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto;"><span style="font-size:40px;">👤</span></div><h4>${currentUser}</h4><p>Role: ${currentUserRole === 'admin' ? 'Administrator' : 'Super-user'}</p></div>
-            ${currentUserRole === "admin" ? `<hr><h4>Existing Users</h4><div style="max-height:150px; overflow-y:auto; background:#f8fafc; padding:10px; border-radius:12px;">${usersList.map(u => `<div style="padding:5px; border-bottom:1px solid #e2e8f0;">${u.username} (${u.role})</div>`).join('')}</div>
-            <hr><h4>Create New Super-user</h4><input type="text" id="newUsername" placeholder="Username" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><input type="text" id="newPassword" placeholder="Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><button id="createUserBtn" class="btn btn-primary" style="margin-top:10px; width:100%;">Create User</button>` : ''}
+			
+			${currentUserRole === "admin" ? `<hr><h4>Existing Users</h4><div style="max-height:150px; overflow-y:auto; background:#f8fafc; padding:10px; border-radius:12px;">${usersList.map(u => `<div style="padding:5px; border-bottom:1px solid #e2e8f0;">${u.username} (${u.role})</div>`).join('')}</div>
+			<hr><h4>Create New User</h4>
+			<div style="margin-bottom:10px;">
+			    <label style="font-size:0.7rem; font-weight:600;">Role</label>
+			    <select id="newUserRole" style="width:100%; padding:8px; border-radius:12px; border:1px solid #ccc;">
+			        <option value="super">Super-user</option>
+			        <option value="senior_super">Senior Super-user</option>
+			    </select>
+			</div>
+			<input type="text" id="newUsername" placeholder="Username" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;">
+			<input type="text" id="newPassword" placeholder="Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;">
+			<button id="createUserBtn" class="btn btn-primary" style="margin-top:10px; width:100%;">Create User</button>` : ''}
+			
             <hr><h4>Change Password</h4><input type="password" id="oldPwd" placeholder="Current Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><input type="password" id="newPwd" placeholder="New Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><input type="password" id="confirmPwd" placeholder="Confirm Password" style="width:100%; padding:8px; margin:5px 0; border-radius:12px;"><button id="changePwdBtn" class="btn btn-primary" style="margin-top:10px; width:100%;">Change Password</button>
         </div>`;
         document.body.appendChild(modal);
         modal.querySelector(".close-modal").onclick = () => modal.remove();
         if (currentUserRole === "admin" && modal.querySelector("#createUserBtn")) {
-    		modal.querySelector("#createUserBtn").onclick = async () => {
-       			let newUser = modal.querySelector("#newUsername").value.trim().toLowerCase(), newPwd = modal.querySelector("#newPassword").value.trim();
-        		if (!newUser || !newPwd) { alert("Username and password required"); return; }
-        		if (newPwd.length < 3) { alert("Password must be at least 3 characters"); return; }
-        
-        		const { data: existing } = await supabaseClient.from('users').select('*').eq('username', newUser);
-        		if (existing && existing.length > 0) { 
-            			alert("User already exists"); 
-            			return; 
-        		}
-        
-        		await supabaseClient.from('users').insert({ username: newUser, password: newPwd, role: "super" });
-        
-        		// Log user creation
-        		await addLog(
-            			"USER_CREATED", 
-           			newUser, 
-            			`Admin ${currentUser} created new super-user: ${newUser}`, 
-            			currentUser, 
-            			"New user account creation",
-            			{ newUsername: newUser, createdBy: currentUser, role: "super", timestamp: new Date().toISOString() }
-        		);
-        
-        		alert(`User ${newUser} created successfully`);
-        		modal.remove();
-        		await loadUsersFromSupabase();
-    		};
-	}
+		    modal.querySelector("#createUserBtn").onclick = async () => {
+		        let newUser = modal.querySelector("#newUsername").value.trim().toLowerCase();
+		        let newPwd = modal.querySelector("#newPassword").value.trim();
+		        let newRole = modal.querySelector("#newUserRole") ? modal.querySelector("#newUserRole").value : "super";
+		        
+		        if (!newUser || !newPwd) { alert("Username and password required"); return; }
+		        if (newPwd.length < 3) { alert("Password must be at least 3 characters"); return; }
+		        
+		        const { data: existing } = await supabaseClient.from('users').select('*').eq('username', newUser);
+		        if (existing && existing.length > 0) { 
+		            alert("User already exists"); 
+		            return; 
+		        }
+		        
+		        await supabaseClient.from('users').insert({ username: newUser, password: newPwd, role: newRole });
+		        
+		        // Log user creation
+		        await addLog(
+		            "USER_CREATED", 
+		            newUser, 
+		            `Admin ${currentUser} created new ${newRole}: ${newUser}`, 
+		            currentUser, 
+		            "New user account creation",
+		            { newUsername: newUser, createdBy: currentUser, role: newRole, timestamp: new Date().toISOString() }
+		        );
+		        
+		        alert(`User ${newUser} created successfully`);
+		        modal.remove();
+		        await loadUsersFromSupabase();
+		    };
+		}
         modal.querySelector("#changePwdBtn").onclick = async () => {
     		let oldPwd = modal.querySelector("#oldPwd").value, newPwd = modal.querySelector("#newPwd").value, confirmPwd = modal.querySelector("#confirmPwd").value;
     		const { data: userData } = await supabaseClient.from('users').select('*').eq('username', currentUser);
@@ -4017,13 +4064,24 @@ window.addEventListener('beforeunload', function() {
             		document.getElementById("aiAssistant").style.display = "block";
             
             		// Control visibility of admin-only elements
-            		if (currentUserRole === "super") {
+					if (currentUserRole === "super") {
 					    var dlogsTab = document.getElementById("dblogsTab");
 					    if (dlogsTab) dlogsTab.style.display = "none";
 					    var adminButtons = document.querySelectorAll('.admin-only');
 					    adminButtons.forEach(function(btn) {
 					        btn.style.display = "none";
 					    });
+					} else if (currentUserRole === "senior_super") {
+					    // Senior Super-user - can see DB Logs but with limited access
+					    var dlogsTab = document.getElementById("dblogsTab");
+					    if (dlogsTab) dlogsTab.style.display = "block";
+					    var adminButtons = document.querySelectorAll('.admin-only');
+					    adminButtons.forEach(function(btn) {
+					        btn.style.display = "none"; // No backup/restore buttons
+					    });
+					    // Hide export button in DB Logs
+					    var exportDbLogsBtn = document.getElementById("exportDbLogsBtn");
+					    if (exportDbLogsBtn) exportDbLogsBtn.style.display = "none";
 					} else {
 					    var dlogsTab = document.getElementById("dblogsTab");
 					    if (dlogsTab) dlogsTab.style.display = "block";
