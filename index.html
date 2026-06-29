@@ -524,22 +524,23 @@
     <div id="dblogsPage" class="page">
         <div class="filter-bar"><input type="text" id="dbLogSearch" placeholder="🔍 Filter logs">
 	<select id="dbLogActionFilter">
-    		<option value="">All Actions</option>
-    		<option value="LOGIN_SUCCESS">✅ Login Success</option>
-    		<option value="LOGIN_FAILED">❌ Login Failed</option>
-    		<option value="LOGOUT">🚪 Logout</option>
-			<option value="SESSION_START">🔄 Session Start</option>
-    		<option value="USER_CREATED">👤 User Created</option>
-    		<option value="PASSWORD_CHANGED">🔑 Password Changed</option>
-    		<option value="RECORD_CREATED">📝 Record Created</option>
-    		<option value="RECORD_EDITED">✏️ Record Edited</option>
-    		<option value="EQUIPMENT_ADDED">➕ Equipment Added</option>
-    		<option value="EQUIPMENT_EDITED">🔧 Equipment Edited</option>
-			<option value="BACKUP">💾 Backup</option>
-    		<option value="RESTORE">📂 Restore</option>
-    		<option value="SUPABASE_BACKUP">☁️ Supabase Backup</option>
-			<option value="POKE_SENT">🔔 Poke Sent</option>
-    		<option value="POKE_BACK">🔁 Poke Back</option>
+	    <option value="">All Actions</option>
+	    <option value="EQUIPMENT_ADDED">➕ Equipment Added</option>
+	    <option value="EQUIPMENT_EDITED">🔧 Equipment Edited</option>
+	    <!-- These options are hidden for Senior Super-user, but available for Admin -->
+	    <option value="LOGIN_SUCCESS" class="admin-only-action">✅ Login Success</option>
+	    <option value="LOGIN_FAILED" class="admin-only-action">❌ Login Failed</option>
+	    <option value="LOGOUT" class="admin-only-action">🚪 Logout</option>
+	    <option value="SESSION_START" class="admin-only-action">🔄 Session Start</option>
+	    <option value="USER_CREATED" class="admin-only-action">👤 User Created</option>
+	    <option value="PASSWORD_CHANGED" class="admin-only-action">🔑 Password Changed</option>
+	    <option value="RECORD_CREATED" class="admin-only-action">📝 Record Created</option>
+	    <option value="RECORD_EDITED" class="admin-only-action">✏️ Record Edited</option>
+	    <option value="BACKUP" class="admin-only-action">💾 Backup</option>
+	    <option value="RESTORE" class="admin-only-action">📂 Restore</option>
+	    <option value="SUPABASE_BACKUP" class="admin-only-action">☁️ Supabase Backup</option>
+	    <option value="POKE_SENT" class="admin-only-action">🔔 Poke Sent</option>
+	    <option value="POKE_BACK" class="admin-only-action">🔁 Poke Back</option>
 	</select>
 	<input type="date" id="dbLogStartDate" style="width:130px;">
 	<input type="date" id="dbLogEndDate" style="width:130px;">
@@ -810,71 +811,76 @@ window.addEventListener('beforeunload', function() {
     async function loadStatus() { const { data } = await supabaseClient.from('equip_status').select('*'); if (data) { equipStatus = {}; data.forEach(row => { equipStatus[row.equipment_key] = row.status; }); } }
     async function loadHistory() { const { data } = await supabaseClient.from('history_records').select('*').order('created_at', { ascending: false }); if (data) { historyRecords = data.map(row => ({ id: row.record_id, displayTime: row.display_time, status: row.status, jobType: row.job_type, purpose: row.purpose, et: row.et, set: row.set_person, physicist: row.physicist, others: row.others, remarks: row.remarks, signature: row.signature, recordStatus: row.record_status, editHistory: row.edit_history || [], equipmentDetails: row.equipment_details || [] })); } }
     async function loadDbLogs() { 
-    	if (currentUserRole !== 'admin' && currentUserRole !== 'senior_super') return;  
-    	try {
-        	console.log("📝 Loading DB logs from database...");
-        	const { data, error } = await supabaseClient
-            	.from('db_logs')
-            	.select('*')
-            	.order('timestamp', { ascending: false })
-            	.limit(500);
-        
-        	if (error) {
-            	console.error("❌ Error loading DB logs:", error);
-            	return;
-        	}
-        
-        	if (data && data.length > 0) {
-            	console.log("✅ Loaded " + data.length + " logs from database");
-            	dbLogs = data.map(function(row) { 
-                	return { 
-                    	id: row.log_id, 
-                    	timestamp: row.timestamp,  // UTC from Supabase - formatTimestampHK will handle display
-                    	action: row.action, 
-                    	recordId: row.record_id, 
-                    	details: row.details, 
-                    	user: row.user_name, 
-                    	reason: row.reason,
-                    	userRole: row.user_role || "Unknown",
-                    	ipAddress: row.ip_address || "N/A",
-                    	browser: row.browser || "Unknown",
-                    	deviceType: row.device_type || "Unknown",
-                    	additionalInfo: row.additional_info || "{}"
-                	};
-            	});
-            	logsLoaded = true;
-        	} else {
-            	console.log("ℹ️ No logs found in database");
-        	}
-        
-        	var dblogsPage = document.getElementById("dblogsPage");
-        	if (dblogsPage && dblogsPage.classList.contains("active")) {
-            	renderDbLogs();
-        	}
-    	} catch (err) {
-        	console.error("❌ Load DB logs error:", err);
-    	}
+	    if (currentUserRole !== 'admin' && currentUserRole !== 'senior_super') return; 
+	    try {
+	        console.log("📝 Loading DB logs from database...");
+	        const { data, error } = await supabaseClient
+	            .from('db_logs')
+	            .select('*')
+	            .order('timestamp', { ascending: false })
+	            .limit(500);
+	        
+	        if (error) {
+	            console.error("❌ Error loading DB logs:", error);
+	            return;
+	        }
+	        
+	        if (data && data.length > 0) {
+	            console.log("✅ Loaded " + data.length + " logs from database");
+	            dbLogs = data.map(function(row) { 
+	                return { 
+	                    id: row.log_id, 
+	                    timestamp: row.timestamp,
+	                    action: row.action, 
+	                    recordId: row.record_id, 
+	                    details: row.details, 
+	                    user: row.user_name, 
+	                    reason: row.reason,
+	                    userRole: row.user_role || "Unknown",
+	                    ipAddress: row.ip_address || "N/A",
+	                    browser: row.browser || "Unknown",
+	                    deviceType: row.device_type || "Unknown",
+	                    additionalInfo: row.additional_info || "{}"
+	                };
+	            });
+	            logsLoaded = true;
+	        } else {
+	            console.log("ℹ️ No logs found in database");
+	        }
+	        
+	        var dblogsPage = document.getElementById("dblogsPage");
+	        if (dblogsPage && dblogsPage.classList.contains("active")) {
+	            renderDbLogs();
+	        }
+	    } catch (err) {
+	        console.error("❌ Load DB logs error:", err);
+	    }
 	}
     
     async function syncAll() {
-        var statusSpan = document.getElementById("syncStatusText");
-        if (statusSpan) statusSpan.innerHTML = "Syncing...";
-        try {
-            await loadEquipment();
-            await loadStatus();
-            await loadHistory();
-            if (currentUserRole === 'admin') await loadDbLogs();
-            await loadUsersFromSupabase();
-            rebuildFilters();
-            renderEquipment();
-            renderHistory();
-            if (currentUserRole === 'admin') renderDbLogs();
-            if (statusSpan) statusSpan.innerHTML = "Live Sync";
-        } catch (err) {
-            console.error("Sync error:", err);
-            if (statusSpan) statusSpan.innerHTML = "Sync Error";
-        }
-    }
+	    var statusSpan = document.getElementById("syncStatusText");
+	    if (statusSpan) statusSpan.innerHTML = "Syncing...";
+	    try {
+	        await loadEquipment();
+	        await loadStatus();
+	        await loadHistory();
+	        // Allow both admin and senior_super to load logs
+	        if (currentUserRole === 'admin' || currentUserRole === 'senior_super') {
+	            await loadDbLogs();
+	        }
+	        await loadUsersFromSupabase();
+	        rebuildFilters();
+	        renderEquipment();
+	        renderHistory();
+	        if (currentUserRole === 'admin' || currentUserRole === 'senior_super') {
+	            renderDbLogs();
+	        }
+	        if (statusSpan) statusSpan.innerHTML = "Live Sync";
+	    } catch (err) {
+	        console.error("Sync error:", err);
+	        if (statusSpan) statusSpan.innerHTML = "Sync Error";
+	    }
+	}
     
     async function fullSyncToCloud() {
         try {
@@ -3390,7 +3396,7 @@ window.addEventListener('beforeunload', function() {
 	            'jacky.leung@ha.org.hk',
 	            'ckh101a@ha.org.hk'
 	        ];
-	        var ccString = ccRecipients.join(',');
+	        var ccString = ccRecipients.join(';');  // ← Changed to semicolon
 	
 	        // Create email body with HTML styling (using Gadugi font, size 11)
 	        var emailBody = `
@@ -3684,10 +3690,16 @@ window.addEventListener('beforeunload', function() {
 	        var search = document.getElementById("dbLogSearch").value.toLowerCase();
 	        var actionFilter = document.getElementById("dbLogActionFilter").value;
 	        
+	        // Senior Super-user can only see EQUIPMENT_ADDED and EQUIPMENT_EDITED
+	        var allowedActions = [];
+	        if (currentUserRole === "senior_super") {
+	            allowedActions = ["EQUIPMENT_ADDED", "EQUIPMENT_EDITED"];
+	        }
+	        
 	        var filtered = dbLogs.filter(function(l) {
 	            if (!l) return false;
 	            
-	            // Senior Super-user can only see EQUIPMENT_ADDED and EQUIPMENT_EDITED
+	            // Senior Super-user filter
 	            if (currentUserRole === "senior_super") {
 	                if (l.action !== "EQUIPMENT_ADDED" && l.action !== "EQUIPMENT_EDITED") {
 	                    return false;
@@ -4052,86 +4064,92 @@ window.addEventListener('beforeunload', function() {
     	}
     
     async function login(username, password) {
-    	try {
-        	const { data } = await supabaseClient.from('users').select('*').eq('username', username.toLowerCase());
-        	if (data && data.length > 0 && data[0].password === password) {
-            		currentUser = username; 
-            		currentUserRole = data[0].role;
-            		sessionStorage.setItem("loggedUser", username); 
-            		sessionStorage.setItem("loggedRole", data[0].role);
-            		document.getElementById("loginPage").style.display = "none";
-            		document.getElementById("appContainer").classList.add("visible");
-            		document.getElementById("aiAssistant").style.display = "block";
-            
-            		// Control visibility of admin-only elements
-					if (currentUserRole === "super") {
-					    var dlogsTab = document.getElementById("dblogsTab");
-					    if (dlogsTab) dlogsTab.style.display = "none";
-					    var adminButtons = document.querySelectorAll('.admin-only');
-					    adminButtons.forEach(function(btn) {
-					        btn.style.display = "none";
-					    });
-					} else if (currentUserRole === "senior_super") {
-					    // Senior Super-user - can see DB Logs but with limited access
-					    var dlogsTab = document.getElementById("dblogsTab");
-					    if (dlogsTab) dlogsTab.style.display = "block";
-					    var adminButtons = document.querySelectorAll('.admin-only');
-					    adminButtons.forEach(function(btn) {
-					        btn.style.display = "none"; // No backup/restore buttons
-					    });
-					    // Hide export button in DB Logs
-					    var exportDbLogsBtn = document.getElementById("exportDbLogsBtn");
-					    if (exportDbLogsBtn) exportDbLogsBtn.style.display = "none";
-					} else {
-					    var dlogsTab = document.getElementById("dblogsTab");
-					    if (dlogsTab) dlogsTab.style.display = "block";
-					    var adminButtons = document.querySelectorAll('.admin-only');
-					    adminButtons.forEach(function(btn) {
-					        btn.style.display = "inline-block";
-					    });
-					}
-            
-            		// Log successful login
-            		await addLog(
-                		"LOGIN_SUCCESS", 
-                		username, 
-                		`User ${username} (${currentUserRole}) logged in successfully`, 
-               		 	username, 
-                		"Successful login",
-                		{ role: currentUserRole, loginTime: new Date().toISOString() }
-            		);
-            
-            		await syncAll();
-					initUI();
-					
-					// Load pokes after login with delay
-					console.log("🔔 Loading pokes for user after login:", currentUser);
-					setTimeout(async function() {
-					    await loadPokes();
-					    // Set up real-time subscription after pokes are loaded
-					    setupPokeSubscription();
-					}, 2000);
-				
-            		return true;
-        	} else {
-            		// Log failed login attempt
-            		await addLog(
-                		"LOGIN_FAILED", 
-                		username.toLowerCase(), 
-                		`Failed login attempt for user ${username}`, 
-                		"Unknown", 
-                		"Invalid credentials"
-            		);
-            
-            		document.getElementById("loginError").innerText = "Invalid username or password";
-            		return false;
-        	}
-    	} catch (err) {
-       		console.error("Login error:", err);
-        	document.getElementById("loginError").innerText = "Login system error. Please try again.";
-        	return false;
-    	}
-    }
+	    try {
+	        const { data } = await supabaseClient.from('users').select('*').eq('username', username.toLowerCase());
+	        if (data && data.length > 0 && data[0].password === password) {
+	            currentUser = username; 
+	            currentUserRole = data[0].role;
+	            sessionStorage.setItem("loggedUser", username); 
+	            sessionStorage.setItem("loggedRole", data[0].role);
+	            document.getElementById("loginPage").style.display = "none";
+	            document.getElementById("appContainer").classList.add("visible");
+	            document.getElementById("aiAssistant").style.display = "block";
+	            
+	            // Control visibility of admin-only elements
+	            if (currentUserRole === "super") {
+	                var dlogsTab = document.getElementById("dblogsTab");
+	                if (dlogsTab) dlogsTab.style.display = "none";
+	                var adminButtons = document.querySelectorAll('.admin-only');
+	                adminButtons.forEach(function(btn) {
+	                    btn.style.display = "none";
+	                });
+	            } else if (currentUserRole === "senior_super") {
+	                // Senior Super-user - can see DB Logs but with limited access
+	                var dlogsTab = document.getElementById("dblogsTab");
+	                if (dlogsTab) dlogsTab.style.display = "block";
+	                var adminButtons = document.querySelectorAll('.admin-only');
+	                adminButtons.forEach(function(btn) {
+	                    btn.style.display = "none"; // No backup/restore buttons
+	                });
+	                // Hide export button in DB Logs
+	                var exportDbLogsBtn = document.getElementById("exportDbLogsBtn");
+	                if (exportDbLogsBtn) exportDbLogsBtn.style.display = "none";
+	                // Hide admin-only actions in filter
+	                setTimeout(function() {
+	                    var adminActionOptions = document.querySelectorAll('.admin-only-action');
+	                    adminActionOptions.forEach(function(opt) {
+	                        opt.style.display = 'none';
+	                    });
+	                }, 100);
+	            } else {
+	                var dlogsTab = document.getElementById("dblogsTab");
+	                if (dlogsTab) dlogsTab.style.display = "block";
+	                var adminButtons = document.querySelectorAll('.admin-only');
+	                adminButtons.forEach(function(btn) {
+	                    btn.style.display = "inline-block";
+	                });
+	            }
+	            
+	            // Log successful login
+	            await addLog(
+	                "LOGIN_SUCCESS", 
+	                username, 
+	                `User ${username} (${currentUserRole}) logged in successfully`, 
+	                username, 
+	                "Successful login",
+	                { role: currentUserRole, loginTime: new Date().toISOString() }
+	            );
+	            
+	            await syncAll();
+	            initUI();
+	            
+	            // Load pokes after login with delay
+	            console.log("🔔 Loading pokes for user after login:", currentUser);
+	            setTimeout(async function() {
+	                await loadPokes();
+	                setupPokeSubscription();
+	            }, 2000);
+	            
+	            return true;
+	        } else {
+	            // Log failed login attempt
+	            await addLog(
+	                "LOGIN_FAILED", 
+	                username.toLowerCase(), 
+	                `Failed login attempt for user ${username}`, 
+	                "Unknown", 
+	                "Invalid credentials"
+	            );
+	            
+	            document.getElementById("loginError").innerText = "Invalid username or password";
+	            return false;
+	        }
+	    } catch (err) {
+	        console.error("Login error:", err);
+	        document.getElementById("loginError").innerText = "Login system error. Please try again.";
+	        return false;
+	    }
+	}
     
     async function logout() { 
 	    if (confirm("Are you sure you want to logout?")) { 
@@ -4177,6 +4195,14 @@ window.addEventListener('beforeunload', function() {
 		        { sessionStart: new Date().toISOString() }
 		    );
 		    sessionStorage.setItem("sessionLogged", "true");
+		}
+
+		// Hide admin-only actions in DB Logs filter for Senior Super-user
+		if (currentUserRole === 'senior_super') {
+		    var adminActionOptions = document.querySelectorAll('.admin-only-action');
+		    adminActionOptions.forEach(function(opt) {
+		        opt.style.display = 'none';
+		    });
 		}
 		
 		// Load pokes for the current user
