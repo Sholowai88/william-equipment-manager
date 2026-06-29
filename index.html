@@ -4362,11 +4362,27 @@ window.addEventListener('beforeunload', function() {
         document.getElementById("logoutBtn").onclick = logout;
         document.getElementById("sortHistoryAscBtn").onclick = () => { historySortOrder = 'asc'; renderHistory(); };
         document.getElementById("sortHistoryDescBtn").onclick = () => { historySortOrder = 'desc'; renderHistory(); };
-        document.getElementById("sortDbLogsAscBtn").onclick = () => { dbLogsSortOrder = 'asc'; if (currentUserRole === "admin") renderDbLogs(); };
-        document.getElementById("sortDbLogsDescBtn").onclick = () => { dbLogsSortOrder = 'desc'; if (currentUserRole === "admin") renderDbLogs(); };
-        document.getElementById("resetHistoryFiltersBtn").onclick = () => { document.getElementById("historySearch").value = ""; document.getElementById("histFilterPurpose").value = ""; document.getElementById("histFilterStatus").value = ""; document.getElementById("histFilterRecordStatus").value = ""; renderHistory(); };
-        document.getElementById("resetDbLogsBtn").onclick = () => { document.getElementById("dbLogSearch").value = ""; document.getElementById("dbLogActionFilter").value = ""; if (currentUserRole === "admin") renderDbLogs(); };
-        document.getElementById("equipSearch").addEventListener("input", () => renderEquipment());
+		document.getElementById("sortDbLogsAscBtn").onclick = () => { 
+		    dbLogsSortOrder = 'asc'; 
+		    if (currentUserRole === "admin" || currentUserRole === "senior_super") {
+		        renderDbLogs(); 
+		    }
+		};
+		document.getElementById("sortDbLogsDescBtn").onclick = () => { 
+		    dbLogsSortOrder = 'desc'; 
+		    if (currentUserRole === "admin" || currentUserRole === "senior_super") {
+		        renderDbLogs(); 
+		    }
+		};
+		document.getElementById("resetHistoryFiltersBtn").onclick = () => { document.getElementById("historySearch").value = ""; document.getElementById("histFilterPurpose").value = ""; document.getElementById("histFilterStatus").value = ""; document.getElementById("histFilterRecordStatus").value = ""; renderHistory(); };
+		document.getElementById("resetDbLogsBtn").onclick = () => { 
+		    document.getElementById("dbLogSearch").value = ""; 
+		    document.getElementById("dbLogActionFilter").value = ""; 
+		    if (currentUserRole === "admin" || currentUserRole === "senior_super") {
+		        renderDbLogs(); 
+		    }
+		};
+		document.getElementById("equipSearch").addEventListener("input", () => renderEquipment());
         document.getElementById("filterLocation").addEventListener("change", () => renderEquipment());
         document.getElementById("filterParentAsset").addEventListener("change", () => renderEquipment());
         document.getElementById("filterStatus").addEventListener("change", () => renderEquipment());
@@ -4374,18 +4390,41 @@ window.addEventListener('beforeunload', function() {
         document.getElementById("histFilterPurpose").addEventListener("change", () => renderHistory());
         document.getElementById("histFilterStatus").addEventListener("change", () => renderHistory());
         document.getElementById("histFilterRecordStatus").addEventListener("change", () => renderHistory());
-        document.getElementById("dbLogSearch").addEventListener("input", () => { if (currentUserRole === "admin") renderDbLogs(); });
-        document.getElementById("dbLogActionFilter").addEventListener("change", () => { if (currentUserRole === "admin") renderDbLogs(); });
-        document.querySelectorAll(".tab").forEach(tab => {
-            tab.addEventListener("click", () => {
-                document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-                document.getElementById(tab.dataset.page + "Page").classList.add("active");
-                document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-                tab.classList.add("active");
-                if (tab.dataset.page === "history") renderHistory();
-                if (tab.dataset.page === "dblogs" && currentUserRole === "admin") renderDbLogs();
-            });
-        });
+		document.getElementById("dbLogSearch").addEventListener("input", () => { 
+		    if (currentUserRole === "admin" || currentUserRole === "senior_super") {
+		        renderDbLogs(); 
+		    }
+		});
+		document.getElementById("dbLogActionFilter").addEventListener("change", () => { 
+		    if (currentUserRole === "admin" || currentUserRole === "senior_super") {
+		        renderDbLogs(); 
+		    }
+		});
+
+		document.getElementById("dbLogStartDate").addEventListener("change", () => { 
+		    if (currentUserRole === "admin" || currentUserRole === "senior_super") {
+		        renderDbLogs(); 
+		    }
+		});
+		document.getElementById("dbLogEndDate").addEventListener("change", () => { 
+		    if (currentUserRole === "admin" || currentUserRole === "senior_super") {
+		        renderDbLogs(); 
+		    }
+		});
+		
+		document.querySelectorAll(".tab").forEach(tab => {
+		    tab.addEventListener("click", () => {
+		        document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+		        document.getElementById(tab.dataset.page + "Page").classList.add("active");
+		        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+		        tab.classList.add("active");
+		        if (tab.dataset.page === "history") renderHistory();
+		        if (tab.dataset.page === "dblogs" && (currentUserRole === "admin" || currentUserRole === "senior_super")) {
+		            // Load fresh logs when switching to DB Logs tab
+		            loadDbLogs();
+		        }
+		    });
+		});
     }
     
     // ============================================================
