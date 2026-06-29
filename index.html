@@ -797,7 +797,8 @@ window.addEventListener('beforeunload', function() {
 			    var dblogsPage = document.getElementById("dblogsPage");
 			    if (dblogsPage && dblogsPage.classList.contains("active")) {
 			        setTimeout(function() {
-			            renderDbLogs();
+			            // Reload logs from database first, then render
+			            loadDbLogs();
 			        }, 500);
 			    }
 			}
@@ -813,7 +814,7 @@ window.addEventListener('beforeunload', function() {
     async function loadDbLogs() { 
 	    if (currentUserRole !== 'admin' && currentUserRole !== 'senior_super') return; 
 	    try {
-	        console.log("📝 Loading DB logs from database...");
+	        console.log("📝 Loading DB logs from database for:", currentUserRole);
 	        const { data, error } = await supabaseClient
 	            .from('db_logs')
 	            .select('*')
@@ -846,8 +847,10 @@ window.addEventListener('beforeunload', function() {
 	            logsLoaded = true;
 	        } else {
 	            console.log("ℹ️ No logs found in database");
+	            // Don't clear dbLogs if no data returned - keep existing logs
 	        }
 	        
+	        // Always render if we're on the DB Logs page
 	        var dblogsPage = document.getElementById("dblogsPage");
 	        if (dblogsPage && dblogsPage.classList.contains("active")) {
 	            renderDbLogs();
@@ -3686,20 +3689,15 @@ window.addEventListener('beforeunload', function() {
 	    }
 	    
 	    try {
-	        console.log("🔄 Rendering DB Logs...");
-	        var search = document.getElementById("dbLogSearch").value.toLowerCase();
-	        var actionFilter = document.getElementById("dbLogActionFilter").value;
+	        console.log("🔄 Rendering DB Logs for role:", currentUserRole);
+	        var search = document.getElementById("dbLogSearch")?.value?.toLowerCase() || "";
+	        var actionFilter = document.getElementById("dbLogActionFilter")?.value || "";
 	        
 	        // Senior Super-user can only see EQUIPMENT_ADDED and EQUIPMENT_EDITED
-	        var allowedActions = [];
-	        if (currentUserRole === "senior_super") {
-	            allowedActions = ["EQUIPMENT_ADDED", "EQUIPMENT_EDITED"];
-	        }
-	        
 	        var filtered = dbLogs.filter(function(l) {
 	            if (!l) return false;
 	            
-	            // Senior Super-user filter
+	            // Senior Super-user filter - only show Equipment Added and Equipment Edited
 	            if (currentUserRole === "senior_super") {
 	                if (l.action !== "EQUIPMENT_ADDED" && l.action !== "EQUIPMENT_EDITED") {
 	                    return false;
@@ -3712,132 +3710,126 @@ window.addEventListener('beforeunload', function() {
 	            var matchAction = actionFilter ? l.action === actionFilter : true;
 	            return matchSearch && matchAction;
 	        });
-        
-        	if (dbLogsSortOrder === 'asc') {
-            		filtered.sort(function(a, b) { 
-                		return new Date(a.timestamp) - new Date(b.timestamp); 
-            		});
-        	} else {
-            		filtered.sort(function(a, b) { 
-                		return new Date(b.timestamp) - new Date(a.timestamp); 
-            		});
-        	}
-        
-        	var tbody = document.getElementById("dbLogsBody");
-        	if (!tbody) return;
-        
-        	tbody.innerHTML = "";
-        
-        	if (filtered.length === 0) {
-            		if (dbLogs.length === 0) {
-                		tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No logs found. Start using the system to generate logs.</td></tr>';
-            		} else {
-                		tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No logs match your filters.</td></tr>';
-            		}
-            		return;
-        	}
-        
-        	filtered.forEach(function(l) {
-            		var row = tbody.insertRow();
-            
-            		// Timestamp - USING HK TIME
-					row.insertCell(0).innerText = l.timestamp ? formatTimestampHK(l.timestamp) : "Unknown";
-            
-            		// Action Type with color coding
-            		var actionColor = "#e9ecef";
-					if (l.action === "LOGIN_SUCCESS") actionColor = "#d4edda";
-					else if (l.action === "LOGIN_FAILED") actionColor = "#f8d7da";
-					else if (l.action === "LOGOUT") actionColor = "#fff3cd";
-					else if (l.action === "SESSION_START") actionColor = "#c5cae9";
-					else if (l.action === "USER_CREATED") actionColor = "#d1ecf1";
-					else if (l.action === "PASSWORD_CHANGED") actionColor = "#d4edda";
-					else if (l.action === "RECORD_CREATED") actionColor = "#c8e6c9";
-					else if (l.action === "RECORD_EDITED") actionColor = "#fff9c4";
-					else if (l.action === "EQUIPMENT_ADDED") actionColor = "#b3e5fc";
-					else if (l.action === "EQUIPMENT_EDITED") actionColor = "#e1bee7";
-					else if (l.action === "BACKUP") actionColor = "#bbdefb";
-					else if (l.action === "RESTORE") actionColor = "#ffccbc";
-					else if (l.action === "SUPABASE_BACKUP") actionColor = "#b2dfdb";
-					else if (l.action === "POKE_SENT") actionColor = "#f8bbd0";
-					else if (l.action === "POKE_BACK") actionColor = "#ce93d8";
-            
-            		row.insertCell(1).innerHTML = '<span style="background:' + actionColor + '; padding:4px 12px; border-radius:20px; font-size:0.7rem; font-weight:bold;">' + (l.action || 'N/A') + '</span>';
-            
-            		// Record ID
-            		row.insertCell(2).innerText = l.recordId || 'N/A';
-            
-            		// Details - Show more information
-					var detailsText = l.details || '';
-					if (l.browser && l.browser !== "Unknown") {
-    					detailsText += ' [Browser: ' + l.browser + ']';
-					}
-					if (l.deviceType && l.deviceType !== "Unknown") {
-    					detailsText += ' [Device: ' + l.deviceType + ']';
-					}
-					if (l.userRole && l.userRole !== "Unknown") {
-    					detailsText += ' (Role: ' + l.userRole + ')';
-					}
-					// Add location info if available
-					if (l.additionalInfo && l.additionalInfo !== "{}") {
-    					try {
-        					var additional = JSON.parse(l.additionalInfo);
-        					if (additional.role) {
-            					detailsText += ' [Role: ' + additional.role + ']';
-        					}
-        					if (additional.loginTime) {
-            					detailsText += ' [Login: ' + formatTimestampHK(additional.loginTime) + ']';
-        					}
-        					// Show job type and status for record actions
-        					if (l.action === "RECORD_CREATED" || l.action === "RECORD_EDITED") {
-            					if (additional.jobType) detailsText += ' [Job: ' + additional.jobType + ']';
-            					if (additional.status) detailsText += ' [Status: ' + additional.status + ']';
-        					}
-    					} catch(e) {}
-					}
-					row.insertCell(3).innerHTML = '<div style="max-width:300px; word-wrap:break-word; font-size:0.7rem;">' + detailsText + '</div>';		
-            		
-					// Add user role to details if available
-            		if (l.userRole && l.userRole !== "Unknown") {
-              			detailsText += ' (Role: ' + l.userRole + ')';
-            		}
-            		row.insertCell(3).innerHTML = '<div style="max-width:300px; word-wrap:break-word; font-size:0.7rem;">' + detailsText + '</div>';
-            
-            		// User with role
-            		var userRoleDisplay = l.userRole ? ' (' + l.userRole + ')' : '';
-            		row.insertCell(4).innerHTML = '<strong>' + (l.user || '-') + '</strong>' + userRoleDisplay;
-            
-            		// Action Timestamp - USING HK TIME
-					row.insertCell(5).innerText = l.timestamp ? formatTimestampHK(l.timestamp) : "Unknown";
-            
-            		// Reason with additional info
-            		var reasonText = l.reason || '-';
-            		if (l.additionalInfo && l.additionalInfo !== "{}") {
-                		try {
-                    			var additional = JSON.parse(l.additionalInfo);
-                    			if (additional.newUsername) {
-                        			reasonText += ' [New User: ' + additional.newUsername + ']';
-                    			}
-                    			if (additional.createdBy) {
-                        			reasonText += ' [Created by: ' + additional.createdBy + ']';
-                    			}
-                		} catch(e) {}
-            		}
-            		if (l.ipAddress && l.ipAddress !== "N/A" && l.ipAddress !== "Logging IP") {
-                		reasonText += '<br><small style="color:#666;">📍 IP: ' + l.ipAddress + '</small>';
-            		}
-            		row.insertCell(6).innerHTML = reasonText;
-        	});
-        
-        	console.log("✅ Rendered " + filtered.length + " logs");
-        
-    	} catch (err) {
-        	console.error("❌ Render DB Logs error:", err);
-        	var tbody = document.getElementById("dbLogsBody");
-        	if (tbody) {
-            		tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Error loading logs. Please refresh the page.</td></tr>';
-        	}
-    	}
-    }
+	        
+	        if (dbLogsSortOrder === 'asc') {
+	            filtered.sort(function(a, b) { 
+	                return new Date(a.timestamp) - new Date(b.timestamp); 
+	            });
+	        } else {
+	            filtered.sort(function(a, b) { 
+	                return new Date(b.timestamp) - new Date(a.timestamp); 
+	            });
+	        }
+	        
+	        var tbody = document.getElementById("dbLogsBody");
+	        if (!tbody) return;
+	        
+	        tbody.innerHTML = "";
+	        
+	        if (filtered.length === 0) {
+	            if (dbLogs.length === 0) {
+	                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No logs found. Start using the system to generate logs.</td></tr>';
+	            } else {
+	                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No logs match your filters.</td></tr>';
+	            }
+	            return;
+	        }
+	        
+	        filtered.forEach(function(l) {
+	            var row = tbody.insertRow();
+	            
+	            // Timestamp - USING HK TIME
+	            row.insertCell(0).innerText = l.timestamp ? formatTimestampHK(l.timestamp) : "Unknown";
+	            
+	            // Action Type with color coding
+	            var actionColor = "#e9ecef";
+	            if (l.action === "LOGIN_SUCCESS") actionColor = "#d4edda";
+	            else if (l.action === "LOGIN_FAILED") actionColor = "#f8d7da";
+	            else if (l.action === "LOGOUT") actionColor = "#fff3cd";
+	            else if (l.action === "SESSION_START") actionColor = "#c5cae9";
+	            else if (l.action === "USER_CREATED") actionColor = "#d1ecf1";
+	            else if (l.action === "PASSWORD_CHANGED") actionColor = "#d4edda";
+	            else if (l.action === "RECORD_CREATED") actionColor = "#c8e6c9";
+	            else if (l.action === "RECORD_EDITED") actionColor = "#fff9c4";
+	            else if (l.action === "EQUIPMENT_ADDED") actionColor = "#b3e5fc";
+	            else if (l.action === "EQUIPMENT_EDITED") actionColor = "#e1bee7";
+	            else if (l.action === "BACKUP") actionColor = "#bbdefb";
+	            else if (l.action === "RESTORE") actionColor = "#ffccbc";
+	            else if (l.action === "SUPABASE_BACKUP") actionColor = "#b2dfdb";
+	            else if (l.action === "POKE_SENT") actionColor = "#f8bbd0";
+	            else if (l.action === "POKE_BACK") actionColor = "#ce93d8";
+	            
+	            row.insertCell(1).innerHTML = '<span style="background:' + actionColor + '; padding:4px 12px; border-radius:20px; font-size:0.7rem; font-weight:bold;">' + (l.action || 'N/A') + '</span>';
+	            
+	            // Record ID
+	            row.insertCell(2).innerText = l.recordId || 'N/A';
+	            
+	            // Details - Show more information
+	            var detailsText = l.details || '';
+	            if (l.browser && l.browser !== "Unknown") {
+	                detailsText += ' [Browser: ' + l.browser + ']';
+	            }
+	            if (l.deviceType && l.deviceType !== "Unknown") {
+	                detailsText += ' [Device: ' + l.deviceType + ']';
+	            }
+	            if (l.userRole && l.userRole !== "Unknown") {
+	                detailsText += ' (Role: ' + l.userRole + ')';
+	            }
+	            // Add location info if available
+	            if (l.additionalInfo && l.additionalInfo !== "{}") {
+	                try {
+	                    var additional = JSON.parse(l.additionalInfo);
+	                    if (additional.role) {
+	                        detailsText += ' [Role: ' + additional.role + ']';
+	                    }
+	                    if (additional.loginTime) {
+	                        detailsText += ' [Login: ' + formatTimestampHK(additional.loginTime) + ']';
+	                    }
+	                    // Show job type and status for record actions
+	                    if (l.action === "RECORD_CREATED" || l.action === "RECORD_EDITED") {
+	                        if (additional.jobType) detailsText += ' [Job: ' + additional.jobType + ']';
+	                        if (additional.status) detailsText += ' [Status: ' + additional.status + ']';
+	                    }
+	                } catch(e) {}
+	            }
+	            row.insertCell(3).innerHTML = '<div style="max-width:300px; word-wrap:break-word; font-size:0.7rem;">' + detailsText + '</div>';
+	            
+	            // User with role
+	            var userRoleDisplay = l.userRole ? ' (' + l.userRole + ')' : '';
+	            row.insertCell(4).innerHTML = '<strong>' + (l.user || '-') + '</strong>' + userRoleDisplay;
+	            
+	            // Action Timestamp - USING HK TIME
+	            row.insertCell(5).innerText = l.timestamp ? formatTimestampHK(l.timestamp) : "Unknown";
+	            
+	            // Reason with additional info
+	            var reasonText = l.reason || '-';
+	            if (l.additionalInfo && l.additionalInfo !== "{}") {
+	                try {
+	                    var additional = JSON.parse(l.additionalInfo);
+	                    if (additional.newUsername) {
+	                        reasonText += ' [New User: ' + additional.newUsername + ']';
+	                    }
+	                    if (additional.createdBy) {
+	                        reasonText += ' [Created by: ' + additional.createdBy + ']';
+	                    }
+	                } catch(e) {}
+	            }
+	            if (l.ipAddress && l.ipAddress !== "N/A" && l.ipAddress !== "Logging IP") {
+	                reasonText += '<br><small style="color:#666;">📍 IP: ' + l.ipAddress + '</small>';
+	            }
+	            row.insertCell(6).innerHTML = reasonText;
+	        });
+	        
+	        console.log("✅ Rendered " + filtered.length + " logs for " + currentUserRole);
+	        
+	    } catch (err) {
+	        console.error("❌ Render DB Logs error:", err);
+	        var tbody = document.getElementById("dbLogsBody");
+	        if (tbody) {
+	            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Error loading logs. Please refresh the page.</td></tr>';
+	        }
+	    }
+	}
     
     function exportHistoryCSV() {
     	var startDate = document.getElementById("historyStartDate").value;
@@ -4332,7 +4324,9 @@ window.addEventListener('beforeunload', function() {
                 await loadEquipment();
                 await loadStatus();
                 await loadHistory();
-                if (currentUserRole === 'admin') await loadDbLogs();
+                if (currentUserRole === 'admin' || currentUserRole === 'senior_super') {
+				    await loadDbLogs();
+				}
                 await loadUsersFromSupabase();
 
 				// Reload pokes
@@ -4344,7 +4338,9 @@ window.addEventListener('beforeunload', function() {
                 rebuildFilters();
                 renderEquipment();
                 renderHistory();
-                if (currentUserRole === 'admin') renderDbLogs();
+                if (currentUserRole === 'admin' || currentUserRole === 'senior_super') {
+				    renderDbLogs();
+				}
         
                 // Update last refresh time
                 lastRefreshTime = now;
