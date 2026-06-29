@@ -3911,68 +3911,75 @@ window.addEventListener('beforeunload', function() {
 	}
     
     function exportDbLogsCSV() {
-    	if (currentUserRole !== "admin") {
-        	alert("⚠️ Only admin can export DB Logs.");
-        	return;
-    	}
-    
-    	var startDate = document.getElementById("dbLogStartDate").value;
-   		var endDate = document.getElementById("dbLogEndDate").value;
-    
-    	var logs = [...dbLogs];
-    
-    	// Filter by date range if selected
-    	if (startDate) {
-        	var startDateTime = new Date(startDate);
-        	startDateTime.setHours(0, 0, 0, 0);
-        	logs = logs.filter(function(l) {
-            	var logDate = new Date(l.timestamp);
-            	return logDate >= startDateTime;
-        	});
-    	}
-    	if (endDate) {
-        	var endDateTime = new Date(endDate);
-        	endDateTime.setHours(23, 59, 59, 999);
-        	logs = logs.filter(function(l) {
-            	var logDate = new Date(l.timestamp);
-            	return logDate <= endDateTime;
-        	});
-    	}
-    
-    	if (logs.length === 0) {
-        	alert("⚠️ No logs found in the selected date range.");
-        	return;
-    	}
-    
-    	var rows = [["Timestamp (HK Time)", "Action Type", "Record ID", "Details", "User", "User Role", "Reason/Note"]];
-		logs.forEach(function(l) {
-    		rows.push([
-        		formatTimestampHK(l.timestamp), // USING HK TIME
-        		l.action || '', 
-        		l.recordId || '', 
-        		l.details || '', 
-        		l.user || '', 
-        		l.userRole || '', 
-        		l.reason || ''
-    		]);
-		});
-    
-    	var csv = rows.map(function(r) {
-        	return r.map(function(c) {
-            	return '"' + String(c || '').replace(/"/g, '""') + '"';
-        	}).join(",");
-    	}).join("\n");
-    
-    	var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    	var link = document.createElement("a");
-    	link.href = URL.createObjectURL(blob);
-    	link.download = `db_logs - ${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.csv`;
-    	document.body.appendChild(link);
-    	link.click();
-    	document.body.removeChild(link);
-    	URL.revokeObjectURL(link.href);
-    
-    	alert("✅ DB Logs exported to CSV!\n\nLogs exported: " + logs.length);
+	    if (currentUserRole !== "admin" && currentUserRole !== "senior_super") {
+	        alert("⚠️ Only Admin and Senior Super-user can export DB Logs.");
+	        return;
+	    }
+	    
+	    var startDate = document.getElementById("dbLogStartDate").value;
+	    var endDate = document.getElementById("dbLogEndDate").value;
+	    
+	    var logs = [...dbLogs];
+	    
+	    // Senior Super-user can only export EQUIPMENT_ADDED and EQUIPMENT_EDITED
+	    if (currentUserRole === "senior_super") {
+	        logs = logs.filter(function(l) {
+	            return l.action === "EQUIPMENT_ADDED" || l.action === "EQUIPMENT_EDITED";
+	        });
+	    }
+	    
+	    // Filter by date range if selected
+	    if (startDate) {
+	        var startDateTime = new Date(startDate);
+	        startDateTime.setHours(0, 0, 0, 0);
+	        logs = logs.filter(function(l) {
+	            var logDate = new Date(l.timestamp);
+	            return logDate >= startDateTime;
+	        });
+	    }
+	    if (endDate) {
+	        var endDateTime = new Date(endDate);
+	        endDateTime.setHours(23, 59, 59, 999);
+	        logs = logs.filter(function(l) {
+	            var logDate = new Date(l.timestamp);
+	            return logDate <= endDateTime;
+	        });
+	    }
+	    
+	    if (logs.length === 0) {
+	        alert("⚠️ No logs found in the selected date range.");
+	        return;
+	    }
+	    
+	    var rows = [["Timestamp (HK Time)", "Action Type", "Record ID", "Details", "User", "User Role", "Reason/Note"]];
+	    logs.forEach(function(l) {
+	        rows.push([
+	            formatTimestampHK(l.timestamp),
+	            l.action || '', 
+	            l.recordId || '', 
+	            l.details || '', 
+	            l.user || '', 
+	            l.userRole || '', 
+	            l.reason || ''
+	        ]);
+	    });
+	    
+	    var csv = rows.map(function(r) {
+	        return r.map(function(c) {
+	            return '"' + String(c || '').replace(/"/g, '""') + '"';
+	        }).join(",");
+	    }).join("\n");
+	    
+	    var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+	    var link = document.createElement("a");
+	    link.href = URL.createObjectURL(blob);
+	    link.download = `db_logs - ${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.csv`;
+	    document.body.appendChild(link);
+	    link.click();
+	    document.body.removeChild(link);
+	    URL.revokeObjectURL(link.href);
+	    
+	    alert("✅ DB Logs exported to CSV!\n\nLogs exported: " + logs.length);
 	}
     
     async function accountManagement() {
@@ -4076,16 +4083,16 @@ window.addEventListener('beforeunload', function() {
 	                    btn.style.display = "none";
 	                });
 	            } else if (currentUserRole === "senior_super") {
-	                // Senior Super-user - can see DB Logs but with limited access
-	                var dlogsTab = document.getElementById("dblogsTab");
-	                if (dlogsTab) dlogsTab.style.display = "block";
-	                var adminButtons = document.querySelectorAll('.admin-only');
-	                adminButtons.forEach(function(btn) {
-	                    btn.style.display = "none"; // No backup/restore buttons
-	                });
-	                // Hide export button in DB Logs
-	                var exportDbLogsBtn = document.getElementById("exportDbLogsBtn");
-	                if (exportDbLogsBtn) exportDbLogsBtn.style.display = "none";
+				    // Senior Super-user - can see DB Logs with export access
+				    var dlogsTab = document.getElementById("dblogsTab");
+				    if (dlogsTab) dlogsTab.style.display = "block";
+				    var adminButtons = document.querySelectorAll('.admin-only');
+				    adminButtons.forEach(function(btn) {
+				        btn.style.display = "none"; // No backup/restore buttons
+				    });
+				    // Export button is now enabled for Senior Super-user
+				    var exportDbLogsBtn = document.getElementById("exportDbLogsBtn");
+				    if (exportDbLogsBtn) exportDbLogsBtn.style.display = "inline-block";
 	                // Hide admin-only actions in filter
 	                setTimeout(function() {
 	                    var adminActionOptions = document.querySelectorAll('.admin-only-action');
