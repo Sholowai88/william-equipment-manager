@@ -4196,14 +4196,6 @@ window.addEventListener('beforeunload', function() {
 		    );
 		    sessionStorage.setItem("sessionLogged", "true");
 		}
-
-		// Hide admin-only actions in DB Logs filter for Senior Super-user
-		if (currentUserRole === 'senior_super') {
-		    var adminActionOptions = document.querySelectorAll('.admin-only-action');
-		    adminActionOptions.forEach(function(opt) {
-		        opt.style.display = 'none';
-		    });
-		}
 		
 		// Load pokes for the current user
 		if (currentUser) {
@@ -4237,6 +4229,15 @@ window.addEventListener('beforeunload', function() {
 		}
 		
         updateClock(); setToday(); initCanvas();
+
+		// Hide admin-only actions in DB Logs filter for Senior Super-user
+		if (currentUserRole === 'senior_super') {
+		    var adminActionOptions = document.querySelectorAll('.admin-only-action');
+		    adminActionOptions.forEach(function(opt) {
+		        opt.style.display = 'none';
+		    });
+		}
+		
         document.getElementById("etSelect").innerHTML = etNames.map(n => `<option value="${n}">${n}</option>`).join('');
 		document.getElementById("compareBtn").onclick = showCompareDialog;
 		document.getElementById("compareStatBtn").onclick = showCompareStatsDialog;
