@@ -496,7 +496,7 @@
 		    <button id="compareBtn" class="btn btn-primary btn-sm" style="background:#e67e22;">📊 Compare</button>
 		    <button id="compareStatBtn" class="btn btn-primary btn-sm admin-only" style="background:#8e44ad; display:none;">📈 Compare Stat</button>
 		</div>
-		<div class="table-wrapper"><table id="equipTable"><thead><tr><th style="width:30px">Select</th><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th><th>Location</th><th>Parent</th><th>Status</th><th>Actions</th></tr></thead><tbody id="equipTableBody"></tbody></table></div>
+		<div class="table-wrapper"><table id="equipTable"><thead><tr><th style="width:30px">Select</th><th>Asset #</th><th>Description</th><th>Manufacturer</th><th>Serial #</th><th>Location</th><th>Parent</th><th>Status</th><th>Photo</th><th>Actions</th></tr></thead><tbody id="equipTableBody"></tbody></table></div>
     </div>
 
     <div id="recordPage" class="page">
@@ -808,8 +808,26 @@ window.addEventListener('beforeunload', function() {
     	}
     }
     
-    async function loadEquipment() { const { data } = await supabaseClient.from('equipment_data').select('*'); if (data && data.length > 0) equipmentData = data.map(row => ({ assetNumber: row.asset_number || "", assetDesc: row.asset_desc, manufacturer: row.manufacturer || "", parentAsset: row.parent_asset || "", assetOwner: row.asset_owner || "", serialNo: row.serial_no || "", location: row.location || "", poNumber: row.po_number || "", acceptanceDate: row.acceptance_date || "", calibrationDate: row.calibration_date || "", currentDetail: row.current_detail || "" })); }
-    async function loadStatus() { const { data } = await supabaseClient.from('equip_status').select('*'); if (data) { equipStatus = {}; data.forEach(row => { equipStatus[row.equipment_key] = row.status; }); } }
+    async function loadEquipment() { 
+	    const { data } = await supabaseClient.from('equipment_data').select('*'); 
+	    if (data && data.length > 0) {
+	        equipmentData = data.map(row => ({ 
+	            assetNumber: row.asset_number || "", 
+	            assetDesc: row.asset_desc, 
+	            manufacturer: row.manufacturer || "", 
+	            parentAsset: row.parent_asset || "", 
+	            assetOwner: row.asset_owner || "", 
+	            serialNo: row.serial_no || "", 
+	            location: row.location || "", 
+	            poNumber: row.po_number || "", 
+	            acceptanceDate: row.acceptance_date || "", 
+	            calibrationDate: row.calibration_date || "", 
+	            currentDetail: row.current_detail || "",
+	            photos: row.photos || []  // Add this line
+	        })); 
+	    } 
+	}
+	async function loadStatus() { const { data } = await supabaseClient.from('equip_status').select('*'); if (data) { equipStatus = {}; data.forEach(row => { equipStatus[row.equipment_key] = row.status; }); } }
     async function loadHistory() { const { data } = await supabaseClient.from('history_records').select('*').order('created_at', { ascending: false }); if (data) { historyRecords = data.map(row => ({ id: row.record_id, displayTime: row.display_time, status: row.status, jobType: row.job_type, purpose: row.purpose, et: row.et, set: row.set_person, physicist: row.physicist, others: row.others, remarks: row.remarks, signature: row.signature, recordStatus: row.record_status, editHistory: row.edit_history || [], equipmentDetails: row.equipment_details || [] })); } }
     async function loadDbLogs() { 
 	    if (currentUserRole !== 'admin' && currentUserRole !== 'senior_super') return; 
@@ -900,7 +918,8 @@ window.addEventListener('beforeunload', function() {
                     po_number: eq.poNumber, 
                     acceptance_date: eq.acceptanceDate,
                     calibration_date: eq.calibrationDate, 
-                    current_detail: eq.currentDetail
+                    current_detail: eq.currentDetail,
+    				photos: eq.photos || []  // Add this line
                 }));
             
                 await supabaseClient.from('equipment_data').upsert(equipmentForUpsert, {
@@ -988,7 +1007,8 @@ window.addEventListener('beforeunload', function() {
                 po_number: eq.poNumber || "", 
                 acceptance_date: eq.acceptanceDate || "",
                 calibration_date: eq.calibrationDate || "", 
-                current_detail: eq.currentDetail || ""
+                current_detail: eq.currentDetail || "",
+				photos: eq.photos || []  // Add this line
             };
         
             var result;
@@ -1270,7 +1290,40 @@ window.addEventListener('beforeunload', function() {
             row.insertCell(1).innerText = eq.assetNumber || "-"; row.insertCell(2).innerText = eq.assetDesc; row.insertCell(3).innerText = eq.manufacturer; row.insertCell(4).innerText = eq.serialNo || "-";
             row.insertCell(5).innerText = eq.location || "-"; row.insertCell(6).innerText = eq.parentAsset || "-";
             row.insertCell(7).innerHTML = `<span class="status-badge ${status === 'IN' ? 'status-in' : 'status-out'}">${status}</span>`;
-            let actionCell = row.insertCell(8);
+
+			// After row.insertCell(7).innerHTML = `<span class="status-badge ...`
+			// Add photo cell
+			let photoCell = row.insertCell(8);
+			let photos = eq.photos || [];
+			if (photos.length > 0) {
+			    let thumbImg = document.createElement("img");
+			    thumbImg.src = photos[0];
+			    thumbImg.style.width = "40px";
+			    thumbImg.style.height = "30px";
+			    thumbImg.style.objectFit = "cover";
+			    thumbImg.style.borderRadius = "4px";
+			    thumbImg.style.cursor = "pointer";
+			    thumbImg.style.border = "1px solid #ddd";
+			    thumbImg.title = "Click to view full photo";
+			    thumbImg.onclick = function(e) {
+			        e.stopPropagation();
+			        showPhotoGallery(eq);
+			    };
+			    photoCell.appendChild(thumbImg);
+			    // Show count if more than 1 photo
+			    if (photos.length > 1) {
+			        let countBadge = document.createElement("span");
+			        countBadge.style.cssText = "display:block; font-size:0.6rem; color:#666; text-align:center;";
+			        countBadge.innerText = "+" + (photos.length - 1);
+			        photoCell.appendChild(countBadge);
+			    }
+			} else {
+			    photoCell.innerHTML = '<span style="color:#ccc; font-size:0.6rem;">No photo</span>';
+			}
+			
+			// Update action cell index from 8 to 9
+			let actionCell = row.insertCell(9);
+			
             let showBtn = document.createElement("button"); showBtn.innerText = "📋 Show"; showBtn.className = "btn btn-sm"; showBtn.onclick = () => showEquipmentDetail(eq);
             let editBtn = document.createElement("button"); editBtn.innerText = "✏️ Edit"; editBtn.className = "btn btn-sm"; editBtn.onclick = () => editEquipmentDialog(eq);
             actionCell.append(showBtn, editBtn);
@@ -1281,6 +1334,136 @@ window.addEventListener('beforeunload', function() {
         });
         attachCheckboxEvents(); updateSelectedDisplay(); renderSelectedList();
     }
+
+	// Photo upload helper functions
+	function compressImage(file, maxSizeKB = 10) {
+	    return new Promise(function(resolve, reject) {
+	        var reader = new FileReader();
+	        reader.onload = function(e) {
+	            var img = new Image();
+	            img.onload = function() {
+	                var canvas = document.createElement('canvas');
+	                var ctx = canvas.getContext('2d');
+	                var width = img.width;
+	                var height = img.height;
+	                var maxDim = 800;
+	                if (width > maxDim || height > maxDim) {
+	                    var ratio = Math.min(maxDim / width, maxDim / height);
+	                    width = Math.round(width * ratio);
+	                    height = Math.round(height * ratio);
+	                }
+	                canvas.width = width;
+	                canvas.height = height;
+	                ctx.drawImage(img, 0, 0, width, height);
+	                var quality = 0.9;
+	                var dataUrl = canvas.toDataURL('image/jpeg', quality);
+	                // Reduce quality until size is under maxSizeKB
+	                while (dataUrl.length / 1024 > maxSizeKB && quality > 0.1) {
+	                    quality -= 0.05;
+	                    dataUrl = canvas.toDataURL('image/jpeg', quality);
+	                }
+	                resolve(dataUrl);
+	            };
+	            img.onerror = function() {
+	                reject(new Error('Failed to load image'));
+	            };
+	            img.src = e.target.result;
+	        };
+	        reader.onerror = function() {
+	            reject(new Error('Failed to read file'));
+	        };
+	        reader.readAsDataURL(file);
+	    });
+	}
+	
+	function showPhotoGallery(eq) {
+	    var photos = eq.photos || [];
+	    if (photos.length === 0) {
+	        alert("No photos available for this equipment.");
+	        return;
+	    }
+	    
+	    var modal = document.createElement("div");
+	    modal.className = "modal-overlay";
+	    var currentIndex = 0;
+	    
+	    function renderGallery() {
+	        var photoHtml = photos.map(function(p, idx) {
+	            var active = idx === 0 ? 'style="display:block;"' : 'style="display:none;"';
+	            return '<img src="' + p + '" ' + active + ' class="gallery-img" data-index="' + idx + '" style="max-width:100%; max-height:60vh; margin:0 auto; border-radius:8px;">';
+	        }).join('');
+	        
+	        modal.innerHTML = `
+	            <div class="modal-card" style="max-width:600px; max-height:90vh; text-align:center;">
+	                <button class="close-modal">✖</button>
+	                <h3>📸 Photos: ${eq.assetDesc || eq.assetNumber}</h3>
+	                <div style="position:relative; margin:15px 0; min-height:200px; display:flex; align-items:center; justify-content:center; background:#f8fafc; border-radius:12px; padding:10px;">
+	                    <div style="position:relative; width:100%;">
+	                        ${photoHtml}
+	                    </div>
+	                </div>
+	                <div style="display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; margin-top:10px;">
+	                    <button id="prevPhotoBtn" class="btn btn-sm" ${photos.length <= 1 ? 'disabled' : ''}>◀ Prev</button>
+	                    <span id="photoCounter" style="font-size:0.8rem;">${currentIndex + 1} / ${photos.length}</span>
+	                    <button id="nextPhotoBtn" class="btn btn-sm" ${photos.length <= 1 ? 'disabled' : ''}>Next ▶</button>
+	                </div>
+	                <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+	                    ${photos.map(function(p, idx) {
+	                        return '<span class="photo-dot" data-index="' + idx + '" style="display:inline-block; width:12px; height:12px; border-radius:50%; background:' + (idx === 0 ? '#166b5c' : '#ddd') + '; cursor:pointer;"></span>';
+	                    }).join('')}
+	                </div>
+	                <div style="margin-top:15px;">
+	                    <button class="btn btn-sm" onclick="this.closest('.modal-overlay').remove();">Close</button>
+	                </div>
+	            </div>
+	        `;
+	        
+	        document.body.appendChild(modal);
+	        
+	        // Gallery navigation
+	        var images = modal.querySelectorAll('.gallery-img');
+	        var dots = modal.querySelectorAll('.photo-dot');
+	        
+	        function showImage(index) {
+	            images.forEach(function(img, i) {
+	                img.style.display = i === index ? 'block' : 'none';
+	            });
+	            dots.forEach(function(dot, i) {
+	                dot.style.background = i === index ? '#166b5c' : '#ddd';
+	            });
+	            var counter = modal.querySelector('#photoCounter');
+	            if (counter) counter.innerText = (index + 1) + ' / ' + photos.length;
+	            currentIndex = index;
+	        }
+	        
+	        modal.querySelector('#prevPhotoBtn').onclick = function() {
+	            if (currentIndex > 0) {
+	                showImage(currentIndex - 1);
+	            }
+	        };
+	        
+	        modal.querySelector('#nextPhotoBtn').onclick = function() {
+	            if (currentIndex < photos.length - 1) {
+	                showImage(currentIndex + 1);
+	            }
+	        };
+	        
+	        dots.forEach(function(dot, idx) {
+	            dot.onclick = function() {
+	                showImage(idx);
+	            };
+	        });
+	        
+	        modal.querySelector(".close-modal").onclick = function() {
+	            modal.remove();
+	        };
+	    }
+	    
+	    renderGallery();
+	}
+	
+	// Make globally accessible
+	window.showPhotoGallery = showPhotoGallery;	
 
 	// Compare Button - View Multiple Equipment Details
 	function showCompareDialog(returnToCompare) {
@@ -2025,175 +2208,425 @@ window.addEventListener('beforeunload', function() {
     function renderSelectedList() { let selected = equipmentData.filter(eq => selectedAssetsSet.has(getKey(eq))); document.getElementById("selectedEquipList").innerHTML = selected.map(eq => `• ${eq.assetNumber || eq.assetDesc} - ${eq.assetDesc} (${equipStatus[getKey(eq)]})`).join("<br>") || "None selected"; }
     
     function showEquipmentDetail(eq) {
-        let modal = document.createElement("div"); modal.className = "modal-overlay";
-        modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>🔧 Equipment Details</h3><div class="details-grid">${Object.entries(eq).map(([k, v]) => `<div class="detail-item"><strong>${k.replace(/([A-Z])/g, ' $1').trim()}:</strong><span>${v || '-'}</span></div>`).join('')}</div></div>`;
-        document.body.appendChild(modal); modal.querySelector(".close-modal").onclick = () => modal.remove();
-    }
+	    var photosHtml = '';
+	    if (eq.photos && eq.photos.length > 0) {
+	        photosHtml = '<div class="detail-item"><strong>Photos:</strong><span><div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">';
+	        eq.photos.forEach(function(p) {
+	            photosHtml += '<img src="' + p + '" style="width:80px; height:60px; object-fit:cover; border-radius:4px; border:1px solid #ddd; cursor:pointer;" onclick="window.open(\'' + p + '\', \'_blank\');">';
+	        });
+	        photosHtml += '</div></span></div>';
+	    }
+	    let modal = document.createElement("div"); modal.className = "modal-overlay";
+	    modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>🔧 Equipment Details</h3><div class="details-grid">${Object.entries(eq).filter(function(kv) { return kv[0] !== 'photos'; }).map(([k, v]) => `<div class="detail-item"><strong>${k.replace(/([A-Z])/g, ' $1').trim()}:</strong><span>${v || '-'}</span></div>`).join('')}${photosHtml}</div></div>`;
+	    document.body.appendChild(modal); modal.querySelector(".close-modal").onclick = () => modal.remove();
+	}
     
     async function editEquipmentDialog(eq) {
-        let modal = document.createElement("div"); modal.className = "modal-overlay";
-        modal.innerHTML = `<div class="modal-card" style="max-width:800px;"><button class="close-modal">✖</button><h3>✏️ Edit Equipment</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
-                <div><label>Asset Number (Cannot be edited)</label><input id="eAssetNum" value="${eq.assetNumber||''}" readonly style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc; background:#f0f0f0;"></div>
-                <div><label>Asset Description *</label><input id="eAssetDesc" value="${eq.assetDesc||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Manufacturer</label><input id="eMfg" value="${eq.manufacturer||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Serial Number</label><input id="eSerial" value="${eq.serialNo||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Location</label><input id="eLocation" value="${eq.location||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Parent Asset</label><input id="eParent" value="${eq.parentAsset||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Asset Owner</label><input id="eOwner" value="${eq.assetOwner||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>PO Number</label><input id="ePo" value="${eq.poNumber||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Acceptance Date</label><input type="date" id="eAccept" value="${eq.acceptanceDate?.split(' ')[0]||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Calibration Date</label><input type="date" id="eCal" value="${eq.calibrationDate?.split(' ')[0]||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div style="grid-column:span 2;"><label>Current Detail</label><textarea id="eDetail" rows="3" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">${eq.currentDetail||''}</textarea></div>
-            </div>
-            <div style="display:flex; gap:12px; justify-content:flex-end;"><button id="saveEquipEdit" class="btn btn-primary">Save Changes</button><button id="cancelEquipEdit" class="btn">Cancel</button></div></div>`;
-        document.body.appendChild(modal);
-        modal.querySelector(".close-modal").onclick = () => modal.remove();
-        modal.querySelector("#cancelEquipEdit").onclick = () => modal.remove();
-        modal.querySelector("#saveEquipEdit").onclick = async () => {
-            var oldKey = getKey(eq);
-            var newAssetNumber = modal.querySelector("#eAssetNum").value;
-        
-            // Asset number cannot be changed - it's readonly
-            if (newAssetNumber !== eq.assetNumber) {
-                alert("⚠️ Asset Number cannot be changed. Please contact administrator if correction is needed.");
-                return;
-            }
-        
-            if (!modal.querySelector("#eAssetDesc").value.trim()) {
-                alert("Asset Description is required!");
-                return;
-            }
-        
-            // Store original values
-            var oldAssetNumber = eq.assetNumber;
-        
-            eq.assetNumber = newAssetNumber; 
-            eq.assetDesc = modal.querySelector("#eAssetDesc").value; 
-            eq.manufacturer = modal.querySelector("#eMfg").value;
-            eq.serialNo = modal.querySelector("#eSerial").value; 
-            eq.location = modal.querySelector("#eLocation").value; 
-            eq.parentAsset = modal.querySelector("#eParent").value;
-            eq.assetOwner = modal.querySelector("#eOwner").value; 
-            eq.poNumber = modal.querySelector("#ePo").value; 
-            eq.acceptanceDate = modal.querySelector("#eAccept").value;
-            eq.calibrationDate = modal.querySelector("#eCal").value; 
-            eq.currentDetail = modal.querySelector("#eDetail").value;
-        
-            var newKey = getKey(eq);
-        
-            try {
-                // First, update equipment_data
-                var eqDataObj = {
-                    asset_number: eq.assetNumber || "",
-                    asset_desc: eq.assetDesc,
-                    manufacturer: eq.manufacturer || "",
-                    parent_asset: eq.parentAsset || "",
-                    asset_owner: eq.assetOwner || "",
-                    serial_no: eq.serialNo || "",
-                    location: eq.location || "",
-                    po_number: eq.poNumber || "",
-                    acceptance_date: eq.acceptanceDate || "",
-                    calibration_date: eq.calibrationDate || "",
-                    current_detail: eq.currentDetail || ""
-                };
-            
-                // Find existing equipment record by old asset_number and serial_no
-                var existingQuery = await supabaseClient
-                    .from('equipment_data')
-                    .select('id')
-                    .eq('asset_number', oldAssetNumber || '')
-                    .eq('serial_no', eq.serialNo || '')
-                    .maybeSingle();
-            
-                if (existingQuery.data) {
-                    // Update existing record
-                    await supabaseClient
-                        .from('equipment_data')
-                        .update(eqDataObj)
-                        .eq('id', existingQuery.data.id);
-                } else {
-                    // Insert as new if not found
-                    await supabaseClient
-                        .from('equipment_data')
-                        .insert(eqDataObj);
-                }
-            
-                // Handle status migration if asset number changed
-                if (oldAssetNumber !== newAssetNumber && oldAssetNumber) {
-                    var oldStatus = equipStatus[oldAssetNumber];
-                    if (oldStatus) {
-                        // Delete old status record
-                        await supabaseClient
-                            .from('equip_status')
-                            .delete()
-                            .eq('equipment_key', oldAssetNumber);
-                    
-                        // Create new status record with new key
-                        var statusCheck = await supabaseClient
-                            .from('equip_status')
-                            .select('id')
-                            .eq('equipment_key', newKey)
-                            .maybeSingle();
-                    
-                        if (statusCheck.data) {
-                            await supabaseClient
-                                .from('equip_status')
-                                .update({ status: oldStatus })
-                                .eq('equipment_key', newKey);
-                        } else {
-                            await supabaseClient
-                                .from('equip_status')
-                                .insert({ equipment_key: newKey, status: oldStatus });
-                        }
-                    
-                        // Update local status object
-                        delete equipStatus[oldAssetNumber];
-                    equipStatus[newKey] = oldStatus;
-                    }
-                } else {
-                    // Just update status if key didn't change
-                await quickSyncStatus(newKey, equipStatus[newKey] || "IN");
-                }
-            
-                renderEquipment();
-                await addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited", currentUser, "");
-                alert("✅ Equipment updated successfully and synced to cloud!");
-            
-            } catch (err) {
-                console.error("Edit error:", err);
-                alert("❌ Failed to update equipment. Error: " + err.message);
-            }
-            modal.remove();
-        };
-    }
+	    let modal = document.createElement("div"); 
+	    modal.className = "modal-overlay";
+	    
+	    // Generate existing photos preview HTML
+	    var existingPhotosHtml = '';
+	    var existingPhotos = eq.photos || [];
+	    if (existingPhotos.length > 0) {
+	        existingPhotos.forEach(function(p) {
+	            existingPhotosHtml += '<img src="' + p + '" style="width:60px; height:60px; object-fit:cover; border-radius:4px; border:1px solid #ddd; cursor:pointer; margin:2px;" onclick="window.open(\'' + p + '\', \'_blank\');">';
+	        });
+	    } else {
+	        existingPhotosHtml = '<span style="color:#999; font-size:0.7rem;">No photos uploaded</span>';
+	    }
+	    
+	    modal.innerHTML = `
+	        <div class="modal-card" style="max-width:800px;">
+	            <button class="close-modal">✖</button>
+	            <h3>✏️ Edit Equipment</h3>
+	            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
+	                <div>
+	                    <label>Asset Number (Cannot be edited)</label>
+	                    <input id="eAssetNum" value="${eq.assetNumber||''}" readonly style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc; background:#f0f0f0;">
+	                </div>
+	                <div>
+	                    <label>Asset Description *</label>
+	                    <input id="eAssetDesc" value="${eq.assetDesc||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">
+	                </div>
+	                <div>
+	                    <label>Manufacturer</label>
+	                    <input id="eMfg" value="${eq.manufacturer||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">
+	                </div>
+	                <div>
+	                    <label>Serial Number</label>
+	                    <input id="eSerial" value="${eq.serialNo||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">
+	                </div>
+	                <div>
+	                    <label>Location</label>
+	                    <input id="eLocation" value="${eq.location||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">
+	                </div>
+	                <div>
+	                    <label>Parent Asset</label>
+	                    <input id="eParent" value="${eq.parentAsset||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">
+	                </div>
+	                <div>
+	                    <label>Asset Owner</label>
+	                    <input id="eOwner" value="${eq.assetOwner||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">
+	                </div>
+	                <div>
+	                    <label>PO Number</label>
+	                    <input id="ePo" value="${eq.poNumber||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">
+	                </div>
+	                <div>
+	                    <label>Acceptance Date</label>
+	                    <input type="date" id="eAccept" value="${eq.acceptanceDate?.split(' ')[0]||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">
+	                </div>
+	                <div>
+	                    <label>Calibration Date</label>
+	                    <input type="date" id="eCal" value="${eq.calibrationDate?.split(' ')[0]||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">
+	                </div>
+	                <div style="grid-column:span 2;">
+	                    <label>Current Detail</label>
+	                    <textarea id="eDetail" rows="3" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">${eq.currentDetail||''}</textarea>
+	                </div>
+	                <!-- PHOTO UPLOAD SECTION -->
+	                <div style="grid-column:span 2; border-top:1px solid #ddd; padding-top:15px;">
+	                    <label style="font-weight:600;">📸 Photos (Max 3, JPEG only, &lt;10KB each)</label>
+	                    <div style="margin-top:8px;">
+	                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+	                            <input type="file" id="ePhotos" accept="image/jpeg" multiple style="flex:1; padding:8px; border-radius:12px; border:1px solid #ccc; min-width:200px;">
+	                            <button id="eClearPhotosBtn" class="btn btn-sm" style="background:#dc3545; color:white;">🗑️ Remove All</button>
+	                        </div>
+	                        <div style="font-size:0.7rem; color:#666; margin-top:4px;">
+	                            <span id="ePhotoStatus">${existingPhotos.length} photo(s) currently saved</span>
+	                        </div>
+	                        <div id="ePhotoPreview" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; padding:10px; background:#f8fafc; border-radius:8px; border:1px dashed #ddd; min-height:60px;">
+	                            ${existingPhotosHtml}
+	                        </div>
+	                    </div>
+	                </div>
+	                <!-- END PHOTO UPLOAD SECTION -->
+	            </div>
+	            <div style="display:flex; gap:12px; justify-content:flex-end;">
+	                <button id="saveEquipEdit" class="btn btn-primary">Save Changes</button>
+	                <button id="cancelEquipEdit" class="btn">Cancel</button>
+	            </div>
+	        </div>
+	    `;
+	    
+	    document.body.appendChild(modal);
+	    
+	    // --- PHOTO UPLOAD HANDLING ---
+	    var photoDataUrls = [];
+	    var existingPhotoUrls = (eq.photos || []).slice(); // Copy existing photos
+	    var photoInput = modal.querySelector("#ePhotos");
+	    var photoPreview = modal.querySelector("#ePhotoPreview");
+	    var photoStatus = modal.querySelector("#ePhotoStatus");
+	    var clearPhotosBtn = modal.querySelector("#eClearPhotosBtn");
+	    
+	    // Function to render photo preview
+	    function renderPhotoPreview() {
+	        var allPhotos = existingPhotoUrls.concat(photoDataUrls);
+	        if (allPhotos.length === 0) {
+	            photoPreview.innerHTML = '<span style="color:#999; font-size:0.7rem;">No photos uploaded</span>';
+	            photoStatus.innerText = '0 photo(s)';
+	            return;
+	        }
+	        var html = '';
+	        allPhotos.forEach(function(p, idx) {
+	            var isExisting = idx < existingPhotoUrls.length;
+	            var deleteLabel = isExisting ? 'Remove' : 'Remove';
+	            html += '<div style="position:relative; display:inline-block;">';
+	            html += '<img src="' + p + '" style="width:60px; height:60px; object-fit:cover; border-radius:4px; border:1px solid #ddd; cursor:pointer;" onclick="window.open(\'' + p + '\', \'_blank\');">';
+	            html += '<button class="btn btn-sm" style="position:absolute; top:-8px; right:-8px; background:#dc3545; color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; padding:0; line-height:20px;" onclick="removePhoto(' + idx + ')">×</button>';
+	            html += '</div>';
+	        });
+	        photoPreview.innerHTML = html;
+	        photoStatus.innerText = allPhotos.length + ' photo(s)';
+	    }
+	    
+	    // Remove photo function
+	    window.removePhoto = function(index) {
+	        var allPhotos = existingPhotoUrls.concat(photoDataUrls);
+	        if (index < existingPhotoUrls.length) {
+	            // Remove from existing photos
+	            existingPhotoUrls.splice(index, 1);
+	        } else {
+	            // Remove from new uploads
+	            var newIndex = index - existingPhotoUrls.length;
+	            photoDataUrls.splice(newIndex, 1);
+	        }
+	        renderPhotoPreview();
+	    };
+	    
+	    // Handle photo upload
+	    photoInput.addEventListener("change", async function(e) {
+	        var files = Array.from(e.target.files);
+	        var currentCount = existingPhotoUrls.length + photoDataUrls.length;
+	        if (currentCount + files.length > 3) {
+	            alert("⚠️ Maximum 3 photos allowed. You currently have " + currentCount + " photo(s).");
+	            this.value = "";
+	            return;
+	        }
+	        
+	        photoStatus.innerText = "Compressing images...";
+	        var compressedCount = 0;
+	        var failedCount = 0;
+	        
+	        for (var i = 0; i < files.length; i++) {
+	            try {
+	                var compressed = await compressImage(files[i], 10);
+	                photoDataUrls.push(compressed);
+	                compressedCount++;
+	            } catch(err) {
+	                console.error("Failed to compress image:", err);
+	                failedCount++;
+	            }
+	        }
+	        
+	        if (compressedCount > 0) {
+	            renderPhotoPreview();
+	            photoStatus.innerText = existingPhotoUrls.length + photoDataUrls.length + ' photo(s) (' + compressedCount + ' uploaded)';
+	        }
+	        
+	        if (failedCount > 0) {
+	            alert("⚠️ " + failedCount + " image(s) failed to compress. Please try again.");
+	        }
+	        
+	        this.value = "";
+	    });
+	    
+	    // Clear all photos
+	    clearPhotosBtn.onclick = function() {
+	        if (confirm("Remove all photos from this equipment?")) {
+	            existingPhotoUrls = [];
+	            photoDataUrls = [];
+	            renderPhotoPreview();
+	            photoStatus.innerText = '0 photo(s) - all removed';
+	        }
+	    };
+	    
+	    // --- MODAL CONTROLS ---
+	    modal.querySelector(".close-modal").onclick = function() {
+	        modal.remove();
+	        window.removePhoto = undefined; // Clean up global function
+	    };
+	    
+	    modal.querySelector("#cancelEquipEdit").onclick = function() {
+	        modal.remove();
+	        window.removePhoto = undefined;
+	    };
+	    
+	    // --- SAVE HANDLER ---
+	    modal.querySelector("#saveEquipEdit").onclick = async function() {
+	        var oldKey = getKey(eq);
+	        var newAssetNumber = modal.querySelector("#eAssetNum").value;
+	        
+	        // Asset number cannot be changed - it's readonly
+	        if (newAssetNumber !== eq.assetNumber) {
+	            alert("⚠️ Asset Number cannot be changed. Please contact administrator if correction is needed.");
+	            return;
+	        }
+	        
+	        if (!modal.querySelector("#eAssetDesc").value.trim()) {
+	            alert("Asset Description is required!");
+	            return;
+	        }
+	        
+	        // Store original values
+	        var oldAssetNumber = eq.assetNumber;
+	        
+	        // Combine existing and new photos (max 3)
+	        var allPhotos = existingPhotoUrls.concat(photoDataUrls);
+	        if (allPhotos.length > 3) {
+	            allPhotos = allPhotos.slice(0, 3);
+	        }
+	        
+	        eq.assetNumber = newAssetNumber; 
+	        eq.assetDesc = modal.querySelector("#eAssetDesc").value; 
+	        eq.manufacturer = modal.querySelector("#eMfg").value;
+	        eq.serialNo = modal.querySelector("#eSerial").value; 
+	        eq.location = modal.querySelector("#eLocation").value; 
+	        eq.parentAsset = modal.querySelector("#eParent").value;
+	        eq.assetOwner = modal.querySelector("#eOwner").value; 
+	        eq.poNumber = modal.querySelector("#ePo").value; 
+	        eq.acceptanceDate = modal.querySelector("#eAccept").value;
+	        eq.calibrationDate = modal.querySelector("#eCal").value; 
+	        eq.currentDetail = modal.querySelector("#eDetail").value;
+	        eq.photos = allPhotos; // Save photos
+	        
+	        var newKey = getKey(eq);
+	        
+	        try {
+	            // First, update equipment_data
+	            var eqDataObj = {
+	                asset_number: eq.assetNumber || "",
+	                asset_desc: eq.assetDesc,
+	                manufacturer: eq.manufacturer || "",
+	                parent_asset: eq.parentAsset || "",
+	                asset_owner: eq.assetOwner || "",
+	                serial_no: eq.serialNo || "",
+	                location: eq.location || "",
+	                po_number: eq.poNumber || "",
+	                acceptance_date: eq.acceptanceDate || "",
+	                calibration_date: eq.calibrationDate || "",
+	                current_detail: eq.currentDetail || "",
+	                photos: eq.photos || []  // Include photos
+	            };
+	            
+	            // Find existing equipment record by old asset_number and serial_no
+	            var existingQuery = await supabaseClient
+	                .from('equipment_data')
+	                .select('id')
+	                .eq('asset_number', oldAssetNumber || '')
+	                .eq('serial_no', eq.serialNo || '')
+	                .maybeSingle();
+	            
+	            if (existingQuery.data) {
+	                // Update existing record
+	                await supabaseClient
+	                    .from('equipment_data')
+	                    .update(eqDataObj)
+	                    .eq('id', existingQuery.data.id);
+	            } else {
+	                // Insert as new if not found
+	                await supabaseClient
+	                    .from('equipment_data')
+	                    .insert(eqDataObj);
+	            }
+	            
+	            // Handle status migration if asset number changed
+	            if (oldAssetNumber !== newAssetNumber && oldAssetNumber) {
+	                var oldStatus = equipStatus[oldAssetNumber];
+	                if (oldStatus) {
+	                    // Delete old status record
+	                    await supabaseClient
+	                        .from('equip_status')
+	                        .delete()
+	                        .eq('equipment_key', oldAssetNumber);
+	                    
+	                    // Create new status record with new key
+	                    var statusCheck = await supabaseClient
+	                        .from('equip_status')
+	                        .select('id')
+	                        .eq('equipment_key', newKey)
+	                        .maybeSingle();
+	                    
+	                    if (statusCheck.data) {
+	                        await supabaseClient
+	                            .from('equip_status')
+	                            .update({ status: oldStatus })
+	                            .eq('equipment_key', newKey);
+	                    } else {
+	                        await supabaseClient
+	                            .from('equip_status')
+	                            .insert({ equipment_key: newKey, status: oldStatus });
+	                    }
+	                    
+	                    // Update local status object
+	                    delete equipStatus[oldAssetNumber];
+	                    equipStatus[newKey] = oldStatus;
+	                }
+	            } else {
+	                // Just update status if key didn't change
+	                await quickSyncStatus(newKey, equipStatus[newKey] || "IN");
+	            }
+	            
+	            renderEquipment();
+	            
+	            // Log the edit with photo count
+	            var photoLog = eq.photos.length > 0 ? ' (' + eq.photos.length + ' photos)' : '';
+	            await addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited" + photoLog, currentUser, "");
+	            
+	            alert("✅ Equipment updated successfully and synced to cloud!" + 
+	                  (eq.photos.length > 0 ? '\n\n📸 ' + eq.photos.length + ' photo(s) saved.' : ''));
+	            
+	        } catch (err) {
+	            console.error("Edit error:", err);
+	            alert("❌ Failed to update equipment. Error: " + err.message);
+	        }
+	        
+	        modal.remove();
+	        window.removePhoto = undefined;
+	    };
+	    
+	    // Initial render
+	    renderPhotoPreview();
+	}
     
     async function addNewEquipment() {
-        let modal = document.createElement("div"); modal.className = "modal-overlay";
-        modal.innerHTML = `<div class="modal-card" style="max-width:800px;"><button class="close-modal">✖</button><h3>➕ Add New Equipment</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
-                <div><label>Asset Number *</label><input id="nAssetNum" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;" placeholder="Unique asset number"></div>
-                <div><label>Asset Description *</label><input id="nAssetDesc" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Manufacturer</label><input id="nMfg" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Serial Number</label><input id="nSerial" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Location</label><input id="nLocation" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Parent Asset</label><input id="nParent" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>Asset Owner</label><input id="nOwner" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div><label>PO Number</label><input id="nPo" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
-                <div style="grid-column:span 2;"><label>Current Detail</label><textarea id="nDetail" rows="3" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></textarea></div>
-            </div>
-            <div style="display:flex; gap:12px; justify-content:flex-end;"><button id="confirmAddBtn" class="btn btn-primary">Confirm Add</button><button id="cancelAddBtn" class="btn">Cancel</button></div></div>`;
-        document.body.appendChild(modal);
+	    let modal = document.createElement("div"); modal.className = "modal-overlay";
+	    modal.innerHTML = `<div class="modal-card" style="max-width:800px;"><button class="close-modal">✖</button><h3>➕ Add New Equipment</h3>
+	        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
+	            <div><label>Asset Number *</label><input id="nAssetNum" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;" placeholder="Unique asset number"></div>
+	            <div><label>Asset Description *</label><input id="nAssetDesc" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Manufacturer</label><input id="nMfg" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Serial Number</label><input id="nSerial" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Location</label><input id="nLocation" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Parent Asset</label><input id="nParent" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>Asset Owner</label><input id="nOwner" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div><label>PO Number</label><input id="nPo" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
+	            <div style="grid-column:span 2;"><label>Current Detail</label><textarea id="nDetail" rows="3" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></textarea></div>
+	            <div style="grid-column:span 2;">
+	                <label>Photos (Max 3, JPEG only, &lt;10KB each)</label>
+	                <input type="file" id="nPhotos" accept="image/jpeg" multiple style="width:100%; padding:8px; border-radius:12px; border:1px solid #ccc;">
+	                <div id="nPhotoPreview" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;"></div>
+	                <div id="nPhotoStatus" style="font-size:0.7rem; color:#666; margin-top:4px;"></div>
+	            </div>
+	        </div>
+	        <div style="display:flex; gap:12px; justify-content:flex-end;"><button id="confirmAddBtn" class="btn btn-primary">Confirm Add</button><button id="cancelAddBtn" class="btn">Cancel</button></div></div>`;
+	    document.body.appendChild(modal);
+	    
+	    // Photo upload handling
+	    var photoFiles = [];
+	    var photoDataUrls = [];
+	    var photoInput = modal.querySelector("#nPhotos");
+	    var photoPreview = modal.querySelector("#nPhotoPreview");
+	    var photoStatus = modal.querySelector("#nPhotoStatus");
+	    
+	    photoInput.addEventListener("change", async function(e) {
+	        var files = Array.from(e.target.files);
+	        if (photoDataUrls.length + files.length > 3) {
+	            alert("Maximum 3 photos allowed.");
+	            this.value = "";
+	            return;
+	        }
+	        
+	        photoStatus.innerText = "Compressing images...";
+	        for (var i = 0; i < files.length; i++) {
+	            try {
+	                var compressed = await compressImage(files[i], 10);
+	                photoDataUrls.push(compressed);
+	                var thumb = document.createElement("img");
+	                thumb.src = compressed;
+	                thumb.style.width = "60px";
+	                thumb.style.height = "60px";
+	                thumb.style.objectFit = "cover";
+	                thumb.style.borderRadius = "4px";
+	                thumb.style.border = "1px solid #ddd";
+	                thumb.style.cursor = "pointer";
+	                thumb.onclick = function(dataUrl) {
+	                    return function() {
+	                        window.open(dataUrl, '_blank');
+	                    };
+	                }(compressed);
+	                photoPreview.appendChild(thumb);
+	            } catch(err) {
+	                alert("Failed to compress image: " + err.message);
+	            }
+	        }
+	        photoStatus.innerText = photoDataUrls.length + " photo(s) uploaded";
+	        this.value = "";
+	    });
+		
         modal.querySelector(".close-modal").onclick = () => modal.remove();
         modal.querySelector("#cancelAddBtn").onclick = () => modal.remove();
     
         modal.querySelector("#confirmAddBtn").onclick = async () => {
             let assetNum = modal.querySelector("#nAssetNum").value;
             let assetDesc = modal.querySelector("#nAssetDesc").value;
-            
+			
             if (!assetDesc) { 
                 alert("Asset Description is required"); 
-                return; 
+                return;
+
+			newEq.photos = photoDataUrls;	
             }
         
             // Check for duplicate asset_number OR (assetDesc + serialNo combination)
