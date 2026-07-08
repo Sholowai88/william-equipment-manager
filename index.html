@@ -356,7 +356,12 @@
         .sync-status { display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.25); padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; }
         .sync-dot { width: 10px; height: 10px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 5px #4ade80; animation: pulse-green 2s infinite; }
         @keyframes pulse-green { 0% { opacity: 0.5; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.5; transform: scale(0.8); } }
-        .refresh-btn { background: #2c6e5f !important; }
+        @keyframes pulse-blue { 
+		    0% { opacity: 0.5; transform: scale(0.8); } 
+		    50% { opacity: 1; transform: scale(1.2); background: #0a2e3f; box-shadow: 0 0 8px #0a2e3f; } 
+		    100% { opacity: 0.5; transform: scale(0.8); } 
+		}
+		.refresh-btn { background: #2c6e5f !important; }
         
         .tabs { display: flex; gap: 0; background: #e2e8f0; padding: 0 20px; overflow-x: auto; }
         .tab { padding: 12px 24px; font-weight: 600; background: transparent; border: none; cursor: pointer; font-size: 0.85rem; color: #2d3748; border-radius: 20px 20px 0 0; }
@@ -478,10 +483,10 @@
 			<button id="supabaseBackupBtn" class="admin-only" style="display:inline-block;">☁️ Supabase Backup</button>
             <button id="logoutBtn">🚪 Logout</button>
             <div class="sync-status"><span class="sync-dot"></span><span id="syncStatusText">Live Sync</span></div>
-			<div class="sync-status" style="position:relative;">
-			    <span class="sync-dot"></span>
-			    <span id="syncStatusText">Live Sync</span>
-			    <span id="photoSyncStatus" style="font-size:1.1rem; margin-left:5px; color:#1a5c6e;">📸</span>
+			<div class="sync-status" style="position:relative; display:flex; align-items:center; gap:6px;">
+			    <span class="sync-dot" style="background:#1a5c6e; box-shadow:0 0 5px #1a5c6e; animation: pulse-blue 2s infinite;"></span>
+			    <span id="syncStatusText" style="color:#1a5c6e;">Live Sync</span>
+			    <span id="photoSyncStatus" style="font-size:0.6rem; margin-left:5px; color:#1a5c6e;">📸</span>
 			</div>
         </div>
     </div>
