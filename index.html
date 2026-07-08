@@ -478,10 +478,10 @@
 			<button id="supabaseBackupBtn" class="admin-only" style="display:inline-block;">☁️ Supabase Backup</button>
             <button id="logoutBtn">🚪 Logout</button>
             <div class="sync-status"><span class="sync-dot"></span><span id="syncStatusText">Live Sync</span></div>
-			<div class="sync-status" style="position:relative;">
+			<div class="sync-status" style="position:relative; color:#1a5c6e;">
 			    <span class="sync-dot"></span>
 			    <span id="syncStatusText">Live Sync</span>
-			    <span id="photoSyncStatus" style="font-size:0.6rem; margin-left:5px; color:#0018f9;">📸</span>
+			    <span id="photoSyncStatus" style="font-size:0.6rem; margin-left:5px; color:#1a5c6e;">📸</span>
 			</div>
         </div>
     </div>
@@ -2614,11 +2614,50 @@ window.addEventListener('beforeunload', function() {
 	    renderPhotoPreview();
 	}
 	
-	// Helper function to open Show with return callback
+	// Helper function to open Show with return callback - UPDATED to show photos
 	function openShowWithReturn(eq, callback) {
+	    // Build photos HTML
+	    var photosHtml = '';
+	    if (eq.photos && eq.photos.length > 0) {
+	        photosHtml = '<div class="detail-item" style="grid-column:span 2; background:#f8fafc; padding:12px; border-radius:16px; border-left:4px solid #166b5c;">';
+	        photosHtml += '<strong style="display:block; font-size:0.7rem; color:#166b5c; margin-bottom:8px;">📸 Photos (' + eq.photos.length + ')</strong>';
+	        photosHtml += '<div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">';
+	        eq.photos.forEach(function(p, idx) {
+	            photosHtml += '<div style="position:relative; display:inline-block;">';
+	            photosHtml += '<img src="' + p + '" style="width:100px; height:75px; object-fit:cover; border-radius:6px; border:2px solid #166b5c; cursor:pointer; transition:transform 0.2s;" onclick="window.open(\'' + p + '\', \'_blank\');" onmouseover="this.style.transform=\'scale(1.05)\';" onmouseout="this.style.transform=\'scale(1)\';">';
+	            photosHtml += '<span style="position:absolute; bottom:-6px; right:-6px; background:#166b5c; color:white; border-radius:50%; width:20px; height:20px; font-size:10px; display:flex; align-items:center; justify-content:center; border:2px solid white;">' + (idx + 1) + '</span>';
+	            photosHtml += '</div>';
+	        });
+	        photosHtml += '</div></div>';
+	    }
+	    
+	    // Build details grid without photos (they're handled separately)
+	    var detailsHtml = Object.entries(eq).filter(function(kv) {
+	        return kv[0] !== 'photos';
+	    }).map(function([k, v]) {
+	        var displayKey = k.replace(/([A-Z])/g, ' $1').trim();
+	        var displayValue = v || '-';
+	        if (typeof v === 'string' && v.match(/^\d{4}-\d{2}-\d{2}/)) {
+	            displayValue = v;
+	        }
+	        return '<div class="detail-item"><strong>' + displayKey + ':</strong><span>' + displayValue + '</span></div>';
+	    }).join('');
+	    
 	    var modal = document.createElement("div");
 	    modal.className = "modal-overlay";
-	    modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>🔧 Equipment Details</h3><div class="details-grid">${Object.entries(eq).map(([k, v]) => `<div class="detail-item"><strong>${k.replace(/([A-Z])/g, ' $1').trim()}:</strong><span>${v || '-'}</span></div>`).join('')}</div></div>`;
+	    modal.innerHTML = `
+	        <div class="modal-card">
+	            <button class="close-modal">✖</button>
+	            <h3>🔧 Equipment Details: ${eq.assetDesc || eq.assetNumber || 'N/A'}</h3>
+	            <div class="details-grid">
+	                ${detailsHtml}
+	                ${photosHtml}
+	            </div>
+	            <div style="margin-top:15px; text-align:center;">
+	                <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove(); if (typeof callback === 'function') callback();" style="padding:8px 30px;">Close</button>
+	            </div>
+	        </div>
+	    `;
 	    document.body.appendChild(modal);
 	    
 	    modal.querySelector(".close-modal").onclick = function() {
