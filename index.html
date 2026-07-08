@@ -478,6 +478,11 @@
 			<button id="supabaseBackupBtn" class="admin-only" style="display:inline-block;">☁️ Supabase Backup</button>
             <button id="logoutBtn">🚪 Logout</button>
             <div class="sync-status"><span class="sync-dot"></span><span id="syncStatusText">Live Sync</span></div>
+			<div class="sync-status" style="position:relative;">
+			    <span class="sync-dot"></span>
+			    <span id="syncStatusText">Live Sync</span>
+			    <span id="photoSyncStatus" style="font-size:0.6rem; margin-left:5px; color:#4ade80;">📸</span>
+			</div>
         </div>
     </div>
     <div class="tabs"><button class="tab active" data-page="home">📋 Equipment DB</button><button class="tab" data-page="record">✍️ In/Out Record</button><button class="tab" data-page="history">📜 History Logs</button><button id="dblogsTab" class="tab" data-page="dblogs">📊 DB Logs</button></div>
@@ -807,6 +812,80 @@ window.addEventListener('beforeunload', function() {
         	console.error("❌ Failed to insert log:", err);
     	}
     }
+
+	// ============================================================
+	// PHOTO SYNC VERIFICATION FUNCTIONS
+	// ============================================================
+	
+	// Function to verify photo sync for a specific equipment
+	async function verifyPhotoSync(assetNumber) {
+	    try {
+	        console.log("🔍 Verifying photo sync for:", assetNumber);
+	        var { data, error } = await supabaseClient
+	            .from('equipment_data')
+	            .select('asset_number, photos')
+	            .eq('asset_number', assetNumber)
+	            .single();
+	        
+	        if (error) {
+	            console.error("❌ Verification failed:", error);
+	            return false;
+	        }
+	        
+	        var hasPhotos = data.photos && data.photos.length > 0;
+	        var photoCount = hasPhotos ? data.photos.length : 0;
+	        
+	        console.log("📸 Photo verification result:", {
+	            assetNumber: data.asset_number,
+	            hasPhotos: hasPhotos,
+	            photoCount: photoCount
+	        });
+	        
+	        return hasPhotos;
+	    } catch(err) {
+	        console.error("❌ Verify error:", err);
+	        return false;
+	    }
+	}
+	
+	// Function to check all equipment photos
+	async function checkAllPhotos() {
+	    try {
+	        console.log("🔍 Checking all equipment photos...");
+	        var { data, error } = await supabaseClient
+	            .from('equipment_data')
+	            .select('asset_number, asset_desc, photos');
+	        
+	        if (error) {
+	            console.error("❌ Error:", error);
+	            return;
+	        }
+	        
+	        var withPhotos = data.filter(function(row) {
+	            return row.photos && row.photos.length > 0;
+	        });
+	        
+	        console.log("📸 Photo summary:");
+	        console.log("• Total equipment:", data.length);
+	        console.log("• With photos:", withPhotos.length);
+	        console.log("• Without photos:", data.length - withPhotos.length);
+	        
+	        if (withPhotos.length > 0) {
+	            console.log("📷 Equipment with photos:");
+	            withPhotos.forEach(function(row) {
+	                console.log("  -", row.asset_number, ":", row.asset_desc, "(" + row.photos.length + " photos)");
+	            });
+	        }
+	        
+	        return data;
+	    } catch(err) {
+	        console.error("❌ Error:", err);
+	    }
+	}
+	
+	// Make globally accessible
+	window.verifyPhotoSync = verifyPhotoSync;
+	window.checkAllPhotos = checkAllPhotos;
     
     async function loadEquipment() { 
 	    const { data } = await supabaseClient.from('equipment_data').select('*'); 
@@ -971,70 +1050,76 @@ window.addEventListener('beforeunload', function() {
     }
 
     // Quick sync for single equipment update - using simple upsert with proper conflict handling
-    async function quickSyncEquipment(eq) {
-        try {
-            // Ensure we have valid data
-            if (!eq.assetDesc) {
-                console.error("Cannot sync equipment: missing description", eq);
-                return false;
-            }
-        
-            // First, check if the record exists using a simple SELECT
-            var identifier = null;
-            if (eq.assetNumber && eq.assetNumber.trim() !== "") {
-                identifier = eq.assetNumber;
-            } else if (eq.serialNo && eq.serialNo.trim() !== "") {
-                identifier = eq.serialNo;
-            } else {
-                identifier = eq.assetDesc;
-            }
-        
-            // Try to find existing record
-            var existingQuery = await supabaseClient
-                .from('equipment_data')
-                .select('id')
-                .or('asset_number.eq.' + (eq.assetNumber || '___NULL___'), 'serial_no.eq.' + (eq.serialNo || '___NULL___'))
-                .limit(1);
-        
-            var equipmentDataObj = {
-                asset_number: eq.assetNumber || "", 
-                asset_desc: eq.assetDesc, 
-                manufacturer: eq.manufacturer || "",
-                parent_asset: eq.parentAsset || "", 
-                asset_owner: eq.assetOwner || "", 
-                serial_no: eq.serialNo || "",
-                location: eq.location || "", 
-                po_number: eq.poNumber || "", 
-                acceptance_date: eq.acceptanceDate || "",
-                calibration_date: eq.calibrationDate || "", 
-                current_detail: eq.currentDetail || "",
-				photos: eq.photos || []  // Add this line
-            };
-        
-            var result;
-            if (existingQuery.data && existingQuery.data.length > 0) {
-                // Update existing record
-                result = await supabaseClient
-                    .from('equipment_data')
-                    .update(equipmentDataObj)
-                    .eq('id', existingQuery.data[0].id);
-            } else {
-                // Insert new record
-                result = await supabaseClient
-                    .from('equipment_data')
-                    .insert(equipmentDataObj);
-            }
-        
-            if (result.error) {
-                console.error("Upsert error:", result.error);
-                return false;
-            }
-            return true;
-        } catch (err) {
-            console.error("Quick sync equipment error:", err);
-            return false;
-        }
-    }
+	async function quickSyncEquipment(eq) {
+	    try {
+	        // Ensure we have valid data
+	        if (!eq.assetDesc) {
+	            console.error("Cannot sync equipment: missing description", eq);
+	            return false;
+	        }
+	        
+	        // First, check if the record exists using a simple SELECT
+	        var identifier = null;
+	        if (eq.assetNumber && eq.assetNumber.trim() !== "") {
+	            identifier = eq.assetNumber;
+	        } else if (eq.serialNo && eq.serialNo.trim() !== "") {
+	            identifier = eq.serialNo;
+	        } else {
+	            identifier = eq.assetDesc;
+	        }
+	        
+	        // Try to find existing record
+	        var existingQuery = await supabaseClient
+	            .from('equipment_data')
+	            .select('id')
+	            .or('asset_number.eq.' + (eq.assetNumber || '___NULL___'), 'serial_no.eq.' + (eq.serialNo || '___NULL___'))
+	            .limit(1);
+	        
+	        var equipmentDataObj = {
+	            asset_number: eq.assetNumber || "", 
+	            asset_desc: eq.assetDesc, 
+	            manufacturer: eq.manufacturer || "",
+	            parent_asset: eq.parentAsset || "", 
+	            asset_owner: eq.assetOwner || "", 
+	            serial_no: eq.serialNo || "",
+	            location: eq.location || "", 
+	            po_number: eq.poNumber || "", 
+	            acceptance_date: eq.acceptanceDate || "",
+	            calibration_date: eq.calibrationDate || "", 
+	            current_detail: eq.currentDetail || "",
+	            photos: eq.photos || []  // <-- ADD THIS LINE - Include photos in sync
+	        };
+	        
+	        var result;
+	        if (existingQuery.data && existingQuery.data.length > 0) {
+	            // Update existing record
+	            result = await supabaseClient
+	                .from('equipment_data')
+	                .update(equipmentDataObj)
+	                .eq('id', existingQuery.data[0].id);
+	        } else {
+	            // Insert new record
+	            result = await supabaseClient
+	                .from('equipment_data')
+	                .insert(equipmentDataObj);
+	        }
+	        
+	        if (result.error) {
+	            console.error("Upsert error:", result.error);
+	            return false;
+	        }
+	        
+	        // Verify photo sync immediately after update
+	        if (eq.photos && eq.photos.length > 0) {
+	            console.log("📸 Synced " + eq.photos.length + " photos for", eq.assetNumber);
+	        }
+	        
+	        return true;
+	    } catch (err) {
+	        console.error("Quick sync equipment error:", err);
+	        return false;
+	    }
+	}
 
     // Quick sync for status update
     async function quickSyncStatus(key, status) {
@@ -1292,29 +1377,36 @@ window.addEventListener('beforeunload', function() {
             row.insertCell(7).innerHTML = `<span class="status-badge ${status === 'IN' ? 'status-in' : 'status-out'}">${status}</span>`;
 
 			// After row.insertCell(7).innerHTML = `<span class="status-badge ...`
-			// Add photo cell
+			// Photo cell
 			let photoCell = row.insertCell(8);
-			let photos = eq.photos || [];
+			var photos = eq.photos || [];
 			if (photos.length > 0) {
-			    let thumbImg = document.createElement("img");
+			    var thumbImg = document.createElement("img");
 			    thumbImg.src = photos[0];
-			    thumbImg.style.width = "40px";
-			    thumbImg.style.height = "30px";
+			    thumbImg.style.width = "50px";
+			    thumbImg.style.height = "40px";
 			    thumbImg.style.objectFit = "cover";
 			    thumbImg.style.borderRadius = "4px";
 			    thumbImg.style.cursor = "pointer";
-			    thumbImg.style.border = "1px solid #ddd";
-			    thumbImg.title = "Click to view full photo";
+			    thumbImg.style.border = "2px solid #166b5c";
+			    thumbImg.style.transition = "transform 0.2s";
+			    thumbImg.onmouseover = function() {
+			        this.style.transform = "scale(1.05)";
+			        this.style.borderColor = "#e67e22";
+			    };
+			    thumbImg.onmouseout = function() {
+			        this.style.transform = "scale(1)";
+			        this.style.borderColor = "#166b5c";
+			    };
 			    thumbImg.onclick = function(e) {
 			        e.stopPropagation();
 			        showPhotoGallery(eq);
 			    };
 			    photoCell.appendChild(thumbImg);
-			    // Show count if more than 1 photo
 			    if (photos.length > 1) {
-			        let countBadge = document.createElement("span");
-			        countBadge.style.cssText = "display:block; font-size:0.6rem; color:#666; text-align:center;";
-			        countBadge.innerText = "+" + (photos.length - 1);
+			        var countBadge = document.createElement("span");
+			        countBadge.style.cssText = "display:block; font-size:0.6rem; color:#666; text-align:center; margin-top:2px;";
+			        countBadge.innerText = "+" + (photos.length - 1) + " more";
 			        photoCell.appendChild(countBadge);
 			    }
 			} else {
@@ -1335,8 +1427,8 @@ window.addEventListener('beforeunload', function() {
         attachCheckboxEvents(); updateSelectedDisplay(); renderSelectedList();
     }
 
-	// Photo upload helper functions
-	function compressImage(file, maxSizeKB = 10) {
+	// Photo upload helper functions - 5KB limit
+	function compressImage(file, maxSizeKB = 5) {
 	    return new Promise(function(resolve, reject) {
 	        var reader = new FileReader();
 	        reader.onload = function(e) {
@@ -1346,7 +1438,7 @@ window.addEventListener('beforeunload', function() {
 	                var ctx = canvas.getContext('2d');
 	                var width = img.width;
 	                var height = img.height;
-	                var maxDim = 800;
+	                var maxDim = 600; // Reduced for smaller file size
 	                if (width > maxDim || height > maxDim) {
 	                    var ratio = Math.min(maxDim / width, maxDim / height);
 	                    width = Math.round(width * ratio);
@@ -1355,10 +1447,10 @@ window.addEventListener('beforeunload', function() {
 	                canvas.width = width;
 	                canvas.height = height;
 	                ctx.drawImage(img, 0, 0, width, height);
-	                var quality = 0.9;
+	                var quality = 0.8;
 	                var dataUrl = canvas.toDataURL('image/jpeg', quality);
 	                // Reduce quality until size is under maxSizeKB
-	                while (dataUrl.length / 1024 > maxSizeKB && quality > 0.1) {
+	                while (dataUrl.length / 1024 > maxSizeKB && quality > 0.05) {
 	                    quality -= 0.05;
 	                    dataUrl = canvas.toDataURL('image/jpeg', quality);
 	                }
@@ -1390,37 +1482,36 @@ window.addEventListener('beforeunload', function() {
 	    function renderGallery() {
 	        var photoHtml = photos.map(function(p, idx) {
 	            var active = idx === 0 ? 'style="display:block;"' : 'style="display:none;"';
-	            return '<img src="' + p + '" ' + active + ' class="gallery-img" data-index="' + idx + '" style="max-width:100%; max-height:60vh; margin:0 auto; border-radius:8px;">';
+	            return '<img src="' + p + '" ' + active + ' class="gallery-img" data-index="' + idx + '" style="max-width:100%; max-height:60vh; margin:0 auto; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">';
 	        }).join('');
 	        
 	        modal.innerHTML = `
-	            <div class="modal-card" style="max-width:600px; max-height:90vh; text-align:center;">
+	            <div class="modal-card" style="max-width:500px; max-height:90vh; text-align:center;">
 	                <button class="close-modal">✖</button>
-	                <h3>📸 Photos: ${eq.assetDesc || eq.assetNumber}</h3>
-	                <div style="position:relative; margin:15px 0; min-height:200px; display:flex; align-items:center; justify-content:center; background:#f8fafc; border-radius:12px; padding:10px;">
-	                    <div style="position:relative; width:100%;">
+	                <h3 style="font-size:1rem;">📸 ${eq.assetDesc || eq.assetNumber}</h3>
+	                <div style="position:relative; margin:10px 0; min-height:200px; display:flex; align-items:center; justify-content:center; background:#f0f4f8; border-radius:12px; padding:10px; border:1px solid #e0e7ef;">
+	                    <div style="position:relative; width:100%; max-width:400px; max-height:350px; display:flex; align-items:center; justify-content:center;">
 	                        ${photoHtml}
 	                    </div>
 	                </div>
 	                <div style="display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; margin-top:10px;">
-	                    <button id="prevPhotoBtn" class="btn btn-sm" ${photos.length <= 1 ? 'disabled' : ''}>◀ Prev</button>
-	                    <span id="photoCounter" style="font-size:0.8rem;">${currentIndex + 1} / ${photos.length}</span>
-	                    <button id="nextPhotoBtn" class="btn btn-sm" ${photos.length <= 1 ? 'disabled' : ''}>Next ▶</button>
+	                    <button id="prevPhotoBtn" class="btn btn-sm" ${photos.length <= 1 ? 'disabled' : ''} style="${photos.length <= 1 ? 'opacity:0.5;' : ''}">◀ Prev</button>
+	                    <span id="photoCounter" style="font-size:0.85rem; font-weight:bold;">${currentIndex + 1} / ${photos.length}</span>
+	                    <button id="nextPhotoBtn" class="btn btn-sm" ${photos.length <= 1 ? 'disabled' : ''} style="${photos.length <= 1 ? 'opacity:0.5;' : ''}">Next ▶</button>
 	                </div>
-	                <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+	                <div style="margin-top:10px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
 	                    ${photos.map(function(p, idx) {
-	                        return '<span class="photo-dot" data-index="' + idx + '" style="display:inline-block; width:12px; height:12px; border-radius:50%; background:' + (idx === 0 ? '#166b5c' : '#ddd') + '; cursor:pointer;"></span>';
+	                        return '<span class="photo-dot" data-index="' + idx + '" style="display:inline-block; width:10px; height:10px; border-radius:50%; background:' + (idx === 0 ? '#166b5c' : '#ddd') + '; cursor:pointer; transition:all 0.3s;"></span>';
 	                    }).join('')}
 	                </div>
-	                <div style="margin-top:15px;">
-	                    <button class="btn btn-sm" onclick="this.closest('.modal-overlay').remove();">Close</button>
+	                <div style="margin-top:12px; padding-top:10px; border-top:1px solid #eee;">
+	                    <button class="btn btn-sm" onclick="this.closest(\'.modal-overlay\').remove();" style="background:#166b5c; color:white;">Close</button>
 	                </div>
 	            </div>
 	        `;
 	        
 	        document.body.appendChild(modal);
 	        
-	        // Gallery navigation
 	        var images = modal.querySelectorAll('.gallery-img');
 	        var dots = modal.querySelectorAll('.photo-dot');
 	        
@@ -1430,6 +1521,7 @@ window.addEventListener('beforeunload', function() {
 	            });
 	            dots.forEach(function(dot, i) {
 	                dot.style.background = i === index ? '#166b5c' : '#ddd';
+	                dot.style.transform = i === index ? 'scale(1.3)' : 'scale(1)';
 	            });
 	            var counter = modal.querySelector('#photoCounter');
 	            if (counter) counter.innerText = (index + 1) + ' / ' + photos.length;
@@ -1463,7 +1555,381 @@ window.addEventListener('beforeunload', function() {
 	}
 	
 	// Make globally accessible
-	window.showPhotoGallery = showPhotoGallery;	
+	window.showPhotoGallery = showPhotoGallery;
+
+	// ============================================================
+	// PHOTO SYNC VERIFICATION FUNCTIONS
+	// ============================================================
+	
+	// Debug function to check photo sync
+	async function checkPhotoSync(assetNumber) {
+	    try {
+	        console.log("🔍 Checking photo sync for asset:", assetNumber);
+	        var { data, error } = await supabaseClient
+	            .from('equipment_data')
+	            .select('asset_number, asset_desc, photos')
+	            .eq('asset_number', assetNumber)
+	            .single();
+	        
+	        if (error) {
+	            console.error("❌ Error checking photos:", error);
+	            return null;
+	        }
+	        
+	        console.log("✅ Photo sync check for", assetNumber, ":", {
+	            assetNumber: data.asset_number,
+	            assetDesc: data.asset_desc,
+	            photoCount: data.photos ? data.photos.length : 0,
+	            photos: data.photos
+	        });
+	        
+	        return data;
+	    } catch(err) {
+	        console.error("❌ Check photo error:", err);
+	        return null;
+	    }
+	}
+	
+	// Function to verify all equipment photos
+	async function verifyAllPhotos() {
+	    try {
+	        console.log("🔍 Verifying all equipment photos...");
+	        var { data, error } = await supabaseClient
+	            .from('equipment_data')
+	            .select('asset_number, asset_desc, photos');
+	        
+	        if (error) {
+	            console.error("❌ Error verifying photos:", error);
+	            return;
+	        }
+	        
+	        var withPhotos = data.filter(function(row) {
+	            return row.photos && row.photos.length > 0;
+	        });
+	        
+	        console.log("📸 Photo verification complete:");
+	        console.log("• Total equipment:", data.length);
+	        console.log("• Equipment with photos:", withPhotos.length);
+	        console.log("• Equipment without photos:", data.length - withPhotos.length);
+	        
+	        if (withPhotos.length > 0) {
+	            console.log("📷 Equipment with photos:");
+	            withPhotos.forEach(function(row) {
+	                console.log("  -", row.asset_number, ":", row.asset_desc, "(" + row.photos.length + " photos)");
+	            });
+	        }
+	        
+	        return data;
+	    } catch(err) {
+	        console.error("❌ Verify photos error:", err);
+	    }
+	}
+	
+	// Make globally accessible
+	window.checkPhotoSync = checkPhotoSync;
+	window.verifyAllPhotos = verifyAllPhotos;
+
+	// ============================================================
+	// MANUAL PHOTO SYNC FUNCTION
+	// ============================================================
+	
+	// Manual photo sync function - syncs all equipment photos to Supabase
+	async function syncPhotosManually() {
+	    console.log("📸 Starting manual photo sync...");
+	    console.log("🔄 This will sync all equipment photos to Supabase");
+	    
+	    // Show progress indicator
+	    var progressDiv = document.createElement('div');
+	    progressDiv.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.8); color:white; padding:30px 50px; border-radius:12px; z-index:9999; text-align:center;';
+	    progressDiv.innerHTML = `
+	        <div style="font-size:24px; margin-bottom:10px;">📸</div>
+	        <div style="font-size:16px; font-weight:bold;">Syncing Photos...</div>
+	        <div id="syncProgressBar" style="width:300px; height:6px; background:#333; border-radius:3px; margin:15px auto; overflow:hidden;">
+	            <div id="syncProgressFill" style="width:0%; height:100%; background:#4ade80; border-radius:3px; transition:width 0.3s;"></div>
+	        </div>
+	        <div id="syncProgressText" style="font-size:12px; color:#aaa;">Preparing...</div>
+	    `;
+	    document.body.appendChild(progressDiv);
+	    
+	    try {
+	        // Get all equipment with photos
+	        var equipmentWithPhotos = equipmentData.filter(function(eq) {
+	            return eq.photos && eq.photos.length > 0;
+	        });
+	        
+	        var totalWithPhotos = equipmentWithPhotos.length;
+	        var totalPhotos = 0;
+	        var syncedCount = 0;
+	        var failedCount = 0;
+	        var failedEquipment = [];
+	        
+	        if (totalWithPhotos === 0) {
+	            progressDiv.innerHTML = `
+	                <div style="font-size:24px; margin-bottom:10px;">ℹ️</div>
+	                <div style="font-size:16px; font-weight:bold;">No Photos Found</div>
+	                <div style="font-size:12px; color:#aaa; margin-top:10px;">No equipment has photos to sync.</div>
+	                <button onclick="this.parentElement.remove();" style="margin-top:15px; padding:8px 20px; background:#166b5c; color:white; border:none; border-radius:6px; cursor:pointer;">Close</button>
+	            `;
+	            console.log("📸 No equipment with photos found.");
+	            return;
+	        }
+	        
+	        console.log("📸 Found", totalWithPhotos, "equipment with photos");
+	        
+	        // Calculate total photos
+	        equipmentWithPhotos.forEach(function(eq) {
+	            totalPhotos += eq.photos.length;
+	        });
+	        console.log("📸 Total photos to sync:", totalPhotos);
+	        
+	        // Update progress
+	        var progressFill = document.getElementById('syncProgressFill');
+	        var progressText = document.getElementById('syncProgressText');
+	        
+	        // Sync each equipment
+	        for (var i = 0; i < equipmentWithPhotos.length; i++) {
+	            var eq = equipmentWithPhotos[i];
+	            var percent = Math.round(((i) / totalWithPhotos) * 100);
+	            
+	            progressFill.style.width = percent + '%';
+	            progressText.innerText = 'Syncing ' + (i + 1) + '/' + totalWithPhotos + ': ' + eq.assetNumber + ' (' + eq.photos.length + ' photos)';
+	            
+	            try {
+	                console.log("📤 Syncing photos for", eq.assetNumber, "(" + eq.photos.length + " photos)");
+	                
+	                // Update the equipment with photos
+	                var eqDataObj = {
+	                    asset_number: eq.assetNumber || "",
+	                    asset_desc: eq.assetDesc,
+	                    manufacturer: eq.manufacturer || "",
+	                    parent_asset: eq.parentAsset || "",
+	                    asset_owner: eq.assetOwner || "",
+	                    serial_no: eq.serialNo || "",
+	                    location: eq.location || "",
+	                    po_number: eq.poNumber || "",
+	                    acceptance_date: eq.acceptanceDate || "",
+	                    calibration_date: eq.calibrationDate || "",
+	                    current_detail: eq.currentDetail || "",
+	                    photos: eq.photos || []
+	                };
+	                
+	                // Find existing record
+	                var existingQuery = await supabaseClient
+	                    .from('equipment_data')
+	                    .select('id')
+	                    .eq('asset_number', eq.assetNumber || '')
+	                    .eq('serial_no', eq.serialNo || '')
+	                    .maybeSingle();
+	                
+	                if (existingQuery.data) {
+	                    // Update existing record
+	                    var result = await supabaseClient
+	                        .from('equipment_data')
+	                        .update(eqDataObj)
+	                        .eq('id', existingQuery.data.id);
+	                    
+	                    if (result.error) {
+	                        throw result.error;
+	                    }
+	                    console.log("✅ Updated photos for", eq.assetNumber);
+	                } else {
+	                    // Insert as new if not found
+	                    var result = await supabaseClient
+	                        .from('equipment_data')
+	                        .insert(eqDataObj);
+	                    
+	                    if (result.error) {
+	                        throw result.error;
+	                    }
+	                    console.log("✅ Inserted photos for", eq.assetNumber);
+	                }
+	                
+	                syncedCount++;
+	                
+	            } catch (err) {
+	                console.error("❌ Failed to sync photos for", eq.assetNumber, ":", err);
+	                failedCount++;
+	                failedEquipment.push(eq.assetNumber);
+	            }
+	        }
+	        
+	        // Final progress
+	        progressFill.style.width = '100%';
+	        progressText.innerText = 'Complete! ' + syncedCount + '/' + totalWithPhotos + ' equipment synced';
+	        
+	        // Wait a moment before showing completion
+	        await new Promise(function(resolve) {
+	            setTimeout(resolve, 1000);
+	        });
+	        
+	        // Show completion message
+	        var successIcon = failedCount === 0 ? '✅' : '⚠️';
+	        var successMsg = failedCount === 0 ? 'All photos synced successfully!' : 'Sync completed with some errors.';
+	        
+	        progressDiv.innerHTML = `
+	            <div style="font-size:24px; margin-bottom:10px;">${successIcon}</div>
+	            <div style="font-size:16px; font-weight:bold;">${successMsg}</div>
+	            <div style="font-size:12px; color:#aaa; margin-top:10px; line-height:1.6;">
+	                • Equipment with photos: ${totalWithPhotos}<br>
+	                • Total photos: ${totalPhotos}<br>
+	                • Successfully synced: ${syncedCount}<br>
+	                ${failedCount > 0 ? '• Failed: ' + failedCount + ' (' + failedEquipment.join(', ') + ')' : ''}
+	            </div>
+	            <button onclick="this.parentElement.remove();" style="margin-top:15px; padding:8px 20px; background:#166b5c; color:white; border:none; border-radius:6px; cursor:pointer;">Close</button>
+	        `;
+	        
+	        console.log("📸 Manual photo sync complete:", {
+	            totalWithPhotos: totalWithPhotos,
+	            totalPhotos: totalPhotos,
+	            syncedCount: syncedCount,
+	            failedCount: failedCount,
+	            failedEquipment: failedEquipment
+	        });
+	        
+	        // Log the manual sync
+	        await addLog(
+	            "PHOTO_SYNC",
+	            "MANUAL",
+	            "Manual photo sync completed: " + syncedCount + "/" + totalWithPhotos + " equipment synced (" + totalPhotos + " photos)",
+	            currentUser,
+	            "Manual photo sync"
+	        );
+	        
+	        // Refresh the display
+	        renderEquipment();
+	        
+	        // Show alert
+	        alert("✅ Manual photo sync complete!\n\n" +
+	              "• Equipment with photos: " + totalWithPhotos + "\n" +
+	              "• Total photos: " + totalPhotos + "\n" +
+	              "• Successfully synced: " + syncedCount + "\n" +
+	              (failedCount > 0 ? "• Failed: " + failedCount + " (Check console for details)" : "• All photos synced successfully!"));
+	        
+	    } catch (err) {
+	        console.error("❌ Manual photo sync error:", err);
+	        progressDiv.innerHTML = `
+	            <div style="font-size:24px; margin-bottom:10px;">❌</div>
+	            <div style="font-size:16px; font-weight:bold;">Sync Failed</div>
+	            <div style="font-size:12px; color:#aaa; margin-top:10px;">${err.message || 'Unknown error occurred'}</div>
+	            <button onclick="this.parentElement.remove();" style="margin-top:15px; padding:8px 20px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer;">Close</button>
+	        `;
+	    }
+	}
+	
+	// Quick sync for a single equipment's photos
+	async function syncSinglePhoto(assetNumber) {
+	    try {
+	        console.log("📸 Syncing photos for single equipment:", assetNumber);
+	        
+	        // Find the equipment in local data
+	        var eq = equipmentData.find(function(e) {
+	            return e.assetNumber === assetNumber;
+	        });
+	        
+	        if (!eq) {
+	            console.error("❌ Equipment not found:", assetNumber);
+	            alert("Equipment not found: " + assetNumber);
+	            return false;
+	        }
+	        
+	        if (!eq.photos || eq.photos.length === 0) {
+	            console.log("ℹ️ No photos for", assetNumber);
+	            alert("No photos for equipment: " + assetNumber);
+	            return false;
+	        }
+	        
+	        // Sync the equipment
+	        var success = await quickSyncEquipment(eq);
+	        
+	        if (success) {
+	            console.log("✅ Photos synced for", assetNumber, "(" + eq.photos.length + " photos)");
+	            alert("✅ Photos synced for " + assetNumber + "\n\n" + eq.photos.length + " photo(s) synced.");
+	            return true;
+	        } else {
+	            console.error("❌ Failed to sync photos for", assetNumber);
+	            alert("❌ Failed to sync photos for " + assetNumber);
+	            return false;
+	        }
+	        
+	    } catch (err) {
+	        console.error("❌ Sync single photo error:", err);
+	        alert("❌ Error: " + err.message);
+	        return false;
+	    }
+	}
+	
+	// Function to check photo sync status
+	async function checkPhotoSyncStatus() {
+	    try {
+	        console.log("🔍 Checking photo sync status...");
+	        
+	        // Get all equipment from Supabase
+	        var { data, error } = await supabaseClient
+	            .from('equipment_data')
+	            .select('asset_number, asset_desc, photos');
+	        
+	        if (error) {
+	            console.error("❌ Error:", error);
+	            return;
+	        }
+	        
+	        // Compare with local data
+	        var localWithPhotos = equipmentData.filter(function(eq) {
+	            return eq.photos && eq.photos.length > 0;
+	        });
+	        
+	        var remoteWithPhotos = data.filter(function(row) {
+	            return row.photos && row.photos.length > 0;
+	        });
+	        
+	        console.log("📸 Photo sync status:");
+	        console.log("• Local equipment with photos:", localWithPhotos.length);
+	        console.log("• Remote equipment with photos:", remoteWithPhotos.length);
+	        
+	        // Check for discrepancies
+	        var localAssetNumbers = localWithPhotos.map(function(eq) {
+	            return eq.assetNumber;
+	        });
+	        var remoteAssetNumbers = remoteWithPhotos.map(function(row) {
+	            return row.asset_number;
+	        });
+	        
+	        var missingInRemote = localAssetNumbers.filter(function(asset) {
+	            return !remoteAssetNumbers.includes(asset);
+	        });
+	        
+	        var missingInLocal = remoteAssetNumbers.filter(function(asset) {
+	            return !localAssetNumbers.includes(asset);
+	        });
+	        
+	        if (missingInRemote.length > 0) {
+	            console.warn("⚠️ Equipment with photos missing in remote:", missingInRemote);
+	        }
+	        
+	        if (missingInLocal.length > 0) {
+	            console.warn("⚠️ Equipment with photos missing in local:", missingInLocal);
+	        }
+	        
+	        if (missingInRemote.length === 0 && missingInLocal.length === 0) {
+	            console.log("✅ Photo sync is up to date!");
+	        }
+	        
+	        return {
+	            localWithPhotos: localWithPhotos.length,
+	            remoteWithPhotos: remoteWithPhotos.length,
+	            missingInRemote: missingInRemote,
+	            missingInLocal: missingInLocal
+	        };
+	        
+	    } catch (err) {
+	        console.error("❌ Check sync status error:", err);
+	    }
+	}
+	
+	// Make globally accessible
+	window.syncPhotosManually = syncPhotosManually;
+	window.syncSinglePhoto = syncSinglePhoto;
+	window.checkPhotoSyncStatus = checkPhotoSyncStatus;
 
 	// Compare Button - View Multiple Equipment Details
 	function showCompareDialog(returnToCompare) {
@@ -1504,8 +1970,9 @@ window.addEventListener('beforeunload', function() {
 	    modal.id = "compareModal";
 	    
 	    // Build comparison table
-	    var headers = ['Asset #', 'Description', 'Manufacturer', 'Serial #', 'Location', 'Parent Asset', 'Asset Owner', 'Status', 'Last Transaction'];
-	    var tableHtml = '<table style="min-width:100%; font-size:0.7rem; border-collapse:collapse; width:100%;">';
+	    // In the headers array, add 'Photo' after 'Status'
+		var headers = ['Asset #', 'Description', 'Manufacturer', 'Serial #', 'Location', 'Parent Asset', 'Asset Owner', 'Status', 'Photo', 'Last Transaction'];
+		var tableHtml = '<table style="min-width:100%; font-size:0.7rem; border-collapse:collapse; width:100%;">';
 	    tableHtml += '<thead><tr><th style="border:1px solid #ddd; padding:8px; background:#f1f5f9; position:sticky; top:0;">#</th>';
 	    headers.forEach(function(h) {
 	        tableHtml += '<th style="border:1px solid #ddd; padding:8px; background:#f1f5f9; position:sticky; top:0;">' + h + '</th>';
@@ -1541,12 +2008,25 @@ window.addEventListener('beforeunload', function() {
 	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + (eq.parentAsset || '-') + '</td>';
 	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + (eq.assetOwner || '-') + '</td>';
 	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;"><span class="status-badge ' + (status === 'IN' ? 'status-in' : 'status-out') + '">' + status + '</span></td>';
-	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + lastTransDisplay + '</td>';
-	        tableHtml += '<td style="border:1px solid #ddd; padding:8px;">';
-	        tableHtml += '<button id="' + editBtnId + '" class="btn btn-sm" style="margin-bottom:2px;">✏️ Edit</button> ';
-	        tableHtml += '<button id="' + showBtnId + '" class="btn btn-sm">📋 Show</button>';
-	        tableHtml += '</td></tr>';
-	    });
+			// After the status cell, add photo cell
+			tableHtml += '<td style="border:1px solid #ddd; padding:8px;">';
+			var photos = eq.photos || [];
+			if (photos.length > 0) {
+			    tableHtml += '<img src="' + photos[0] + '" style="width:40px; height:30px; object-fit:cover; border-radius:4px; border:1px solid #ddd; cursor:pointer;" onclick="window.showPhotoGallery(equipmentData.find(function(e) { return getKey(e) === \'' + key + '\'; })); event.stopPropagation();">';
+			    if (photos.length > 1) {
+			        tableHtml += '<div style="font-size:0.6rem; color:#666; text-align:center;">+' + (photos.length - 1) + '</div>';
+			    }
+			} else {
+			    tableHtml += '<span style="color:#ccc; font-size:0.6rem;">No photo</span>';
+			}
+			tableHtml += '</td>';
+			tableHtml += '<td style="border:1px solid #ddd; padding:8px;">' + lastTransDisplay + '</td>';
+	        // The actions cell should now be index 9 (after adding Photo column)
+			tableHtml += '<td style="border:1px solid #ddd; padding:8px;">';
+			tableHtml += '<button id="' + editBtnId + '" class="btn btn-sm" style="margin-bottom:2px;">✏️ Edit</button> ';
+			tableHtml += '<button id="' + showBtnId + '" class="btn btn-sm">📋 Show</button>';
+			tableHtml += '</td>';
+			});
 	    
 	    tableHtml += '</tbody></table>';
 	    
@@ -1811,6 +2291,14 @@ window.addEventListener('beforeunload', function() {
 	        eq.acceptanceDate = modal.querySelector("#eAccept").value;
 	        eq.calibrationDate = modal.querySelector("#eCal").value; 
 	        eq.currentDetail = modal.querySelector("#eDetail").value;
+
+			// Combine existing and new photos (max 3)
+	        var allPhotos = existingPhotoUrls.concat(photoDataUrls);
+	        if (allPhotos.length > 3) {
+	            allPhotos = allPhotos.slice(0, 3);
+	        }
+	        
+	        eq.photos = allPhotos; // <-- ADD THIS
 	        
 	        var newKey = getKey(eq);
 	        
@@ -1826,7 +2314,8 @@ window.addEventListener('beforeunload', function() {
 	                po_number: eq.poNumber || "",
 	                acceptance_date: eq.acceptanceDate || "",
 	                calibration_date: eq.calibrationDate || "",
-	                current_detail: eq.currentDetail || ""
+	                current_detail: eq.currentDetail || "",
+					photos: eq.photos || []  // <-- ADD THIS
 	            };
 	            
 	            var existingQuery = await supabaseClient
@@ -2285,9 +2774,9 @@ window.addEventListener('beforeunload', function() {
 	                    <label>Current Detail</label>
 	                    <textarea id="eDetail" rows="3" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">${eq.currentDetail||''}</textarea>
 	                </div>
-	                <!-- PHOTO UPLOAD SECTION -->
+	                <!-- PHOTO UPLOAD SECTION - 5KB LIMIT -->
 	                <div style="grid-column:span 2; border-top:1px solid #ddd; padding-top:15px;">
-	                    <label style="font-weight:600;">📸 Photos (Max 3, JPEG only, &lt;10KB each)</label>
+	                    <label style="font-weight:600;">📸 Photos (Max 3, JPEG only, &lt;5KB each)</label>
 	                    <div style="margin-top:8px;">
 	                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
 	                            <input type="file" id="ePhotos" accept="image/jpeg" multiple style="flex:1; padding:8px; border-radius:12px; border:1px solid #ccc; min-width:200px;">
@@ -2312,7 +2801,7 @@ window.addEventListener('beforeunload', function() {
 	    
 	    document.body.appendChild(modal);
 	    
-	    // --- PHOTO UPLOAD HANDLING ---
+	    // --- PHOTO UPLOAD HANDLING (5KB LIMIT) ---
 	    var photoDataUrls = [];
 	    var existingPhotoUrls = (eq.photos || []).slice(); // Copy existing photos
 	    var photoInput = modal.querySelector("#ePhotos");
@@ -2331,18 +2820,17 @@ window.addEventListener('beforeunload', function() {
 	        var html = '';
 	        allPhotos.forEach(function(p, idx) {
 	            var isExisting = idx < existingPhotoUrls.length;
-	            var deleteLabel = isExisting ? 'Remove' : 'Remove';
-	            html += '<div style="position:relative; display:inline-block;">';
+	            html += '<div style="position:relative; display:inline-block; margin:4px;">';
 	            html += '<img src="' + p + '" style="width:60px; height:60px; object-fit:cover; border-radius:4px; border:1px solid #ddd; cursor:pointer;" onclick="window.open(\'' + p + '\', \'_blank\');">';
-	            html += '<button class="btn btn-sm" style="position:absolute; top:-8px; right:-8px; background:#dc3545; color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; padding:0; line-height:20px;" onclick="removePhoto(' + idx + ')">×</button>';
+	            html += '<button class="btn btn-sm" style="position:absolute; top:-8px; right:-8px; background:#dc3545; color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; padding:0; line-height:20px;" onclick="removeEditPhoto(' + idx + ')">×</button>';
 	            html += '</div>';
 	        });
 	        photoPreview.innerHTML = html;
-	        photoStatus.innerText = allPhotos.length + ' photo(s)';
+	        photoStatus.innerText = allPhotos.length + ' photo(s) (<5KB each)';
 	    }
 	    
 	    // Remove photo function
-	    window.removePhoto = function(index) {
+	    window.removeEditPhoto = function(index) {
 	        var allPhotos = existingPhotoUrls.concat(photoDataUrls);
 	        if (index < existingPhotoUrls.length) {
 	            // Remove from existing photos
@@ -2355,7 +2843,7 @@ window.addEventListener('beforeunload', function() {
 	        renderPhotoPreview();
 	    };
 	    
-	    // Handle photo upload
+	    // Handle photo upload with 5KB limit
 	    photoInput.addEventListener("change", async function(e) {
 	        var files = Array.from(e.target.files);
 	        var currentCount = existingPhotoUrls.length + photoDataUrls.length;
@@ -2365,13 +2853,13 @@ window.addEventListener('beforeunload', function() {
 	            return;
 	        }
 	        
-	        photoStatus.innerText = "Compressing images...";
+	        photoStatus.innerText = "Compressing images (5KB limit)...";
 	        var compressedCount = 0;
 	        var failedCount = 0;
 	        
 	        for (var i = 0; i < files.length; i++) {
 	            try {
-	                var compressed = await compressImage(files[i], 10);
+	                var compressed = await compressImage(files[i], 5); // 5KB limit
 	                photoDataUrls.push(compressed);
 	                compressedCount++;
 	            } catch(err) {
@@ -2382,7 +2870,7 @@ window.addEventListener('beforeunload', function() {
 	        
 	        if (compressedCount > 0) {
 	            renderPhotoPreview();
-	            photoStatus.innerText = existingPhotoUrls.length + photoDataUrls.length + ' photo(s) (' + compressedCount + ' uploaded)';
+	            photoStatus.innerText = existingPhotoUrls.length + photoDataUrls.length + ' photo(s) (' + compressedCount + ' uploaded, <5KB each)';
 	        }
 	        
 	        if (failedCount > 0) {
@@ -2405,12 +2893,12 @@ window.addEventListener('beforeunload', function() {
 	    // --- MODAL CONTROLS ---
 	    modal.querySelector(".close-modal").onclick = function() {
 	        modal.remove();
-	        window.removePhoto = undefined; // Clean up global function
+	        window.removeEditPhoto = undefined; // Clean up global function
 	    };
 	    
 	    modal.querySelector("#cancelEquipEdit").onclick = function() {
 	        modal.remove();
-	        window.removePhoto = undefined;
+	        window.removeEditPhoto = undefined;
 	    };
 	    
 	    // --- SAVE HANDLER ---
@@ -2490,7 +2978,27 @@ window.addEventListener('beforeunload', function() {
 	                    .from('equipment_data')
 	                    .insert(eqDataObj);
 	            }
-	            
+
+				// --- ADD PHOTO AUTO-SYNC ---
+	            // Verify photos were saved
+	            if (eq.photos && eq.photos.length > 0) {
+	                console.log("📸 Photos updated for", eq.assetNumber, ":", eq.photos.length, "photo(s)");
+	                
+	                // Optional: Verify in Supabase
+	                var { data: verifyData } = await supabaseClient
+	                    .from('equipment_data')
+	                    .select('photos')
+	                    .eq('asset_number', eq.assetNumber)
+	                    .single();
+	                
+	                if (verifyData && verifyData.photos && verifyData.photos.length > 0) {
+	                    console.log("✅ Photos verified in Supabase:", verifyData.photos.length, "photo(s)");
+	                }
+	            } else {
+	                console.log("📸 No photos for", eq.assetNumber);
+	            }
+	            // --- END PHOTO AUTO-SYNC ---
+				
 	            // Handle status migration if asset number changed
 	            if (oldAssetNumber !== newAssetNumber && oldAssetNumber) {
 	                var oldStatus = equipStatus[oldAssetNumber];
@@ -2532,10 +3040,10 @@ window.addEventListener('beforeunload', function() {
 	            
 	            // Log the edit with photo count
 	            var photoLog = eq.photos.length > 0 ? ' (' + eq.photos.length + ' photos)' : '';
-	            await addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited" + photoLog, currentUser, "");
+	            await addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited" + photoLog, currentUser, "Edited from Equipment Comparison");
 	            
 	            alert("✅ Equipment updated successfully and synced to cloud!" + 
-	                  (eq.photos.length > 0 ? '\n\n📸 ' + eq.photos.length + ' photo(s) saved.' : ''));
+	                  (eq.photos.length > 0 ? '\n\n📸 ' + eq.photos.length + ' photo(s) saved (<5KB each).' : ''));
 	            
 	        } catch (err) {
 	            console.error("Edit error:", err);
@@ -2543,7 +3051,7 @@ window.addEventListener('beforeunload', function() {
 	        }
 	        
 	        modal.remove();
-	        window.removePhoto = undefined;
+	        window.removeEditPhoto = undefined;
 	    };
 	    
 	    // Initial render
@@ -2551,8 +3059,11 @@ window.addEventListener('beforeunload', function() {
 	}
     
     async function addNewEquipment() {
-	    let modal = document.createElement("div"); modal.className = "modal-overlay";
-	    modal.innerHTML = `<div class="modal-card" style="max-width:800px;"><button class="close-modal">✖</button><h3>➕ Add New Equipment</h3>
+	    let modal = document.createElement("div"); 
+	    modal.className = "modal-overlay";
+	    modal.innerHTML = `<div class="modal-card" style="max-width:800px;">
+	        <button class="close-modal">✖</button>
+	        <h3>➕ Add New Equipment</h3>
 	        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
 	            <div><label>Asset Number *</label><input id="nAssetNum" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;" placeholder="Unique asset number"></div>
 	            <div><label>Asset Description *</label><input id="nAssetDesc" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
@@ -2563,138 +3074,196 @@ window.addEventListener('beforeunload', function() {
 	            <div><label>Asset Owner</label><input id="nOwner" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
 	            <div><label>PO Number</label><input id="nPo" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
 	            <div style="grid-column:span 2;"><label>Current Detail</label><textarea id="nDetail" rows="3" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></textarea></div>
-	            <div style="grid-column:span 2;">
-	                <label>Photos (Max 3, JPEG only, &lt;10KB each)</label>
-	                <input type="file" id="nPhotos" accept="image/jpeg" multiple style="width:100%; padding:8px; border-radius:12px; border:1px solid #ccc;">
-	                <div id="nPhotoPreview" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;"></div>
-	                <div id="nPhotoStatus" style="font-size:0.7rem; color:#666; margin-top:4px;"></div>
+	            <div style="grid-column:span 2; border-top:1px solid #ddd; padding-top:15px;">
+	                <label style="font-weight:600;">📸 Photos (Max 3, JPEG only, &lt;5KB each)</label>
+	                <div style="margin-top:8px;">
+	                    <input type="file" id="nPhotos" accept="image/jpeg" multiple style="width:100%; padding:8px; border-radius:12px; border:1px solid #ccc;">
+	                    <div style="font-size:0.7rem; color:#666; margin-top:4px;">
+	                        <span id="nPhotoStatus">0 photo(s) selected</span>
+	                    </div>
+	                    <div id="nPhotoPreview" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; padding:10px; background:#f8fafc; border-radius:8px; border:1px dashed #ddd; min-height:60px;">
+	                        <span style="color:#999; font-size:0.7rem;">No photos uploaded</span>
+	                    </div>
+	                </div>
 	            </div>
 	        </div>
-	        <div style="display:flex; gap:12px; justify-content:flex-end;"><button id="confirmAddBtn" class="btn btn-primary">Confirm Add</button><button id="cancelAddBtn" class="btn">Cancel</button></div></div>`;
+	        <div style="display:flex; gap:12px; justify-content:flex-end;">
+	            <button id="confirmAddBtn" class="btn btn-primary">Confirm Add</button>
+	            <button id="cancelAddBtn" class="btn">Cancel</button>
+	        </div>
+	    </div>`;
 	    document.body.appendChild(modal);
 	    
-	    // Photo upload handling
-	    var photoFiles = [];
+	    // --- PHOTO UPLOAD HANDLING ---
 	    var photoDataUrls = [];
 	    var photoInput = modal.querySelector("#nPhotos");
 	    var photoPreview = modal.querySelector("#nPhotoPreview");
 	    var photoStatus = modal.querySelector("#nPhotoStatus");
 	    
+	    function renderPhotoPreview() {
+	        if (photoDataUrls.length === 0) {
+	            photoPreview.innerHTML = '<span style="color:#999; font-size:0.7rem;">No photos uploaded</span>';
+	            photoStatus.innerText = '0 photo(s) selected';
+	            return;
+	        }
+	        var html = '';
+	        photoDataUrls.forEach(function(p, idx) {
+	            html += '<div style="position:relative; display:inline-block; margin:4px;">';
+	            html += '<img src="' + p + '" style="width:60px; height:60px; object-fit:cover; border-radius:4px; border:1px solid #ddd; cursor:pointer;" onclick="window.open(\'' + p + '\', \'_blank\');">';
+	            html += '<button class="btn btn-sm" style="position:absolute; top:-8px; right:-8px; background:#dc3545; color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; padding:0; line-height:20px;" onclick="removeNewPhoto(' + idx + ')">×</button>';
+	            html += '</div>';
+	        });
+	        photoPreview.innerHTML = html;
+	        photoStatus.innerText = photoDataUrls.length + ' photo(s) selected';
+	    }
+	    
+	    window.removeNewPhoto = function(index) {
+	        photoDataUrls.splice(index, 1);
+	        renderPhotoPreview();
+	    };
+	    
 	    photoInput.addEventListener("change", async function(e) {
 	        var files = Array.from(e.target.files);
 	        if (photoDataUrls.length + files.length > 3) {
-	            alert("Maximum 3 photos allowed.");
+	            alert("⚠️ Maximum 3 photos allowed. You currently have " + photoDataUrls.length + " photo(s).");
 	            this.value = "";
 	            return;
 	        }
 	        
-	        photoStatus.innerText = "Compressing images...";
+	        photoStatus.innerText = "Compressing images (5KB limit)...";
+	        var compressedCount = 0;
+	        var failedCount = 0;
+	        
 	        for (var i = 0; i < files.length; i++) {
 	            try {
-	                var compressed = await compressImage(files[i], 10);
+	                var compressed = await compressImage(files[i], 5);
 	                photoDataUrls.push(compressed);
-	                var thumb = document.createElement("img");
-	                thumb.src = compressed;
-	                thumb.style.width = "60px";
-	                thumb.style.height = "60px";
-	                thumb.style.objectFit = "cover";
-	                thumb.style.borderRadius = "4px";
-	                thumb.style.border = "1px solid #ddd";
-	                thumb.style.cursor = "pointer";
-	                thumb.onclick = function(dataUrl) {
-	                    return function() {
-	                        window.open(dataUrl, '_blank');
-	                    };
-	                }(compressed);
-	                photoPreview.appendChild(thumb);
+	                compressedCount++;
 	            } catch(err) {
-	                alert("Failed to compress image: " + err.message);
+	                console.error("Failed to compress image:", err);
+	                failedCount++;
 	            }
 	        }
-	        photoStatus.innerText = photoDataUrls.length + " photo(s) uploaded";
+	        
+	        if (compressedCount > 0) {
+	            renderPhotoPreview();
+	            photoStatus.innerText = photoDataUrls.length + ' photo(s) (' + compressedCount + ' uploaded, <5KB each)';
+	        }
+	        
+	        if (failedCount > 0) {
+	            alert("⚠️ " + failedCount + " image(s) failed to compress. Please try again.");
+	        }
+	        
 	        this.value = "";
 	    });
-		
-        modal.querySelector(".close-modal").onclick = () => modal.remove();
-        modal.querySelector("#cancelAddBtn").onclick = () => modal.remove();
-    
-        modal.querySelector("#confirmAddBtn").onclick = async () => {
-            let assetNum = modal.querySelector("#nAssetNum").value;
-            let assetDesc = modal.querySelector("#nAssetDesc").value;
-			
-            if (!assetDesc) { 
-                alert("Asset Description is required"); 
-                return;
+	    
+	    modal.querySelector(".close-modal").onclick = function() {
+	        modal.remove();
+	        window.removeNewPhoto = undefined;
+	    };
+	    modal.querySelector("#cancelAddBtn").onclick = function() {
+	        modal.remove();
+	        window.removeNewPhoto = undefined;
+	    };
+	    
+	    modal.querySelector("#confirmAddBtn").onclick = async function() {
+	        var assetNum = modal.querySelector("#nAssetNum").value;
+	        var assetDesc = modal.querySelector("#nAssetDesc").value;
+	        
+	        if (!assetDesc) { 
+	            alert("Asset Description is required"); 
+	            return; 
+	        }
+	        
+	        if (!assetNum) {
+	            alert("Asset Number is required");
+	            return;
+	        }
+	        
+	        // Check for duplicate
+	        var duplicate = equipmentData.some(function(eq) {
+	            var sameAssetNum = assetNum && eq.assetNumber === assetNum;
+	            var sameDescSerial = eq.assetDesc === assetDesc && eq.serialNo === modal.querySelector("#nSerial").value;
+	            return sameAssetNum || sameDescSerial;
+	        });
+	        
+	        if (duplicate) {
+	            alert("⚠️ Equipment already exists! Please check:\n- Asset Number must be unique\n- Same Description and Serial Number combination already exists");
+	            return;
+	        }
+	        
+	        var newEq = { 
+	            assetNumber: assetNum, 
+	            assetDesc: assetDesc, 
+	            manufacturer: modal.querySelector("#nMfg").value, 
+	            parentAsset: modal.querySelector("#nParent").value, 
+	            assetOwner: modal.querySelector("#nOwner").value, 
+	            serialNo: modal.querySelector("#nSerial").value, 
+	            location: modal.querySelector("#nLocation").value, 
+	            poNumber: modal.querySelector("#nPo").value, 
+	            acceptanceDate: "", 
+	            calibrationDate: "", 
+	            currentDetail: modal.querySelector("#nDetail").value,
+	            photos: photoDataUrls.slice() // Store photos
+	        };
+	        
+	        // Add to local array first
+	        equipmentData.push(newEq);
+	        var eqKey = getKey(newEq);
+	        equipStatus[eqKey] = "IN";
+	        
+	        renderEquipment();
+	        
+	        // Sync to cloud
+	        try {
+	            var eqDataObj = {
+	                asset_number: newEq.assetNumber || "",
+	                asset_desc: newEq.assetDesc,
+	                manufacturer: newEq.manufacturer || "",
+	                parent_asset: newEq.parentAsset || "",
+	                asset_owner: newEq.assetOwner || "",
+	                serial_no: newEq.serialNo || "",
+	                location: newEq.location || "",
+	                po_number: newEq.poNumber || "",
+	                acceptance_date: newEq.acceptanceDate || "",
+	                calibration_date: newEq.calibrationDate || "",
+	                current_detail: newEq.currentDetail || "",
+	                photos: newEq.photos || []
+	            };
+	            
+	            await supabaseClient.from('equipment_data').insert(eqDataObj);
+	            await supabaseClient.from('equip_status').insert({ equipment_key: eqKey, status: "IN" });
 
-			newEq.photos = photoDataUrls;	
-            }
-        
-            // Check for duplicate asset_number OR (assetDesc + serialNo combination)
-            var duplicate = equipmentData.some(function(eq) {
-                var sameAssetNum = assetNum && eq.assetNumber === assetNum;
-                var sameDescSerial = eq.assetDesc === assetDesc && eq.serialNo === modal.querySelector("#nSerial").value;
-                return sameAssetNum || sameDescSerial;
-            });
-        
-            if (duplicate) {
-                alert("⚠️ Equipment already exists! Please check:\n- Asset Number must be unique\n- Same Description and Serial Number combination already exists");
-                return;
-            }
-        
-            let newEq = { 
-                assetNumber: assetNum, 
-                assetDesc: assetDesc, 
-                manufacturer: modal.querySelector("#nMfg").value, 
-                parentAsset: modal.querySelector("#nParent").value, 
-                assetOwner: modal.querySelector("#nOwner").value, 
-                serialNo: modal.querySelector("#nSerial").value, 
-                location: modal.querySelector("#nLocation").value, 
-                poNumber: modal.querySelector("#nPo").value, 
-                acceptanceDate: "", 
-                calibrationDate: "", 
-                currentDetail: modal.querySelector("#nDetail").value 
-            };
-        
-            // Add to local array first
-            equipmentData.push(newEq);
-            var eqKey = getKey(newEq);
-            equipStatus[eqKey] = "IN";
-        
-            renderEquipment();
-        
-             // Then try to sync to cloud
-            try {
-                // Insert equipment_data
-                var eqDataObj = {
-                    asset_number: newEq.assetNumber || "",
-                    asset_desc: newEq.assetDesc,
-                    manufacturer: newEq.manufacturer || "",
-                    parent_asset: newEq.parentAsset || "",
-                    asset_owner: newEq.assetOwner || "",
-                    serial_no: newEq.serialNo || "",
-                    location: newEq.location || "",
-                    po_number: newEq.poNumber || "",
-                    acceptance_date: newEq.acceptanceDate || "",
-                    calibration_date: newEq.calibrationDate || "",
-                    current_detail: newEq.currentDetail || ""
-                };
-            
-                // Insert equipment
-                await supabaseClient.from('equipment_data').insert(eqDataObj);
-            
-                // Insert status
-                await supabaseClient.from('equip_status').insert({ equipment_key: eqKey, status: "IN" });
-            
-                await addLog("EQUIPMENT_ADDED", newEq.assetNumber, "New equipment " + newEq.assetDesc + " added", currentUser, "");
-                alert("✅ Equipment added successfully and synced to cloud!");
-            
-            } catch (err) {
-                console.error("Add equipment error:", err);
-                alert("✅ Equipment added locally. Cloud sync will happen on next refresh.");
-            }
-            modal.remove();
-        };
-    }
+				// --- ADD PHOTO AUTO-SYNC ---
+	            // Verify photos were saved
+	            if (newEq.photos && newEq.photos.length > 0) {
+	                console.log("📸 Photos added to", newEq.assetNumber, ":", newEq.photos.length, "photo(s)");
+	                
+	                // Optional: Verify in Supabase
+	                var { data: verifyData } = await supabaseClient
+	                    .from('equipment_data')
+	                    .select('photos')
+	                    .eq('asset_number', newEq.assetNumber)
+	                    .single();
+	                
+	                if (verifyData && verifyData.photos && verifyData.photos.length > 0) {
+	                    console.log("✅ Photos verified in Supabase:", verifyData.photos.length, "photo(s)");
+	                }
+	            }
+	            // --- END PHOTO AUTO-SYNC ---
+	            
+	            var photoMsg = newEq.photos.length > 0 ? '\n\n📸 ' + newEq.photos.length + ' photo(s) saved (<5KB each).' : '';
+	            await addLog("EQUIPMENT_ADDED", newEq.assetNumber, "New equipment " + newEq.assetDesc + " added" + (newEq.photos.length > 0 ? ' with ' + newEq.photos.length + ' photos' : ''), currentUser, "");
+	            alert("✅ Equipment added successfully and synced to cloud!" + photoMsg);
+	            
+	        } catch (err) {
+	            console.error("Add equipment error:", err);
+	            alert("✅ Equipment added locally. Cloud sync will happen on next refresh.");
+	        }
+	        modal.remove();
+	        window.removeNewPhoto = undefined;
+	    };
+	}
     
     function showEquipmentStats(eq) {
 	    // Create modal with date range filter
@@ -4781,6 +5350,23 @@ window.addEventListener('beforeunload', function() {
                 if (currentUserRole === 'admin' || currentUserRole === 'senior_super') {
 				    renderDbLogs();
 				}
+
+				// --- ADD PHOTO VERIFICATION AFTER REFRESH ---
+		        // Count equipment with photos
+		        var equipmentWithPhotos = equipmentData.filter(function(eq) {
+		            return eq.photos && eq.photos.length > 0;
+		        });
+		        console.log("📸 After refresh - Equipment with photos:", equipmentWithPhotos.length);
+		        if (equipmentWithPhotos.length > 0) {
+		            console.log("📸 Photo summary:");
+		            equipmentWithPhotos.slice(0, 5).forEach(function(eq) {
+		                console.log("  -", eq.assetNumber, ":", eq.photos.length, "photo(s)");
+		            });
+		            if (equipmentWithPhotos.length > 5) {
+		                console.log("  ... and", equipmentWithPhotos.length - 5, "more");
+		            }
+		        }
+		        // --- END PHOTO VERIFICATION ---
         
                 // Update last refresh time
                 lastRefreshTime = now;
