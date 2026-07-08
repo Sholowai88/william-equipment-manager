@@ -481,7 +481,7 @@
 			<div class="sync-status" style="position:relative;">
 			    <span class="sync-dot"></span>
 			    <span id="syncStatusText">Live Sync</span>
-			    <span id="photoSyncStatus" style="font-size:0.6rem; margin-left:5px; color:#add8e6;">📸</span>
+			    <span id="photoSyncStatus" style="font-size:0.6rem; margin-left:5px; color:#0018f9;">📸</span>
 			</div>
         </div>
     </div>
@@ -2093,7 +2093,9 @@ window.addEventListener('beforeunload', function() {
 			tableHtml += '<td style="border:1px solid #ddd; padding:8px;">';
 			var photos = eq.photos || [];
 			if (photos.length > 0) {
-			    tableHtml += '<img src="' + photos[0] + '" style="width:40px; height:30px; object-fit:cover; border-radius:4px; border:1px solid #ddd; cursor:pointer;" onclick="window.showPhotoGallery(equipmentData.find(function(e) { return getKey(e) === \'' + key + '\'; })); event.stopPropagation();">';
+			    // Create a unique function reference for this equipment
+			    var eqKey = key;
+			    tableHtml += '<img src="' + photos[0] + '" style="width:40px; height:30px; object-fit:cover; border-radius:4px; border:1px solid #ddd; cursor:pointer;" onclick="(function(k){ var eq = equipmentData.find(function(e) { return getKey(e) === k; }); if(eq) { showPhotoGallery(eq); } })(\'' + eqKey + '\'); event.stopPropagation();">';
 			    if (photos.length > 1) {
 			        tableHtml += '<div style="font-size:0.6rem; color:#666; text-align:center;">+' + (photos.length - 1) + '</div>';
 			    }
@@ -2310,13 +2312,22 @@ window.addEventListener('beforeunload', function() {
 	
 	// Helper function to open Edit with return callback
 	function openEditWithReturn(eq, callback) {
-	    // Create a modified editEquipmentDialog that returns to comparison
-	    var originalEdit = editEquipmentDialog;
+	    // Generate existing photos preview HTML
+	    var existingPhotosHtml = '';
+	    var existingPhotos = eq.photos || [];
+	    if (existingPhotos.length > 0) {
+	        existingPhotos.forEach(function(p) {
+	            existingPhotosHtml += '<img src="' + p + '" style="width:60px; height:60px; object-fit:cover; border-radius:4px; border:1px solid #ddd; cursor:pointer; margin:2px;" onclick="window.open(\'' + p + '\', \'_blank\');">';
+	        });
+	    } else {
+	        existingPhotosHtml = '<span style="color:#999; font-size:0.7rem;">No photos uploaded</span>';
+	    }
 	    
-	    // Override the modal close behavior
 	    var modal = document.createElement("div");
 	    modal.className = "modal-overlay";
-	    modal.innerHTML = `<div class="modal-card" style="max-width:800px;"><button class="close-modal">✖</button><h3>✏️ Edit Equipment</h3>
+	    modal.innerHTML = `<div class="modal-card" style="max-width:800px;">
+	        <button class="close-modal">✖</button>
+	        <h3>✏️ Edit Equipment</h3>
 	        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
 	            <div><label>Asset Number (Cannot be edited)</label><input id="eAssetNum" value="${eq.assetNumber||''}" readonly style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc; background:#f0f0f0;"></div>
 	            <div><label>Asset Description *</label><input id="eAssetDesc" value="${eq.assetDesc||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
@@ -2329,17 +2340,122 @@ window.addEventListener('beforeunload', function() {
 	            <div><label>Acceptance Date</label><input type="date" id="eAccept" value="${eq.acceptanceDate?.split(' ')[0]||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
 	            <div><label>Calibration Date</label><input type="date" id="eCal" value="${eq.calibrationDate?.split(' ')[0]||''}" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;"></div>
 	            <div style="grid-column:span 2;"><label>Current Detail</label><textarea id="eDetail" rows="3" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;">${eq.currentDetail||''}</textarea></div>
+	            <!-- PHOTO UPLOAD SECTION - 5KB LIMIT -->
+	            <div style="grid-column:span 2; border-top:1px solid #ddd; padding-top:15px;">
+	                <label style="font-weight:600;">📸 Photos (Max 3, JPEG only, &lt;5KB each)</label>
+	                <div style="margin-top:8px;">
+	                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+	                        <input type="file" id="ePhotos" accept="image/jpeg" multiple style="flex:1; padding:8px; border-radius:12px; border:1px solid #ccc; min-width:200px;">
+	                        <button id="eClearPhotosBtn" class="btn btn-sm" style="background:#dc3545; color:white;">🗑️ Remove All</button>
+	                    </div>
+	                    <div style="font-size:0.7rem; color:#666; margin-top:4px;">
+	                        <span id="ePhotoStatus">${existingPhotos.length} photo(s) currently saved</span>
+	                    </div>
+	                    <div id="ePhotoPreview" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; padding:10px; background:#f8fafc; border-radius:8px; border:1px dashed #ddd; min-height:60px;">
+	                        ${existingPhotosHtml}
+	                    </div>
+	                </div>
+	            </div>
+	            <!-- END PHOTO UPLOAD SECTION -->
 	        </div>
-	        <div style="display:flex; gap:12px; justify-content:flex-end;"><button id="saveEquipEdit" class="btn btn-primary">Save Changes</button><button id="cancelEquipEdit" class="btn">Cancel</button></div></div>`;
+	        <div style="display:flex; gap:12px; justify-content:flex-end;">
+	            <button id="saveEquipEdit" class="btn btn-primary">Save Changes</button>
+	            <button id="cancelEquipEdit" class="btn">Cancel</button>
+	        </div>
+	    </div>`;
 	    document.body.appendChild(modal);
+	    
+	    // --- PHOTO UPLOAD HANDLING (5KB LIMIT) ---
+	    var photoDataUrls = [];
+	    var existingPhotoUrls = (eq.photos || []).slice();
+	    var photoInput = modal.querySelector("#ePhotos");
+	    var photoPreview = modal.querySelector("#ePhotoPreview");
+	    var photoStatus = modal.querySelector("#ePhotoStatus");
+	    var clearPhotosBtn = modal.querySelector("#eClearPhotosBtn");
+	    
+	    function renderPhotoPreview() {
+	        var allPhotos = existingPhotoUrls.concat(photoDataUrls);
+	        if (allPhotos.length === 0) {
+	            photoPreview.innerHTML = '<span style="color:#999; font-size:0.7rem;">No photos uploaded</span>';
+	            photoStatus.innerText = '0 photo(s)';
+	            return;
+	        }
+	        var html = '';
+	        allPhotos.forEach(function(p, idx) {
+	            html += '<div style="position:relative; display:inline-block; margin:4px;">';
+	            html += '<img src="' + p + '" style="width:60px; height:60px; object-fit:cover; border-radius:4px; border:1px solid #ddd; cursor:pointer;" onclick="window.open(\'' + p + '\', \'_blank\');">';
+	            html += '<button class="btn btn-sm" style="position:absolute; top:-8px; right:-8px; background:#dc3545; color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; padding:0; line-height:20px;" onclick="removeEditPhoto(' + idx + ')">×</button>';
+	            html += '</div>';
+	        });
+	        photoPreview.innerHTML = html;
+	        photoStatus.innerText = allPhotos.length + ' photo(s) (<5KB each)';
+	    }
+	    
+	    window.removeEditPhoto = function(index) {
+	        var allPhotos = existingPhotoUrls.concat(photoDataUrls);
+	        if (index < existingPhotoUrls.length) {
+	            existingPhotoUrls.splice(index, 1);
+	        } else {
+	            var newIndex = index - existingPhotoUrls.length;
+	            photoDataUrls.splice(newIndex, 1);
+	        }
+	        renderPhotoPreview();
+	    };
+	    
+	    photoInput.addEventListener("change", async function(e) {
+	        var files = Array.from(e.target.files);
+	        var currentCount = existingPhotoUrls.length + photoDataUrls.length;
+	        if (currentCount + files.length > 3) {
+	            alert("⚠️ Maximum 3 photos allowed. You currently have " + currentCount + " photo(s).");
+	            this.value = "";
+	            return;
+	        }
+	        
+	        photoStatus.innerText = "Compressing images (5KB limit)...";
+	        var compressedCount = 0;
+	        var failedCount = 0;
+	        
+	        for (var i = 0; i < files.length; i++) {
+	            try {
+	                var compressed = await compressImage(files[i], 5);
+	                photoDataUrls.push(compressed);
+	                compressedCount++;
+	            } catch(err) {
+	                console.error("Failed to compress image:", err);
+	                failedCount++;
+	            }
+	        }
+	        
+	        if (compressedCount > 0) {
+	            renderPhotoPreview();
+	            photoStatus.innerText = existingPhotoUrls.length + photoDataUrls.length + ' photo(s) (' + compressedCount + ' uploaded, <5KB each)';
+	        }
+	        
+	        if (failedCount > 0) {
+	            alert("⚠️ " + failedCount + " image(s) failed to compress. Please try again.");
+	        }
+	        
+	        this.value = "";
+	    });
+	    
+	    clearPhotosBtn.onclick = function() {
+	        if (confirm("Remove all photos from this equipment?")) {
+	            existingPhotoUrls = [];
+	            photoDataUrls = [];
+	            renderPhotoPreview();
+	            photoStatus.innerText = '0 photo(s) - all removed';
+	        }
+	    };
 	    
 	    modal.querySelector(".close-modal").onclick = function() {
 	        modal.remove();
+	        window.removeEditPhoto = undefined;
 	        if (callback) callback();
 	    };
 	    
 	    modal.querySelector("#cancelEquipEdit").onclick = function() {
 	        modal.remove();
+	        window.removeEditPhoto = undefined;
 	        if (callback) callback();
 	    };
 	    
@@ -2347,7 +2463,6 @@ window.addEventListener('beforeunload', function() {
 	        var oldKey = getKey(eq);
 	        var newAssetNumber = modal.querySelector("#eAssetNum").value;
 	        
-	        // Asset number cannot be changed - it's readonly
 	        if (newAssetNumber !== eq.assetNumber) {
 	            alert("⚠️ Asset Number cannot be changed. Please contact administrator if correction is needed.");
 	            return;
@@ -2358,8 +2473,12 @@ window.addEventListener('beforeunload', function() {
 	            return;
 	        }
 	        
-	        // Store original values
 	        var oldAssetNumber = eq.assetNumber;
+	        
+	        var allPhotos = existingPhotoUrls.concat(photoDataUrls);
+	        if (allPhotos.length > 3) {
+	            allPhotos = allPhotos.slice(0, 3);
+	        }
 	        
 	        eq.assetNumber = newAssetNumber; 
 	        eq.assetDesc = modal.querySelector("#eAssetDesc").value; 
@@ -2372,14 +2491,7 @@ window.addEventListener('beforeunload', function() {
 	        eq.acceptanceDate = modal.querySelector("#eAccept").value;
 	        eq.calibrationDate = modal.querySelector("#eCal").value; 
 	        eq.currentDetail = modal.querySelector("#eDetail").value;
-
-			// Combine existing and new photos (max 3)
-	        var allPhotos = existingPhotoUrls.concat(photoDataUrls);
-	        if (allPhotos.length > 3) {
-	            allPhotos = allPhotos.slice(0, 3);
-	        }
-	        
-	        eq.photos = allPhotos; // <-- ADD THIS
+	        eq.photos = allPhotos;
 	        
 	        var newKey = getKey(eq);
 	        
@@ -2396,7 +2508,7 @@ window.addEventListener('beforeunload', function() {
 	                acceptance_date: eq.acceptanceDate || "",
 	                calibration_date: eq.calibrationDate || "",
 	                current_detail: eq.currentDetail || "",
-					photos: eq.photos || []  // <-- ADD THIS
+	                photos: eq.photos || []
 	            };
 	            
 	            var existingQuery = await supabaseClient
@@ -2450,8 +2562,12 @@ window.addEventListener('beforeunload', function() {
 	            }
 	            
 	            renderEquipment();
-	            await addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited", currentUser, "Edited from Equipment Comparison");
-	            alert("✅ Equipment updated successfully and synced to cloud!");
+	            
+	            var photoLog = eq.photos.length > 0 ? ' (' + eq.photos.length + ' photos)' : '';
+	            await addLog("EQUIPMENT_EDITED", eq.assetNumber, "Equipment " + eq.assetDesc + " edited" + photoLog, currentUser, "Edited from Equipment Comparison");
+	            
+	            alert("✅ Equipment updated successfully and synced to cloud!" + 
+	                  (eq.photos.length > 0 ? '\n\n📸 ' + eq.photos.length + ' photo(s) saved (<5KB each).' : ''));
 	            
 	        } catch (err) {
 	            console.error("Edit error:", err);
@@ -2459,8 +2575,11 @@ window.addEventListener('beforeunload', function() {
 	        }
 	        
 	        modal.remove();
+	        window.removeEditPhoto = undefined;
 	        if (callback) callback();
 	    };
+	    
+	    renderPhotoPreview();
 	}
 	
 	// Helper function to open Show with return callback
@@ -2780,17 +2899,24 @@ window.addEventListener('beforeunload', function() {
     function showEquipmentDetail(eq) {
 	    var photosHtml = '';
 	    if (eq.photos && eq.photos.length > 0) {
-	        photosHtml = '<div class="detail-item"><strong>Photos:</strong><span><div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">';
-	        eq.photos.forEach(function(p) {
-	            photosHtml += '<img src="' + p + '" style="width:80px; height:60px; object-fit:cover; border-radius:4px; border:1px solid #ddd; cursor:pointer;" onclick="window.open(\'' + p + '\', \'_blank\');">';
+	        photosHtml = '<div class="detail-item" style="grid-column:span 2;"><strong>Photos:</strong><div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">';
+	        eq.photos.forEach(function(p, idx) {
+	            photosHtml += '<div style="position:relative; display:inline-block;">';
+	            photosHtml += '<img src="' + p + '" style="width:80px; height:60px; object-fit:cover; border-radius:4px; border:2px solid #166b5c; cursor:pointer; transition:transform 0.2s;" onclick="window.open(\'' + p + '\', \'_blank\');" onmouseover="this.style.transform=\'scale(1.05)\';" onmouseout="this.style.transform=\'scale(1)\';">';
+	            photosHtml += '<span style="position:absolute; bottom:-5px; right:-5px; background:#166b5c; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center;">' + (idx + 1) + '</span>';
+	            photosHtml += '</div>';
 	        });
-	        photosHtml += '</div></span></div>';
+	        photosHtml += '</div></div>';
 	    }
-	    let modal = document.createElement("div"); modal.className = "modal-overlay";
+	    let modal = document.createElement("div"); 
+	    modal.className = "modal-overlay";
 	    modal.innerHTML = `<div class="modal-card"><button class="close-modal">✖</button><h3>🔧 Equipment Details</h3><div class="details-grid">${Object.entries(eq).filter(function(kv) { return kv[0] !== 'photos'; }).map(([k, v]) => `<div class="detail-item"><strong>${k.replace(/([A-Z])/g, ' $1').trim()}:</strong><span>${v || '-'}</span></div>`).join('')}${photosHtml}</div></div>`;
-	    document.body.appendChild(modal); modal.querySelector(".close-modal").onclick = () => modal.remove();
+	    document.body.appendChild(modal); 
+	    modal.querySelector(".close-modal").onclick = function() {
+	        modal.remove();
+	    };
 	}
-    
+	    
     async function editEquipmentDialog(eq) {
 	    let modal = document.createElement("div"); 
 	    modal.className = "modal-overlay";
