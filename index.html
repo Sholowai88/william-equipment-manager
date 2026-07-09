@@ -432,13 +432,16 @@
             <button id="closeAiChat" title="Close chat">✕</button>
         </div>
         <div class="ai-quick-actions">
-            <button onclick="document.getElementById('aiInput').value='help';sendAIMessage();">💡 Help</button>
-            <button onclick="document.getElementById('aiInput').value='how to in';sendAIMessage();">📥 IN</button>
-            <button onclick="document.getElementById('aiInput').value='how to out';sendAIMessage();">📤 OUT</button>
-            <button onclick="document.getElementById('aiInput').value='statistics';sendAIMessage();">📊 Stats</button>
-            <button onclick="document.getElementById('aiInput').value='troubleshooting';sendAIMessage();">🔧 Fix</button>
-            <button onclick="document.getElementById('aiInput').value='introduction';sendAIMessage();">ℹ️ Intro</button>
-        </div>
+		    <button onclick="document.getElementById('aiInput').value='help';sendAIMessage();">💡 Help</button>
+		    <button onclick="document.getElementById('aiInput').value='how to in';sendAIMessage();">📥 IN</button>
+		    <button onclick="document.getElementById('aiInput').value='how to out';sendAIMessage();">📤 OUT</button>
+		    <button onclick="document.getElementById('aiInput').value='statistics';sendAIMessage();">📊 Stats</button>
+		    <button onclick="document.getElementById('aiInput').value='photos';sendAIMessage();">📸 Photos</button>
+		    <button onclick="document.getElementById('aiInput').value='poke';sendAIMessage();">🔔 Poke</button>
+		    <button onclick="document.getElementById('aiInput').value='compare';sendAIMessage();">📊 Compare</button>
+		    <button onclick="document.getElementById('aiInput').value='troubleshooting';sendAIMessage();">🔧 Fix</button>
+		    <button onclick="document.getElementById('aiInput').value='introduction';sendAIMessage();">ℹ️ Intro</button>
+		</div>
     </div>
     <div class="ai-messages" id="aiMessages">
         <div class="message bot">
@@ -5777,119 +5780,149 @@ window.addEventListener('beforeunload', function() {
 	
 	const aiKnowledgeBase = {
 	    // ----- INTRODUCTION & OVERVIEW -----
-	    'introduction': 'Welcome to the NTWC MPU DR Workshop Equipment Database! 🏥\n\nThis system helps you manage medical equipment inventory, track IN/OUT transactions, and maintain quality assurance records.\n\n🔹 What you can do:\n• View and search equipment database\n• Check equipment IN/OUT status\n• Create transaction records\n• Track history logs\n• Compare equipment\n• Analyze usage statistics\n• Manage user accounts (Admin)\n\nNeed help? Ask me anything about the system!',
+	    'introduction': 'Welcome to the NTWC MPU DR Workshop Equipment Database! 🏥\n\nThis system helps you manage medical equipment inventory, track IN/OUT transactions, and maintain quality assurance records.\n\n🔹 What you can do:\n• View and search equipment database\n• Check equipment IN/OUT status\n• Create transaction records\n• Track history logs\n• Compare equipment\n• Analyze usage statistics\n• Manage user accounts (Admin)\n• View photos of equipment\n• Send pokes to colleagues\n\nNeed help? Ask me anything about the system!',
 	    'what is this': 'This is the NTWC MPU DR Workshop Equipment Management System. It\'s a web-based database for tracking medical equipment used in radiology departments. You can manage equipment inventory, record IN/OUT transactions, compare equipment, analyze usage statistics, and maintain quality assurance records.',
-	    'how to use': 'Here\'s how to get started:\n\n1️⃣ Login with your credentials\n2️⃣ Browse equipment in "Equipment DB" page\n3️⃣ Select equipment and create IN/OUT records\n4️⃣ Compare multiple equipment using "Compare" button\n5️⃣ View transaction history in "History Logs" page\n6️⃣ Analyze usage statistics with "Stat" button\n7️⃣ Admins can access "DB Logs" for audit trails\n\n💡 Tip: Use filters and comparison features to gain insights!',
-	    'getting started': 'Welcome! To get started with the Equipment Database:\n\n1. Login using your assigned username and password\n2. Explore the "Equipment DB" to view all equipment\n3. Select equipment to perform IN/OUT transactions\n4. Use "Compare" to view multiple equipment side-by-side\n5. Check "History Logs" for past records\n6. Use "Stat" to analyze equipment usage\n7. Use "Account" to manage your profile\n\nI\'m here to help at every step!',
+	    'how to use': 'Here\'s how to get started:\n\n1️⃣ Login with your credentials\n2️⃣ Browse equipment in "Equipment DB" page\n3️⃣ Select equipment and create IN/OUT records\n4️⃣ Compare multiple equipment using "Compare" button\n5️⃣ Compare statistics using "Compare Stat" (Admin only)\n6️⃣ View equipment photos in the gallery\n7️⃣ View transaction history in "History Logs" page\n8️⃣ Analyze usage statistics with "Stat" button (Admin only)\n9️⃣ Send pokes to colleagues from history records\n🔟 Admins can access "DB Logs" for audit trails\n\n💡 Tip: Use filters, comparison features, and photo gallery for better insights!',
+	    'getting started': 'Welcome! To get started with the Equipment Database:\n\n1. Login using your assigned username and password\n2. Explore the "Equipment DB" to view all equipment\n3. Select equipment to perform IN/OUT transactions\n4. Use "Compare" to view multiple equipment side-by-side\n5. Use "Compare Stat" for statistical analysis (Admin)\n6. Click on photos to open the photo gallery\n7. Check "History Logs" for past records\n8. Use "Stat" to analyze equipment usage (Admin)\n9. Send pokes to colleagues for quick follow-ups\n10. Use "Account" to manage your profile\n\nI\'m here to help at every step!',
 	
 	    // ----- EQUIPMENT MANAGEMENT -----
-	    'equipment': 'The Equipment Database stores all medical equipment information including:\n\n📦 Asset Number (unique identifier)\n📝 Description\n🏭 Manufacturer\n🔢 Serial Number\n📍 Location\n👤 Asset Owner\n📊 Current Status (IN/OUT)\n\nYou can search, filter, and manage all equipment from the "Equipment DB" page.',
-	    'view equipment': 'To view equipment:\n\n1️⃣ Go to "Equipment DB" tab\n2️⃣ Browse the list of equipment\n3️⃣ Use the search bar to find specific items\n4️⃣ Filter by Location or Parent Asset\n5️⃣ Click "Show" to view detailed information\n6️⃣ Click "Edit" to modify equipment details (Asset Number is locked after creation)',
+	    'equipment': 'The Equipment Database stores all medical equipment information including:\n\n📦 Asset Number (unique identifier)\n📝 Description\n🏭 Manufacturer\n🔢 Serial Number\n📍 Location\n👤 Asset Owner\n📊 Current Status (IN/OUT)\n📸 Photos (up to 3, JPEG, <5KB each)\n\nYou can search, filter, and manage all equipment from the "Equipment DB" page. Click on photos to open the gallery view.',
+	    'view equipment': 'To view equipment:\n\n1️⃣ Go to "Equipment DB" tab\n2️⃣ Browse the list of equipment\n3️⃣ Use the search bar to find specific items\n4️⃣ Filter by Location or Parent Asset\n5️⃣ Click "Show" to view detailed information with photos\n6️⃣ Click "Edit" to modify equipment details (Asset Number is locked after creation)\n7️⃣ Click on equipment photos to open the gallery\n\n💡 The gallery shows all photos in a slideshow with navigation controls.',
 	    'search equipment': 'To search for equipment:\n\n🔍 Use the search bar in "Equipment DB" page\n🔍 Search by Asset Number, Description, Manufacturer, or Serial Number\n🔍 Use the Location filter to find equipment in specific areas\n🔍 Use the Parent Asset filter for related equipment\n🔍 Use the Status filter to show IN or OUT items',
 	    'filter equipment': 'Filtering helps you find equipment faster!\n\n📌 Location Filter: Find equipment at POH, TMH, or TSH\n📌 Parent Asset Filter: Show equipment under specific parent assets\n📌 Status Filter: Show only IN or OUT equipment\n📌 Search Bar: Quick search across multiple fields\n\nCombine filters for precise results!',
 	    'select all': 'The "Select All" button now works with filtered results!\n\n🔹 How it works:\n• Apply filters (search, location, parent asset, status)\n• Click "Select All" - only filtered equipment is selected\n• Not all equipment in the database is selected\n\n💡 This makes batch operations on filtered results much easier!',
 	    'clear selection': 'The "Clear" button removes all selected equipment.\n\n🔹 Use it to:\n• Start fresh selection\n• Deselect all equipment\n• Prepare for new filter and selection\n\n💡 Selected equipment count is displayed next to the buttons.',
 	
+	    // ----- PHOTO GALLERY -----
+	    'photos': '📸 Photo Gallery Feature\n\nThe system supports uploading and viewing photos for each equipment.\n\n🔹 Photo Features:\n• Upload up to 3 photos per equipment\n• Photos must be JPEG format\n• Each photo <5KB (automatically compressed)\n• View photos in gallery with slideshow\n• Navigate with arrow buttons or keyboard\n• Click on thumbnails to open full gallery\n• Photos are synced to Supabase cloud\n\n🔹 How to upload:\n1. Click "Edit" on any equipment\n2. Click "Choose Files" in the photo section\n3. Select JPEG images (max 3)\n4. Click "Save Changes"\n\n🔹 How to view:\n• Click on any photo thumbnail in Equipment DB\n• Use arrows or keyboard (← →) to navigate\n• Click on photo to go to next image\n\n💡 Photos are automatically compressed to <5KB each!',
+	    'photo gallery': '📸 Photo Gallery View\n\nWhen you click on a photo thumbnail, the gallery opens with:\n\n🔹 Features:\n• Full-screen slideshow view\n• Previous/Next navigation buttons\n• Keyboard support (← → arrows)\n• Photo counter (1/3, 2/3, 3/3)\n• Dot indicators for quick navigation\n• Click on photo to advance\n• Close button to exit\n\n💡 The gallery works on both desktop and mobile devices!',
+	    'upload photos': '📤 To upload photos for equipment:\n\n1️⃣ Click "✏️ Edit" on the equipment\n2️⃣ Scroll to the "📸 Photos" section\n3️⃣ Click "Choose Files" (JPEG only)\n4️⃣ Select up to 3 images\n5️⃣ Images are automatically compressed to <5KB\n6️⃣ Click "Save Changes"\n\n🔹 Tips:\n• Use clear, well-lit photos\n• Show different angles\n• Label important parts\n• Photos help with identification\n\n⚠️ Each photo must be under 5KB after compression.',
+	    'photo compression': '🖼️ Photo Compression\n\nThe system automatically compresses photos to save storage.\n\n🔹 Compression Details:\n• Max file size: 5KB per photo\n• Format: JPEG\n• Max dimensions: 600px\n• Quality: Auto-adjusted\n• Max photos per equipment: 3\n\n💡 Photos are compressed in the browser before uploading!',
+	    'sync photos': '☁️ Photo Sync to Supabase\n\nPhotos are automatically synced to Supabase cloud.\n\n🔹 Sync Features:\n• Automatic sync when saving equipment\n• Photos stored in equipment_data table\n• Support for up to 3 photos per equipment\n• Photos persist across sessions\n• Sync verification available\n\n🔹 Manual Sync Options:\n• Use "syncPhotosManually()" in console\n• Use "syncSinglePhoto(assetNumber)" for specific equipment\n• Use "checkPhotoSyncStatus()" to verify\n\n💡 Photos are synced automatically - no action needed!',
+	
 	    // ----- COMPARE FEATURE -----
-	    'compare': '📊 Compare Feature\n\nThe Compare button allows you to view multiple equipment side-by-side!\n\n🔹 What you can do:\n• Select 2-10 equipment (checkboxes)\n• Click "Compare" to view comparison table\n• See all equipment details in one view\n• Compare transaction history\n• Bulk edit multiple equipment\n\n💡 Perfect for identifying differences and similarities!',
-	    'how to compare': 'To compare equipment:\n\n1️⃣ Select equipment using checkboxes in Equipment DB\n2️⃣ Click the "📊 Compare" button\n3️⃣ View the comparison table with all details\n4️⃣ Click "Compare History" to see transaction history\n5️⃣ Click "Edit All" to bulk edit fields\n6️⃣ Click individual "Edit" or "Show" for specific equipment\n7️⃣ Close comparison to return to Equipment DB\n\n📌 You can compare 2-10 equipment at once!',
+	    'compare': '📊 Compare Feature\n\nThe Compare button allows you to view multiple equipment side-by-side!\n\n🔹 What you can do:\n• Select 2-10 equipment (checkboxes)\n• Click "Compare" to view comparison table\n• See all equipment details in one view\n• Compare transaction history\n• Bulk edit multiple equipment\n• View equipment photos in comparison\n• Individual Edit/Show for each item\n\n💡 Perfect for identifying differences and similarities!',
+	    'how to compare': 'To compare equipment:\n\n1️⃣ Select equipment using checkboxes in Equipment DB\n2️⃣ Click the "📊 Compare" button\n3️⃣ View the comparison table with all details\n4️⃣ Click "Compare History" to see transaction history\n5️⃣ Click "Edit All" to bulk edit fields\n6️⃣ Click individual "Edit" or "Show" for specific equipment\n7️⃣ Click on photos in comparison to open gallery\n8️⃣ Close comparison to return to Equipment DB\n\n📌 You can compare 2-10 equipment at once!',
 	    'compare history': '📜 Compare History\n\nThe "Compare History" feature shows transaction history for all compared equipment.\n\n🔹 What you see:\n• Each equipment\'s transaction list (up to 10)\n• Transaction dates, status, job type, and purpose\n• Total transaction count per equipment\n\n💡 Great for comparing usage patterns between similar equipment!',
 	    'bulk edit': '✏️ Bulk Edit Feature\n\nThe "Edit All" button in Compare mode lets you edit multiple equipment simultaneously.\n\n🔹 What you can update:\n• Location\n• Parent Asset\n• Asset Owner\n• Current Detail\n\n🔹 How it works:\n1. Click "Edit All" in Compare view\n2. Fill the fields you want to change\n3. Click "Apply to All Selected"\n4. All selected equipment are updated\n\n✅ Changes are logged to DB Logs for audit trail!',
-	    'compare stat': '📈 Compare Stat (Admin Only)\n\nThe Compare Stat button allows Administrators to compare usage statistics between multiple equipment.\n\n🔹 Features:\n• Select 2-5 equipment\n• View total transactions comparison\n• See IN vs OUT distribution\n• Compare job type usage\n• Compare ET usage patterns\n• Filter by date range\n\n🔹 Only Administrators can access this feature\n\n💡 Powerful tool for equipment performance analysis!',
-	    'how to compare stat': 'To use Compare Stat:\n\n1️⃣ Login as Administrator\n2️⃣ Select 2-5 equipment using checkboxes\n3️⃣ Click "📈 Compare Stat" button\n4️⃣ Optionally select a date range\n5️⃣ View comparison charts:\n   • Total Transactions (Bar Chart)\n   • IN vs OUT Distribution\n   • Job Type Distribution\n   • ET Usage Comparison\n\n📊 Data is visualized in easy-to-read charts!',
+	    'compare stat': '📈 Compare Stat (Admin Only)\n\nThe Compare Stat button allows Administrators to compare usage statistics between multiple equipment.\n\n🔹 Features:\n• Select 2-5 equipment\n• View total transactions comparison (Bar Chart)\n• See IN vs OUT distribution (Grouped Bar)\n• Compare job type usage (Stacked Bar)\n• Compare ET usage patterns (Grouped Bar)\n• Filter by date range\n• View statistics as both charts and lists\n\n🔹 Only Administrators can access this feature\n\n💡 Powerful tool for equipment performance analysis!',
+	    'how to compare stat': 'To use Compare Stat:\n\n1️⃣ Login as Administrator\n2️⃣ Select 2-5 equipment using checkboxes\n3️⃣ Click "📈 Compare Stat" button\n4️⃣ Optionally select a date range\n5️⃣ Click "Apply Date Range" to filter\n6️⃣ View comparison charts:\n   • Total Transactions (Bar Chart)\n   • IN vs OUT Distribution (Grouped Bar)\n   • Job Type Distribution (Stacked Bar)\n   • ET Usage Comparison (Grouped Bar)\n7️⃣ View statistical lists below charts\n\n📊 Data is visualized in easy-to-read charts with detailed lists!',
 	
 	    // ----- STATISTICS FEATURE -----
-	    'statistics': '📊 Equipment Usage Statistics\n\nThe "Stat" button on each equipment shows detailed usage statistics.\n\n🔹 What you can view:\n• ET Usage (Engineering Technicians)\n• SET Usage (Supervisors)\n• Physicist Usage\n• Job Type Usage (PM, CM, QA, AT, OTH)\n• Total Transactions\n\n🔹 Date Range Filter:\n• Select Start Date and End Date\n• Click "Apply Date Range" to filter\n• Charts update automatically\n\n💡 Great for analyzing equipment usage patterns!',
-	    'stat': '📊 To view equipment statistics:\n\n1️⃣ Find equipment in Equipment DB\n2️⃣ Click the "📊 Stat" button (Admin only)\n3️⃣ Optionally filter by date range\n4️⃣ View usage charts:\n   • ET Usage\n   • SET Usage\n   • Physicist Usage\n   • Job Type Usage\n\n📅 Use date filters to analyze specific periods!',
+	    'statistics': '📊 Equipment Usage Statistics\n\nThe "Stat" button on each equipment shows detailed usage statistics.\n\n🔹 What you can view:\n• ET Usage (Engineering Technicians) - Bar Chart\n• SET Usage (Supervisors) - Bar Chart\n• Physicist Usage - Bar Chart\n• Job Type Usage (PM, CM, QA, AT, OTH) - Pie Chart\n• Total Transactions Count\n\n🔹 Date Range Filter:\n• Select Start Date and End Date\n• Click "Apply Date Range" to filter\n• Charts update automatically\n• Click "Reset" to show all records\n\n🔹 Only Administrators can access this feature\n\n💡 Great for analyzing equipment usage patterns!',
+	    'stat': '📊 To view equipment statistics:\n\n1️⃣ Find equipment in Equipment DB\n2️⃣ Click the "📊 Stat" button (Admin only)\n3️⃣ Optionally filter by date range\n4️⃣ View usage charts:\n   • ET Usage (Bar Chart)\n   • SET Usage (Bar Chart)\n   • Physicist Usage (Bar Chart)\n   • Job Type Usage (Pie Chart)\n5️⃣ View detailed lists below charts\n\n📅 Use date filters to analyze specific periods!',
 	    'stat date range': '📅 Date Range Filter in Statistics\n\nThe Stat feature includes a date range filter for deeper analysis.\n\n🔹 How to use:\n1. Click "Stat" on any equipment\n2. Select Start Date (optional)\n3. Select End Date (optional)\n4. Click "Apply Date Range"\n5. Charts and data update to show filtered results\n6. Click "Reset" to show all records\n\n💡 Analyze usage during specific time periods!',
 	
 	    // ----- IN/OUT RECORDS -----
-	    'in record': '📥 To perform an IN record (Return):\n\n1️⃣ Select equipment from Equipment DB page\n2️⃣ Go to "In/Out Record" page\n3️⃣ Select "IN" status\n4️⃣ Fill required fields:\n   • Date & Time (HK) - use "Today" button\n   • Job Type (PM, CM, QA, AT, OTH)\n   • Purpose of transaction\n   • ET (Ctrl/Cmd+Click for multiple)\n   • SET (Supervisor)\n   • Physicist\n   • Others (optional)\n   • Remarks (optional)\n5️⃣ Draw your signature\n6️⃣ Click "Preview" to review\n7️⃣ Click "Save Record"\n\nThe equipment status will update to IN automatically! ✅',
-	    
-	    'out record': '📤 To perform an OUT record (Check-out):\n\n1️⃣ Select equipment from Equipment DB page\n2️⃣ Go to "In/Out Record" page\n3️⃣ Select "OUT" status\n4️⃣ Fill required fields:\n   • Date & Time (HK) - use "Today" button\n   • Job Type (PM, CM, QA, AT, OTH)\n   • Purpose of transaction\n   • ET (Ctrl/Cmd+Click for multiple)\n   • SET (Supervisor)\n   • Physicist\n   • Others (optional)\n   • Remarks (optional)\n5️⃣ Draw your signature\n6️⃣ Click "Preview" to review\n7️⃣ Click "Save Record"\n\nThe equipment status will update to OUT automatically! 🚪',
-	    
-	    'how to in': '📥 To check IN equipment:\n\nSelect equipment → In/Out Record → Choose "IN" → Complete form → Sign → Save\n\nEquipment will be marked as returned. The system will update the status automatically.',
-	    'how to out': '📤 To check OUT equipment:\n\nSelect equipment → In/Out Record → Choose "OUT" → Complete form → Sign → Save\n\nEquipment will be marked as checked out. The system will update the status automatically.',
+	    'in record': '📥 To perform an IN record (Return):\n\n1️⃣ Select equipment from Equipment DB page\n2️⃣ Go to "In/Out Record" page\n3️⃣ Select "IN" status\n4️⃣ Fill required fields:\n   • Date & Time (HK) - use "Today" button\n   • Job Type (PM, CM, QA, AT, OTH)\n   • Purpose of transaction\n   • ET (Ctrl/Cmd+Click for multiple)\n   • SET (Supervisor)\n   • Physicist\n   • Others (optional)\n   • Remarks (optional)\n5️⃣ Draw your signature on the canvas\n6️⃣ Click "Preview" to review\n7️⃣ Click "Save Record"\n\nThe equipment status will update to IN automatically! ✅',
+	    'out record': '📤 To perform an OUT record (Check-out):\n\n1️⃣ Select equipment from Equipment DB page\n2️⃣ Go to "In/Out Record" page\n3️⃣ Select "OUT" status\n4️⃣ Fill required fields:\n   • Date & Time (HK) - use "Today" button\n   • Job Type (PM, CM, QA, AT, OTH)\n   • Purpose of transaction\n   • ET (Ctrl/Cmd+Click for multiple)\n   • SET (Supervisor)\n   • Physicist\n   • Others (optional)\n   • Remarks (optional)\n5️⃣ Draw your signature on the canvas\n6️⃣ Click "Preview" to review\n7️⃣ Click "Save Record"\n\nThe equipment status will update to OUT automatically! 🚪',
+	    'how to in': '📥 To check IN equipment:\n\nSelect equipment → In/Out Record → Choose "IN" → Complete form → Sign → Preview → Save\n\nEquipment will be marked as returned. The system will update the status automatically.',
+	    'how to out': '📤 To check OUT equipment:\n\nSelect equipment → In/Out Record → Choose "OUT" → Complete form → Sign → Preview → Save\n\nEquipment will be marked as checked out. The system will update the status automatically.',
 	    'job type': 'Job Types explained:\n\n🛠️ PM - Preventive Maintenance\n🛠️ CM - Corrective Maintenance\n🛠️ QA - Quality Assurance\n🛠️ AT - Acceptance Test\n🛠️ OTH - Others (specify in purpose)\n\nChoose the appropriate type for your transaction.',
 	    'purpose': 'The "Purpose" field describes the specific reason for the transaction.\n\n📌 Examples:\n• "26QA TMH PMS" - Quality Assurance test\n• "Annual calibration" - Calibration service\n• "Repair of X-ray unit" - Corrective maintenance\n• "Acceptance test for new equipment" - Acceptance testing\n\nBe specific to help with record tracking!',
 	    'status conflict': '⚠️ Status Conflict Error:\n\nThis occurs when you try to perform "IN" on equipment that is already IN, or "OUT" on equipment that is already OUT.\n\n🔹 Solution: Check the current status of the equipment first.\n🔹 If equipment is already IN, you cannot check it IN again.\n🔹 If equipment is already OUT, you cannot check it OUT again.\n\n💡 Tip: Use the Status filter to see which equipment is currently IN or OUT.',
-	    
+	
 	    // ----- PERSONNEL -----
 	    'et': '⚡ ET - Engineering Technician\n\nAvailable ETs:\n• Heung, Andy, Vincent, William\n• Pal, Joe, Richard, Ray\n• N/A (if not applicable)\n\n💡 Tip: Use Ctrl/Cmd+Click to select multiple ETs!\n\nETs are responsible for performing the equipment maintenance or testing.',
 	    'set': '🔧 SET - Supervisor\n\nAvailable SET options:\n• Reeve\n• Kelvin\n• Deputizing\n\nChoose the supervisor responsible for overseeing the work.',
 	    'physicist': '🧪 Physicist\n\nAvailable Physicists:\n• Xiao Li\n• Celina\n• Keith\n• Jacky\n• Martin\n• RT Phy.\n• N/A\n\nSelect the physicist involved in the quality assurance or testing.',
 	    'others': '📝 Others Field\n\nUse this field for:\n• Deputizing name (when someone is deputizing)\n• Additional personnel not listed\n• Special notes about who performed the work\n\nExample: "Deputizing: John Smith"',
-	    
+	
 	    // ----- SIGNATURE -----
 	    'signature': '✍️ Signature Requirements:\n\n• Signature is mandatory for all transactions\n• Draw your signature on the canvas using mouse or touch\n• Use the "Clear Signature" button to redraw\n• Signature is saved with the record\n• Click "Preview" to see your signature before saving\n\n💡 Tip: Use a stylus or your finger for better control!',
 	    'how to sign': 'To draw your signature:\n\n1️⃣ Use your mouse, finger, or stylus on the signature canvas\n2️⃣ Press and drag to draw\n3️⃣ Click "Clear Signature" to start over\n4️⃣ Your signature is saved when you click "Save Record"\n\n📱 Works on both desktop and mobile devices!',
-	    
+	
 	    // ----- HISTORY LOGS -----
 	    'history': '📜 History Logs\n\nThe History Logs page shows all transaction records.\n\n🔹 What you can do:\n• View all IN/OUT transactions\n• Filter by Job Type, Status, or Record Status\n• Sort by Date (Ascending/Descending)\n• Export to CSV\n• Preview records\n• Edit records (with authorization)\n• Email records\n• Poke colleagues\n\nEach record shows equipment details, personnel, and signature.',
 	    'view history': 'To view transaction history:\n\n1️⃣ Go to "History Logs" page\n2️⃣ Use filters to narrow down results\n3️⃣ Click "Sort by Date" to order records\n4️⃣ Use "Export" to download CSV file\n5️⃣ Click "Preview" to see full record details\n6️⃣ Click "Edit" to modify records\n7️⃣ Click "Email" to send record via email\n8️⃣ Click "Poke" to notify colleagues\n\n📅 Use date range filters for specific periods!',
 	    'export history': '📎 Export History Logs:\n\n1️⃣ Go to "History Logs" page\n2️⃣ Select date range (Start Date and End Date)\n3️⃣ Click "Export" button\n4️⃣ CSV file will download automatically\n5️⃣ File name: history_logs_YYYYMMDD.csv\n\n💡 Tip: Use date filters to export specific periods!',
-	    
+	
 	    // ----- DB LOGS (Admin) -----
-	    'db logs': '📊 DB Logs (Admin Only)\n\nDB Logs track all system activities:\n\n🔹 What\'s recorded:\n• Login Success/Failed attempts\n• Logout events\n• Session starts\n• User creation\n• Password changes\n• Record creation/editing\n• Equipment added/edited\n• Backup/Restore actions\n• Supabase Backup\n• Poke sent/back\n• Bulk edit operations\n\n🔹 Only Administrators can view DB Logs',
+	    'db logs': '📊 DB Logs (Admin & Senior Super-user Only)\n\nDB Logs track all system activities:\n\n🔹 What\'s recorded:\n• Login Success/Failed attempts\n• Logout events\n• Session starts\n• User creation\n• Password changes\n• Record creation/editing\n• Equipment added/edited\n• Backup/Restore actions\n• Supabase Backup\n• Poke sent/back\n• Bulk edit operations\n\n🔹 Senior Super-user can only view EQUIPMENT_ADDED and EQUIPMENT_EDITED logs\n\n💡 Use DB Logs for security auditing and troubleshooting!',
 	    'admin logs': '👑 As an Administrator, you can:\n\n• View all DB Logs\n• Monitor user activities\n• Track system changes\n• Audit security events\n• Export logs to CSV\n• Filter by action type\n• Sort by date\n\n💡 Use DB Logs for security auditing and troubleshooting!',
-	    
+	
 	    // ----- BACKUP & RESTORE -----
 	    'backup': '💾 Backup (Admin Only)\n\nCreates a JSON backup of the entire database.\n\n🔹 What\'s backed up:\n• Equipment data\n• Equipment status\n• History records\n• DB logs\n\n📁 File format: backup - ntwc_mpu_drws_equipment_database - YYYYMMDD.json\n\n💡 Regular backups help protect your data!',
 	    'restore': '📂 Restore (Admin Only)\n\nRestores the database from a backup file.\n\n⚠️ WARNING:\n• This will overwrite current data\n• Use with caution\n• Only restore from trusted backup files\n• Consider creating a backup before restoring\n\n💡 Always verify the backup file before restoring!',
 	    'supabase backup': '☁️ Supabase Backup (Admin Only)\n\nCreates a ZIP file containing CSV exports of all tables.\n\n📦 Tables exported:\n• db_logs.csv\n• equip_status.csv\n• equipment_data.csv\n• history_records.csv\n• users.csv\n• pokes.csv\n\n📁 File format: supabase_backup_YYYYMMDD.zip\n\n💡 Use this for complete database backups!',
-	    
+	
 	    // ----- POKE SYSTEM -----
-	    'poke': '🔔 Poke System\n\nThe Poke system allows you to grab attention without typing a full message.\n\n🔹 How it works:\n1. Go to History Logs page\n2. Click "Poke" button on a record\n3. Select ET, SET, or Physicist to poke\n4. Recipients get a notification\n5. They can Acknowledge, Ignore, or Poke Back\n\n💡 Great for quick follow-ups and reminders!',
+	    'poke': '🔔 Poke System\n\nThe Poke system allows you to grab attention without typing a full message.\n\n🔹 How it works:\n1. Go to History Logs page\n2. Click "Poke" button on a record\n3. Select ET, SET, or Physicist to poke\n4. Recipients get a notification with 🔔 icon\n5. They can Acknowledge, Ignore, or Poke Back\n6. Notifications blink until responded to\n\n💡 Great for quick follow-ups and reminders!',
 	    'how to poke': 'To send a poke:\n\n1️⃣ Go to "History Logs" page\n2️⃣ Find the record you want to reference\n3️⃣ Click the "🔔 Poke" button\n4️⃣ Select who to poke (ET, SET, Physicist)\n5️⃣ Click "Send Poke"\n6️⃣ Recipients receive a notification\n7️⃣ They can respond or ignore\n\n💡 You cannot poke yourself!',
-	    'poke notification': '🔔 Poke Notifications:\n\nWhen you receive a poke:\n• 🔔 icon appears in the header\n• Shows number of pending pokes\n• Click to view details\n• Choose to: Acknowledge 👍, Ignore 👋, or Poke Back 🔔\n• Responding dismisses the notification\n• Closing without responding keeps it active',
-	    
+	    'poke notification': '🔔 Poke Notifications:\n\nWhen you receive a poke:\n• 🔔 icon appears in the header with count\n• Shows number of pending pokes\n• Click to view details\n• Choose to: Acknowledge 👍, Ignore 👋, or Poke Back 🔔\n• Responding dismisses the notification\n• Closing without responding keeps it active\n• Notifications blink until responded to',
+	    'poke back': '🔁 Poke Back Feature\n\nWhen someone pokes you, you can "Poke Back" to return the notification.\n\n🔹 How it works:\n1. Click on the 🔔 notification\n2. Click "🔔 Poke Back" button\n3. The original sender receives a new poke\n4. They can respond to your poke back\n\n💡 Perfect for quick back-and-forth communication!',
+	
 	    // ----- ACCOUNT MANAGEMENT -----
 	    'account': '👤 Account Management\n\nYou can manage your account from the "Account" button in the header.\n\n🔹 What you can do:\n• View your username and role\n• Change your password\n• Admins can create new super-users\n\n🔹 Password requirements:\n• Minimum 3 characters\n• Case sensitive\n• Confirm new password when changing',
 	    'change password': '🔑 To change your password:\n\n1️⃣ Click "Account" button in the header\n2️⃣ Enter your current password\n3️⃣ Enter your new password\n4️⃣ Confirm your new password\n5️⃣ Click "Change Password"\n\n✅ Password updated immediately!\n\n💡 Choose a strong password for security!',
-	    'create user': '👤 Create New User (Admin Only):\n\n1️⃣ Click "Account" button\n2️⃣ Enter new username\n3️⃣ Enter new password (minimum 3 characters)\n4️⃣ Click "Create User"\n\n🔹 New users are created as "super-user" role\n🔹 Only Administrators can create users\n🔹 Usernames must be unique',
-	    
+	    'create user': '👤 Create New User (Admin Only):\n\n1️⃣ Click "Account" button\n2️⃣ Enter new username\n3️⃣ Enter new password (minimum 3 characters)\n4️⃣ Select role: Super-user or Senior Super-user\n5️⃣ Click "Create User"\n\n🔹 Only Administrators can create users\n🔹 Usernames must be unique\n🔹 New users are assigned the selected role',
+	
 	    // ----- TROUBLESHOOTING -----
-	    'troubleshooting': '🔧 Common Issues & Solutions:\n\n1. "Status conflict" - Equipment already has that status\n   → Check current status before transaction\n\n2. "Sync Error" - Check internet connection and refresh\n   → Use the Refresh button\n\n3. "Duplicate asset" - Asset number must be unique\n   → Use a different asset number\n\n4. "Signature required" - Draw signature before saving\n   → Use mouse/touch to sign\n\n5. "No equipment selected" - Select equipment first\n   → Check the checkbox on equipment\n\n6. "Compare requires 2+ equipment" - Select at least 2 items\n   → Check more checkboxes\n\n7. "Compare Stat requires 2-5 equipment" - Select 2-5 items\n   → Adjust your selection\n\nNeed more help? Ask me specific questions!',
-	    'error': 'Common errors and solutions:\n\n❌ "Status conflict": Equipment already has that status\n❌ "Sync Error": Refresh your page\n❌ "Duplicate asset": Use a unique asset number\n❌ "Signature required": Draw your signature\n❌ "No equipment selected": Select equipment first\n❌ "Select at least 2 equipment": Use Compare with 2+ items\n❌ "Select at most 10 equipment": Reduce selection for Compare\n\n💡 Always check your inputs before saving!',
+	    'troubleshooting': '🔧 Common Issues & Solutions:\n\n1. "Status conflict" - Equipment already has that status\n   → Check current status before transaction\n\n2. "Sync Error" - Check internet connection and refresh\n   → Use the Refresh button\n\n3. "Duplicate asset" - Asset number must be unique\n   → Use a different asset number\n\n4. "Signature required" - Draw signature before saving\n   → Use mouse/touch to sign\n\n5. "No equipment selected" - Select equipment first\n   → Check the checkbox on equipment\n\n6. "Compare requires 2+ equipment" - Select at least 2 items\n   → Check more checkboxes\n\n7. "Compare Stat requires 2-5 equipment" - Select 2-5 items\n   → Adjust your selection\n\n8. "Photo not showing" - Check photo sync status\n   → Run checkPhotoSyncStatus() in console\n\nNeed more help? Ask me specific questions!',
+	    'error': 'Common errors and solutions:\n\n❌ "Status conflict": Equipment already has that status\n❌ "Sync Error": Refresh your page\n❌ "Duplicate asset": Use a unique asset number\n❌ "Signature required": Draw your signature\n❌ "No equipment selected": Select equipment first\n❌ "Select at least 2 equipment": Use Compare with 2+ items\n❌ "Select at most 10 equipment": Reduce selection for Compare\n❌ "Photo not showing": Check photo sync or re-upload\n\n💡 Always check your inputs before saving!',
 	    'sync error': '🔄 "Sync Error" occurs when data can\'t sync with the cloud.\n\n🔹 Solutions:\n1. Check your internet connection\n2. Click the "Refresh" button\n3. Wait a few seconds and try again\n4. Reload the page\n5. Contact support if issue persists\n\n💡 The Refresh button has a 5-second cooldown to prevent overload.',
-	    'refresh': '🔄 Refresh Button\n\nThe Refresh button syncs data from the cloud.\n\n🔹 What it does:\n• Syncs equipment data\n• Syncs status records\n• Syncs history logs\n• Syncs poke notifications\n• Preserves DB logs (no data loss)\n\n⏳ Cooldown: 5 seconds between refreshes\n\n💡 Use only when needed to check for updates!',
-	    
+	    'refresh': '🔄 Refresh Button\n\nThe Refresh button syncs data from the cloud.\n\n🔹 What it does:\n• Syncs equipment data with photos\n• Syncs status records\n• Syncs history logs\n• Syncs poke notifications\n• Preserves DB logs (no data loss)\n\n⏳ Cooldown: 5 seconds between refreshes\n\n💡 Use only when needed to check for updates!',
+	
 	    // ----- NEW FEATURES HELP -----
-	    'compare features': '📊 Comparison Features Overview\n\nThe system offers two comparison tools:\n\n1️⃣ Compare (All Users):\n   • View 2-10 equipment side-by-side\n   • Compare transaction history\n   • Bulk edit equipment\n   • Individual Edit/Show for each item\n\n2️⃣ Compare Stat (Admin Only):\n   • Compare 2-5 equipment statistics\n   • View charts for transactions, IN/OUT, jobs, ETs\n   • Filter by date range\n   • Analyze usage patterns\n\n💡 Use Compare for details, Compare Stat for analytics!',
+	    'compare features': '📊 Comparison Features Overview\n\nThe system offers two comparison tools:\n\n1️⃣ Compare (All Users):\n   • View 2-10 equipment side-by-side\n   • Compare transaction history\n   • Bulk edit equipment\n   • Individual Edit/Show for each item\n   • View equipment photos in comparison\n\n2️⃣ Compare Stat (Admin Only):\n   • Compare 2-5 equipment statistics\n   • View charts for transactions, IN/OUT, jobs, ETs\n   • Filter by date range\n   • Analyze usage patterns\n\n💡 Use Compare for details, Compare Stat for analytics!',
 	    'bulk edit tips': '💡 Bulk Edit Tips:\n\n• Select multiple equipment first (2-10 items)\n• Click "Compare" then "Edit All"\n• Fill only the fields you want to change\n• Empty fields are ignored\n• Changes are logged to DB Logs\n\n🔹 Fields you can bulk edit:\n• Location\n• Parent Asset\n• Asset Owner\n• Current Detail\n\n💡 Bulk editing saves time for large updates!',
 	    'stat tips': '📊 Statistics Tips:\n\n• Click "Stat" on any equipment (Admin only)\n• Use date range filters for specific periods\n• View 4 different charts for comprehensive analysis\n• ET Usage shows technician workload\n• Job Type Usage shows maintenance patterns\n• Compare Stat for equipment performance benchmarking\n\n💡 Regular analysis helps optimize maintenance schedules!',
 	
 	    // ----- GENERAL HELP -----
-	    'help': '🤖 I\'m your AI Engineering Assistant!\n\nI can help you with:\n\n📋 Equipment Management\n• Viewing and searching equipment\n• Adding new equipment\n• Editing equipment details\n• Comparing multiple equipment\n\n📊 Statistics & Analysis\n• Equipment usage statistics (Admin)\n• Compare Stat (Admin)\n• Date range filtering\n\n📤 IN/OUT Records\n• Performing IN transactions\n• Performing OUT transactions\n• Understanding job types\n\n👤 Personnel Management\n• ET, SET, Physicist roles\n• Account management\n\n📜 History & Logs\n• Viewing history records\n• Exporting data\n• DB Logs (Admin)\n\n🔔 Poke System\n• Sending pokes\n• Receiving notifications\n• Responding to pokes\n\nWhat would you like to know?',
-	    'guide': '📚 User Guide - Quick Reference\n\n1️⃣ Login → Use your credentials\n2️⃣ Equipment DB → View and manage equipment\n3️⃣ Compare → Compare multiple equipment\n4️⃣ Stat → View usage statistics (Admin)\n5️⃣ Compare Stat → Compare equipment stats (Admin)\n6️⃣ In/Out Record → Create transactions\n7️⃣ History Logs → View past records\n8️⃣ DB Logs → Admin audit trail\n9️⃣ Account → Manage profile\n🔟 Refresh → Sync data from cloud\n\n💡 I\'m here to help with any questions!',
-	    'shortcuts': '⌨️ Quick Tips:\n\n• Use "Today" button for current date/time\n• Ctrl/Cmd+Click to select multiple ETs\n• Use filters for faster searches\n• Click "Preview" before saving records\n• Use date range for exports and statistics\n• Select 2-10 equipment for Compare\n• Select 2-5 equipment for Compare Stat\n• Regular backups protect your data\n\n💡 These shortcuts save time!',
-	    'welcome': '👋 Welcome to the NTWC MPU DR Workshop Equipment Database!\n\nI\'m your AI Assistant - here to help you navigate the system.\n\n🔹 New user? Start with "Getting Started"\n🔹 Need to compare equipment? Try "Compare"\n🔹 Want to analyze usage? Use "Stat" or "Compare Stat"\n🔹 Quick reference? Type "Guide"\n\n💡 What would you like to learn about?',
-	    'hello': 'Hello! 👋 I\'m your Engineering AI Assistant.\n\nI\'m here to help you with:\n• Equipment management\n• IN/OUT transactions\n• Compare and analyze equipment\n• Account and user management\n• Database operations\n• Troubleshooting\n\nWhat can I help you with today?',
+	    'help': '🤖 I\'m your AI Engineering Assistant!\n\nI can help you with:\n\n📋 Equipment Management\n• Viewing and searching equipment\n• Adding new equipment\n• Editing equipment details\n• Comparing multiple equipment\n• Viewing equipment photos\n\n📊 Statistics & Analysis\n• Equipment usage statistics (Admin)\n• Compare Stat (Admin)\n• Date range filtering\n• Chart visualization\n\n📤 IN/OUT Records\n• Performing IN transactions\n• Performing OUT transactions\n• Understanding job types\n• Signature drawing\n\n👤 Personnel Management\n• ET, SET, Physicist roles\n• Account management\n• Password changes\n\n📜 History & Logs\n• Viewing history records\n• Exporting data\n• DB Logs (Admin & Senior Super)\n\n🔔 Poke System\n• Sending pokes\n• Receiving notifications\n• Responding to pokes\n• Poke back feature\n\n📸 Photo Features\n• Uploading photos\n• Viewing photo gallery\n• Photo compression\n• Photo sync\n\nWhat would you like to know?',
+	    'guide': '📚 User Guide - Quick Reference\n\n1️⃣ Login → Use your credentials\n2️⃣ Equipment DB → View and manage equipment\n3️⃣ Compare → Compare multiple equipment\n4️⃣ Compare Stat → Compare equipment stats (Admin)\n5️⃣ Stat → View usage statistics (Admin)\n6️⃣ Photos → Click thumbnails for gallery view\n7️⃣ In/Out Record → Create transactions\n8️⃣ History Logs → View past records\n9️⃣ DB Logs → Admin audit trail\n🔟 Account → Manage profile\n1️⃣1️⃣ Refresh → Sync data from cloud\n1️⃣2️⃣ Poke → Send quick notifications\n\n💡 I\'m here to help with any questions!',
+	    'shortcuts': '⌨️ Quick Tips:\n\n• Use "Today" button for current date/time\n• Ctrl/Cmd+Click to select multiple ETs\n• Use filters for faster searches\n• Click "Preview" before saving records\n• Use date range for exports and statistics\n• Select 2-10 equipment for Compare\n• Select 2-5 equipment for Compare Stat\n• Click on photos to open gallery\n• Use ← → arrows in gallery to navigate\n• Regular backups protect your data\n\n💡 These shortcuts save time!',
+	    'welcome': '👋 Welcome to the NTWC MPU DR Workshop Equipment Database!\n\nI\'m your AI Assistant - here to help you navigate the system.\n\n🔹 New user? Start with "Getting Started"\n🔹 Need to compare equipment? Try "Compare"\n🔹 Want to analyze usage? Use "Stat" or "Compare Stat"\n🔹 Want to view photos? Click on any photo thumbnail\n🔹 Need to notify someone? Use the "Poke" system\n🔹 Quick reference? Type "Guide"\n\n💡 What would you like to learn about?',
+	    'hello': 'Hello! 👋 I\'m your Engineering AI Assistant.\n\nI\'m here to help you with:\n• Equipment management and searching\n• IN/OUT transactions with signatures\n• Compare and analyze equipment\n• Photo gallery and uploads\n• Poke system for notifications\n• Account and user management\n• Database operations and backups\n• Troubleshooting and tips\n\nWhat can I help you with today?',
 	};
 	
-	// ============================================================
-	// ENHANCED AI RESPONSE FUNCTION
-	// ============================================================
-	
+	// Enhanced AI Response Function
 	function getAIResponse(userMessage) {
 	    var msg = userMessage.toLowerCase().trim();
+	    
+	    // Check for photo-related questions
+	    if (msg.includes('photo') || msg.includes('picture') || msg.includes('image') || msg.includes('gallery')) {
+	        if (msg.includes('upload') || msg.includes('add') || msg.includes('how')) {
+	            return aiKnowledgeBase['upload photos'] || '📸 To upload photos:\n\n1. Click "Edit" on equipment\n2. Choose JPEG files (max 3)\n3. Photos auto-compress to <5KB\n4. Click "Save Changes"\n\n💡 Photos are synced to Supabase automatically!';
+	        }
+	        if (msg.includes('view') || msg.includes('see') || msg.includes('show')) {
+	            return aiKnowledgeBase['photo gallery'] || '📸 To view photos:\n\n1. Click on any photo thumbnail\n2. Gallery opens with slideshow\n3. Use ← → arrows to navigate\n4. Keyboard shortcuts work too\n5. Click on photo to advance\n\n💡 Works on desktop and mobile!';
+	        }
+	        if (msg.includes('sync') || msg.includes('cloud')) {
+	            return aiKnowledgeBase['sync photos'] || '☁️ Photos sync automatically to Supabase!\n\n• Auto-sync when saving equipment\n• Up to 3 photos per equipment\n• <5KB each (auto-compressed)\n• Persist across sessions\n\n💡 No manual action needed!';
+	        }
+	        return aiKnowledgeBase['photos'] || '📸 Photo Features:\n\n• Upload up to 3 photos per equipment\n• JPEG format, <5KB each\n• Auto-compression in browser\n• Gallery view with slideshow\n• Keyboard navigation (← →)\n• Sync to Supabase cloud\n\n💡 Click any photo to open the gallery!';
+	    }
+	    
+	    // Check for poke-related questions
+	    if (msg.includes('poke') || msg.includes('notification') || msg.includes('alert')) {
+	        if (msg.includes('back') || msg.includes('return')) {
+	            return aiKnowledgeBase['poke back'] || '🔁 Poke Back:\n\nWhen someone pokes you:\n1. Click the 🔔 notification\n2. Click "🔔 Poke Back"\n3. Original sender gets a new poke\n4. They can respond back\n\n💡 Perfect for quick back-and-forth!';
+	        }
+	        return aiKnowledgeBase['poke'] || '🔔 Poke System:\n\n• Click "Poke" on any history record\n• Select ET, SET, or Physicist\n• Recipients get notifications\n• Can Acknowledge, Ignore, or Poke Back\n• Notifications blink until responded\n\n💡 Great for quick follow-ups!';
+	    }
+	    
+	    // Check for Compare Stat questions
+	    if (msg.includes('compare stat') || msg.includes('stat compare') || (msg.includes('compare') && msg.includes('stat'))) {
+	        return aiKnowledgeBase['compare stat'] || '📈 Compare Stat (Admin Only):\n\n• Compare 2-5 equipment statistics\n• View transaction trends\n• IN/OUT distribution\n• Job type analysis\n• ET usage patterns\n• Date range filtering\n\n💡 Powerful equipment performance analysis!';
+	    }
 	    
 	    // Check for greetings
 	    var greetings = ['hello', 'hi', 'hey', 'greetings', 'good morning', 'good afternoon', 'good evening'];
 	    for (var g = 0; g < greetings.length; g++) {
 	        if (msg.includes(greetings[g])) {
-	            return "Hello! 👋\n\nWelcome to the Equipment Management System.\n\nI can help you with:\n• Equipment management and searching\n• IN/OUT transactions\n• Account management\n• History logs and exports\n• Troubleshooting\n• And more!\n\nWhat would you like to know? (Type 'help' for options)";
+	            return "Hello! 👋\n\nWelcome to the Equipment Management System.\n\nI can help you with:\n• Equipment management and searching\n• IN/OUT transactions\n• Photo gallery and uploads\n• Poke system for notifications\n• Compare and analyze equipment\n• Account management\n• History logs and exports\n• Troubleshooting\n\nWhat would you like to know? (Type 'help' for options)";
 	        }
 	    }
 	    
 	    // Thank you responses
 	    if (msg.includes('thank') || msg.includes('thanks')) {
-	        return "You're welcome! 😊\n\nIs there anything else I can help you with?\n\n• Type 'help' for available topics\n• Ask me about specific features\n• I'm here 24/7 to assist you!";
+	        return "You're welcome! 😊\n\nIs there anything else I can help you with?\n\n• Type 'help' for available topics\n• Ask me about specific features like 'photos', 'poke', or 'compare stat'\n• I'm here 24/7 to assist you!";
 	    }
 	    
 	    // Goodbye responses
 	    if (msg.includes('bye') || msg.includes('goodbye') || msg.includes('see you')) {
-	        return "Goodbye! 👋\n\nIt was a pleasure helping you.\n\n📌 Remember:\n• Check the Refresh button for latest data\n• Regular backups save your data\n• I'm always here when you need help\n\nHave a great day!";
+	        return "Goodbye! 👋\n\nIt was a pleasure helping you.\n\n📌 Remember:\n• Click photos to view the gallery\n• Use Poke for quick notifications\n• Check the Refresh button for latest data\n• Regular backups save your data\n• I'm always here when you need help\n\nHave a great day!";
 	    }
 	    
 	    // Check knowledge base for matching keywords
@@ -5904,6 +5937,7 @@ window.addEventListener('beforeunload', function() {
 	    var totalRecords = historyRecords ? historyRecords.length : 0;
 	    var inCount = Object.values(equipStatus).filter(s => s === 'IN').length;
 	    var outCount = Object.values(equipStatus).filter(s => s === 'OUT').length;
+	    var equipmentWithPhotos = equipmentData ? equipmentData.filter(function(eq) { return eq.photos && eq.photos.length > 0; }).length : 0;
 	    
 	    // Check for statistics keywords
 	    if (msg.includes('statistic') || msg.includes('stat') || msg.includes('summary') || msg.includes('count')) {
@@ -5911,6 +5945,7 @@ window.addEventListener('beforeunload', function() {
 	               "• Total Equipment: " + totalEquipment + " items\n" +
 	               "• Equipment IN: " + inCount + " items\n" +
 	               "• Equipment OUT: " + outCount + " items\n" +
+	               "• Equipment with Photos: " + equipmentWithPhotos + " items\n" +
 	               "• Total Transactions: " + totalRecords + " records\n" +
 	               "• Active Users: " + (window.users ? Object.keys(window.users).length : 'Loading...') + "\n\n" +
 	               "Need more specific statistics? Ask about a particular type!";
@@ -5920,7 +5955,8 @@ window.addEventListener('beforeunload', function() {
 	    if (msg.includes('how many equipment') || msg.includes('total equipment')) {
 	        return "📦 Total Equipment: " + totalEquipment + " items\n\n" +
 	               "• IN: " + inCount + " items\n" +
-	               "• OUT: " + outCount + " items\n\n" +
+	               "• OUT: " + outCount + " items\n" +
+	               "• With Photos: " + equipmentWithPhotos + " items\n\n" +
 	               "You can view all equipment in the Equipment DB page.";
 	    }
 	    
@@ -5938,7 +5974,9 @@ window.addEventListener('beforeunload', function() {
 	               "   • Personnel (ET, SET, Physicist)\n" +
 	               "5️⃣ Draw signature\n" +
 	               "6️⃣ Preview and Save\n" +
-	               "7️⃣ Record appears in History Logs\n\n" +
+	               "7️⃣ Record appears in History Logs\n" +
+	               "8️⃣ Click photos to view gallery\n" +
+	               "9️⃣ Use Poke for follow-ups\n\n" +
 	               "💡 Need details? Ask about any step!";
 	    }
 	    
@@ -5951,7 +5989,8 @@ window.addEventListener('beforeunload', function() {
 	               "🔹 Edit any equipment\n" +
 	               "🔹 View equipment statistics\n" +
 	               "🔹 Export all logs\n" +
-	               "🔹 Supabase Backup (ZIP export)\n\n" +
+	               "🔹 Supabase Backup (ZIP export)\n" +
+	               "🔹 Compare Stat (advanced analytics)\n\n" +
 	               "Current role: " + currentUserRole + "\n\n" +
 	               "Need help with any admin feature?";
 	    }
@@ -5964,7 +6003,8 @@ window.addEventListener('beforeunload', function() {
 	               "🔹 View history logs\n" +
 	               "🔹 Export history to CSV\n" +
 	               "🔹 Change password\n" +
-	               "🔹 Use Poke system\n\n" +
+	               "🔹 Use Poke system\n" +
+	               "🔹 View equipment photos\n\n" +
 	               "❌ Cannot access DB Logs or Backup/Restore\n\n" +
 	               "Current role: " + currentUserRole;
 	    }
@@ -6013,9 +6053,10 @@ window.addEventListener('beforeunload', function() {
 	        return "💡 Recommendations:\n\n" +
 	               "• Regular database refresh ensures data sync\n" +
 	               "• Use filters to find equipment faster\n" +
+	               "• Upload photos for better equipment identification\n" +
+	               "• Use Poke for quick team communication\n" +
 	               "• Prepare purpose templates in advance\n" +
-	               "• Save records regularly\n" +
-	               "• Use the Poke system for quick communication\n\n" +
+	               "• Save records regularly\n\n" +
 	               "Any specific area you'd like tips for?";
 	    }
 	    
@@ -6026,7 +6067,9 @@ window.addEventListener('beforeunload', function() {
 	               "2️⃣ Explore the Equipment DB page\n" +
 	               "3️⃣ Select equipment and create IN/OUT records\n" +
 	               "4️⃣ View your transactions in History Logs\n" +
-	               "5️⃣ Change your password in Account settings\n\n" +
+	               "5️⃣ Upload photos for equipment\n" +
+	               "6️⃣ Change your password in Account settings\n" +
+	               "7️⃣ Use Poke to notify colleagues\n\n" +
 	               "💡 I'm here to help! Ask me about any feature.\n\n" +
 	               "Try typing 'help' for a complete list of topics.";
 	    }
@@ -6038,12 +6081,16 @@ window.addEventListener('beforeunload', function() {
 	           "• Adding/editing equipment\n" +
 	           "• Job types (PM, CM, QA, AT, OTH)\n" +
 	           "• Personnel roles (ET, SET, Physicist)\n" +
+	           "• Photo gallery and uploads\n" +
+	           "• Poke system for notifications\n" +
+	           "• Compare and Compare Stat features\n" +
 	           "• Database statistics and trends\n" +
 	           "• Workflow optimization\n" +
 	           "• Troubleshooting\n\n" +
 	           "Current database status:\n" +
 	           "📊 " + totalEquipment + " equipment items\n" +
-	           "📊 " + totalRecords + " transactions\n\n" +
+	           "📊 " + totalRecords + " transactions\n" +
+	           "📸 " + equipmentWithPhotos + " equipment with photos\n\n" +
 	           "💡 Try typing 'help' to see what I can do!\n" +
 	           "🔍 Or ask me a specific question about the system.";
 	}
@@ -6076,6 +6123,7 @@ window.addEventListener('beforeunload', function() {
 	    });
 	}
 	
+	// In the AI chat initialization
 	if (aiAssistantDiv) {
 	    aiAssistantDiv.onclick = function() {
 	        aiChatWin.style.display = 'flex';
@@ -6085,7 +6133,25 @@ window.addEventListener('beforeunload', function() {
 	        aiChatWin.style.top = 'auto';
 	        var messages = document.getElementById('aiMessages');
 	        if (messages.children.length === 0) {
-	            messages.innerHTML = '<div class="message bot"><div class="message-bubble">🤖 Hello! I\'m your intelligent AI Engineering Assistant.\n\nI can help with:\n• Equipment management\n• IN/OUT procedures\n• Account management\n• Troubleshooting\n• Database statistics\n\n💡 Type <strong>help</strong> to see all available topics!\n\nWhat would you like to know?</div></div>';
+	            messages.innerHTML = `
+	                <div class="message bot">
+	                    <div class="message-bubble">
+	                        <strong>🤖 Hello! I'm your intelligent AI Engineering Assistant.</strong><br><br>
+	                        I can help with:<br>
+	                        • 📋 Equipment management and searching<br>
+	                        • 📤 IN/OUT procedures with signatures<br>
+	                        • 📊 Compare and analyze equipment<br>
+	                        • 📸 Photo gallery and uploads<br>
+	                        • 🔔 Poke system for notifications<br>
+	                        • 👤 Account and user management<br>
+	                        • 💾 Database operations and backups<br>
+	                        • 🔧 Troubleshooting and tips<br><br>
+	                        💡 Type <strong>help</strong> to see all available topics!<br>
+	                        📌 Quick topics: introduction, compare, photos, poke, statistics<br><br>
+	                        What would you like to know?
+	                    </div>
+	                </div>
+	            `;
 	        }
 	    };
 	}
